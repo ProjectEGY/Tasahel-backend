@@ -1,0 +1,310 @@
+﻿@model PostexS.Models.Domain.Order
+@using PostexS.Models.Enums
+@{
+    string GetStatusText(PostexS.Models.Enums.OrderStatus status)
+    {
+        // Helper method to get status text based on the order status
+        switch (status)
+        {
+            case PostexS.Models.Enums.OrderStatus.Placed:
+                return "جديد";
+            case PostexS.Models.Enums.OrderStatus.Assigned:
+                return "جارى التوصيل";
+            case PostexS.Models.Enums.OrderStatus.Delivered:
+            case PostexS.Models.Enums.OrderStatus.Completed:
+            case PostexS.Models.Enums.OrderStatus.Finished:
+                return "تم التوصيل";
+            case PostexS.Models.Enums.OrderStatus.PartialDelivered:
+                return "تم التسليم جزئي";
+            case PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price:
+                return "تم التسليم مع تعديل السعر";
+            case PostexS.Models.Enums.OrderStatus.Rejected:
+                return "مرفوض";
+            case PostexS.Models.Enums.OrderStatus.Waiting:
+                return "مؤجل";
+            case PostexS.Models.Enums.OrderStatus.Returned:
+                return "مرتجع كامل";
+            case PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender:
+                return "مرتجع وشحن على الراسل";
+            case PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost:
+                return "مرتجع ودفع شحن";
+            case PostexS.Models.Enums.OrderStatus.PartialReturned:
+                return "مرتجع جزئي";
+            default:
+                return "";
+        }
+    }
+
+    string GetStatusColor(PostexS.Models.Enums.OrderStatus status)
+    {
+        // Helper method to get status color based on the order status
+        switch (status)
+        {
+            case PostexS.Models.Enums.OrderStatus.Placed:
+                return "#3498db"; // Blue
+            case PostexS.Models.Enums.OrderStatus.Assigned:
+                return "#27ae60"; // Green
+            case PostexS.Models.Enums.OrderStatus.Delivered:
+            case PostexS.Models.Enums.OrderStatus.Completed:
+            case PostexS.Models.Enums.OrderStatus.Finished:
+            case PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price:
+                return "#3498db"; // Blue
+            case PostexS.Models.Enums.OrderStatus.PartialDelivered:
+                return "#5f93ca";
+            case PostexS.Models.Enums.OrderStatus.Rejected:
+                return "red"; // red
+            case PostexS.Models.Enums.OrderStatus.Waiting:
+                return "#f1c40f"; // Yellow
+            case PostexS.Models.Enums.OrderStatus.Returned:
+            case PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender:
+            case PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost:
+                return "#755f07";
+            case PostexS.Models.Enums.OrderStatus.PartialReturned:
+                return "#755f37";
+            default:
+                return "#95a5a6"; // Light Gray
+        }
+    }
+}
+
+<!DOCTYPE html>
+<html lang="ar">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background-color: @GetStatusColor(Model.Status);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            padding: 20px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .badge {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 20px;
+        }
+
+            .badge.bg-red {
+                background-color: #d9534f;
+            }
+
+            .badge.bg-light-blue {
+                background-color: #3498db;
+            }
+
+            .badge.bg-green {
+                background-color: #27ae60;
+            }
+
+            .badge.bg-gray {
+                background-color: #95a5a6;
+            }
+
+            .badge.bg-blue-active {
+                background-color: #3498db;
+                color: #fff;
+            }
+
+            .badge.bg-yellow {
+                background-color: #f39c12;
+            }
+
+            .badge.bg-orange {
+                background-color: #f1c40f;
+            }
+
+        .custom-card {
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .custom-card-header {
+            /* background-color: #007bff; */
+            background-color: @GetStatusColor(Model.Status);
+            color: #fff;
+            padding: 15px;
+        }
+
+        .custom-card-body {
+            padding: 20px;
+        }
+
+        .status {
+            margin: 0;
+            font-size: 20px; /* Increase font size for the status */
+        }
+
+        .badge {
+            padding: 8px 16px; /* Adjust padding for the badges */
+            border-radius: 20px;
+            font-size: 16px; /* Increase font size for the badges */
+            font-weight: bold;
+        }
+
+        .success {
+            background-color: #28a745;
+            color: #fff;
+        }
+
+        .pending {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+        .info {
+            display: inline-block;
+            margin-right: 20px;
+            font-size: 16px; /* Increase font size for other information */
+        }
+
+        .time {
+            display: block;
+            font-size: 14px; /* Increase font size for the time */
+            color: #6c757d;
+        }
+
+        .divider {
+            margin: 20px 0;
+            border: none;
+            border-top: 1px solid #ccc;
+        }
+
+        .address-info {
+            margin-top: 20px;
+        }
+
+            .address-info .info {
+                margin-bottom: 10px;
+            }
+
+            .address-info strong {
+                color: #333;
+            }
+
+            .address-info p {
+                margin: 0;
+                font-size: 18px; /* Increase font size for address information */
+                color: #555;
+                line-height: 1.5;
+            }
+
+        .notes {
+            color: #6c757d;
+            font-size: 16px; /* Increase font size for the notes */
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="container" dir="rtl">
+        <div class="custom-card">
+            <div class="custom-card-header">
+                <h4 class="status">@GetStatusText(Model.Status)</h4>
+            </div>
+            <div class="custom-card-body">
+                <div class="order-info">
+                    <div class="info">
+                        <strong>الحالة:</strong>
+                        @switch (Model.OrderCompleted)
+                        {
+                            case OrderCompleted.OK:
+                                <span class="badge success">تم تسويته</span>
+                                @if (Model.CompletedOn.HasValue)
+                                {
+                                    var OrderOn = TimeZoneInfo.ConvertTimeFromUtc(Model.CompletedOn.Value, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
+                                    <span class="time">تاريخ التسوية: @OrderOn.ToString("dd/MM/yyyy HH:mm")</span>
+                                }
+                                break;
+                            case OrderCompleted.NOK:
+                                <span class="badge pending">لم يتم تسويته</span>
+                                break;
+                        }
+                    </div>
+                    <div class="info">
+                        <strong>رقم الطلب:</strong> @(Model.Code)
+                        <br>
+                        <strong>تاريخ الطلب:</strong> @TimeZoneInfo.ConvertTimeFromUtc(Model.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy HH:mm")
+                        @if (Model.LastUpdated.HasValue)
+                        {
+                            <br>
+                            <strong>تاريخ اخر تحديث:</strong> @TimeZoneInfo.ConvertTimeFromUtc(Model.LastUpdated.Value, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy HH:mm")
+                        }
+                    </div>
+                    <div class="info">
+                        <strong>المبلغ:</strong> @Model.Cost جنية
+                        <br>
+                        <strong>خدمة التوصيل:</strong> @Model.DeliveryFees جنية
+                    </div>
+                </div>
+                <hr class="divider">
+                <div class="address-info">
+                    <div class="info">
+                        <p><strong>العنوان:</strong> @Model.AddressCity - @Model.Address</p>
+                    </div>
+                    <div class="info">
+                        <p><strong>الراسل:</strong> @Model.Client.Name</p>
+                    </div>
+                    <div class="info">
+                        <p><strong>المرسل اليه:</strong> @Model.ClientName</p>
+                    </div>
+                    @if (Model.DeliveryId != null)
+                    {
+                        <div class="info">
+                            <p><strong>المندوب:</strong> @Model.Delivery.Name</p>
+                            <p> @Model.Delivery.PhoneNumber</p>
+                        </div>
+                    }
+                </div>
+                <hr class="divider">
+                <div class="notes">
+                    <p><strong>الملاحظات:</strong></p>
+                    @if (Model.OrderNotes.Count > 0)
+                    {
+                        @foreach (var note in Model.OrderNotes)
+                        {
+                            <p>- @note.Content</p>
+                        }
+                    }
+                    else
+                    {
+                        <p>لا توجد ملاحظات</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,53 @@
+{
+	"info": {
+		"_postman_id": "3d040a75-f3c8-446e-827d-a40f5990b8e1",
+		"name": "Postex APIs Integration",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "11873279",
+		"_collection_link": "https://red-crescent-864158.postman.co/workspace/My-Workspace~47e31ebf-d4d7-4fd7-8031-7491c9710b7e/collection/11873279-3d040a75-f3c8-446e-827d-a40f5990b8e1?action=share&source=collection_link&creator=11873279"
+	},
+	"item": [
+		{
+			"name": "API Create New Order",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"ClientName\": \"ClientName\",              //  Required\r\n    \"ClientCity\": \"City\",                    //  Required\r\n    \"Address\": \"Full Address\",               //  Required\r\n    \"Cost\": 100.00,                          //  Required\r\n    \"DeliveryFees\": 10.00,                   //  Required\r\n    \"Notes\": \"\"                              // Not Required\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://postexeg.com/api/Orders/NewOrder?PublicKey=&PrivateKey=",
+					"protocol": "https",
+					"host": [
+						"postexeg",
+						"com"
+					],
+					"path": [
+						"api",
+						"Orders",
+						"NewOrder"
+					],
+					"query": [
+						{
+							"key": "PublicKey",
+							"value": "",
+							"description": "    Required"
+						},
+						{
+							"key": "PrivateKey",
+							"value": "",
+							"description": "    Required"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

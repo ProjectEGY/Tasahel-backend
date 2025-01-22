@@ -1,0 +1,150 @@
+﻿@model PostexS.Models.Domain.Order
+@{
+    ViewBag.Title = "تفاصيل الطلب رقم " + (Model.Code);
+    var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(Model.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
+
+}
+<div class="row">
+    <div class="col-md-12">
+        <div class="box box-info">
+            <div class="box-header with-border">
+                <h3 class="box-title no-print">@ViewBag.Title</h3>
+                <div class="box-tools pull-right">
+                    <button class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                </div>
+            </div><!-- /.box-header -->
+            <div class="box-body">
+                <div class="text-center" style="margin-bottom:10px;">
+                    @if (Model.BarcodeImage != null)
+                    {
+                        <img src="data:image/png;base64,@Convert.ToBase64String(Model.BarcodeImage)" alt="Barcode" style="position: absolute;right: 20px; margin-top:0px;">
+                    }
+                    <h4 style="margin-bottom:20px;">الطلب رقم @(Model.Code)</h4>
+                    <div>
+                        <h4 style="margin:10px">
+                            @if (Model.IsDeleted == true)
+                            {
+                                <span class="badge bg-red">محذوف</span>
+                            }
+                            else if (Model.Status == PostexS.Models.Enums.OrderStatus.Placed)
+                            {
+                                <span class="badge bg-gray">جديد</span>
+                            }
+                            else if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
+                            {
+                                <span class="badge bg-yellow-active">مرتجع جزئي</span>
+                            }
+                            else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned)
+                            {
+                                <span class="badge bg-yellow">مرتجع كامل</span>
+                            }
+                            else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
+                            {
+                                <span class="badge bg-yellow">مرتجع وشحن على الراسل</span>
+                            }
+                            else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
+                            {
+                                <span class="badge bg-yellow">مرتجع ودفع شحن </span>
+                            }
+                            else if (Model.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
+                            {
+                                <span class="badge bg-blue-active">تم التوصيل مع تعديل السعر</span>
+                            }
+                            else if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+                            {
+                                <span class="badge bg-blue-active">تم التوصيل جزئي</span>
+                            }
+                            else if (Model.Status == PostexS.Models.Enums.OrderStatus.Assigned)
+                            {
+                                <span class="badge bg-green">جارى التوصيل</span>
+                            }
+                            else if (Model.Status == PostexS.Models.Enums.OrderStatus.Delivered)
+                            {
+                                <span class="badge bg-blue-active">تم التوصيل</span>
+                            }
+                            else if (Model.Status == PostexS.Models.Enums.OrderStatus.Rejected)
+                            {
+                                <span class="badge bg-yellow">مرفوض</span>
+                            }
+                            else if (Model.Status == PostexS.Models.Enums.OrderStatus.Waiting)
+                            {
+                                <span class="badge bg-orange">مؤجل</span>
+                            }
+
+                            else if (Model.Status == PostexS.Models.Enums.OrderStatus.Completed)
+                            {
+                                <span class="badge bg-light-blue">تم تسويته</span>
+                            }
+                        </h4>
+                        <h4 style="margin:10px" class="no-print">
+                            <br />
+                            <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
+                            <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
+
+                        </h4>
+                    </div>
+                </div>
+                <div>
+                    <table class="table text-center table-bordered" dir="rtl">
+                        <tbody>
+                            <tr>
+                                <td style="width:40%">
+                                    <span>الراسل</span>
+                                    <br />
+                                    <p>@Model.Client.Name</p>
+                                    <p>الهاتف :  <a dir="auto" href="tel:@Model.Client.PhoneNumber">@Model.Client.PhoneNumber</a> </p>
+                                    <p>العنوان : @Model.Client.Address</p>
+                                </td>
+                                <td style="width:20%">
+                                    <img src="~/Content/Images/TasahelExpress.png" width="150" height="110" />
+                                </td>
+                                <td style="width:40%">
+                                    <span>المرسل إليه</span>
+                                    <br />
+
+                                    <p>@Model.ClientName</p>
+                                    <p>الهاتف :  <a dir="auto" href="tel:@Model.ClientPhone">@Model.ClientPhone</a> </p>
+                                    <p>العنوان : @Model.AddressCity - @Model.Address</p>
+
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="text-align:center">
+                                    ملاحظات
+
+                                    @foreach (var item in Model.OrderNotes)
+                                    {
+                                        @item.Content
+                                    }
+
+
+                                </td>
+                                @if (@Model.Status != PostexS.Models.Enums.OrderStatus.PartialReturned)
+                                {
+                                    <td>
+                                        <span>الاجمالي : @Model.TotalCost جنية</span>
+                                        @if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+                                        {
+                                            <br />
+                                            <span style="text-align:right">إستلام : @Model.ArrivedCost جنية</span>
+                                            <br />
+                                            <span style="text-align:left">مرتجع : @(Model.ReturnedCost) جنية</span>
+                                        }
+                                    </td>
+                                }
+                                else
+                                {
+                                    <td>
+                                        <span>الاجمالي : @Model.ClientCost جنية</span>
+                                    </td>
+                                }
+                                <td>@Model.Notes</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
+            </div>
+        </div>
+    </div>
+

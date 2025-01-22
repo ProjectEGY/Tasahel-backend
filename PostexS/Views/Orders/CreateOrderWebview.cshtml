@@ -1,0 +1,157 @@
+﻿@using PostexS.Models.ViewModels;
+@{
+    ViewData["Title"] = "اضافة طلب";
+    var branchs = ViewBag.Branchs as List<PostexS.Models.Domain.Branch>;
+    Layout = "_MobileLayout";
+}
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> اضافة طلب</h3>
+    </div>
+    <div class="panel-body">
+        <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
+            <div class="panel panel-success">
+                @if (TempData["CountryErrors"] != null)
+                {
+                    var Errors = TempData["CountryErrors"] as List<string>;
+                    <div class="alert alert-danger text-center p-5 m-5">
+                        <ul style="list-style:none;">
+                            @foreach (var error in Errors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+                @if (!User.IsInRole("Driver"))
+                {
+
+
+
+
+                    <div class="panel-body">
+
+                        @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+                        @using (Html.BeginForm("Create", "Orders", FormMethod.Post))
+                        {
+                            @Html.AntiForgeryToken()
+
+                            <div class="row" style="margin:10px;">
+
+                                <input value="@ViewBag.ClientId" name="ClientId" id="ClientId" hidden type="hidden" />
+                                <div class="col-lg-6 mb-10">
+                                    <div class="form-group">
+                                        <label for="NameAr" class="col-sm-5 control-label required">اسم المرسل إليه: </label>
+                                        <div class="col-sm-7">
+                                            <input name="ClientName" type="text" id="ClientName" required class="form-control valid" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6 mb-10">
+                                    <div class="form-group">
+                                        <label for="NameAr" class="col-sm-5 control-label required">رقم هاتف المرسل إليه: </label>
+                                        <div class="col-sm-7">
+                                            <input name="ClientPhone" type="text" id="ClientPhone" required class="form-control valid" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6 mb-10">
+                                    <div class="form-group">
+                                        <label for="NameAr" class="col-sm-5 control-label required"> عنوان المرسل إليه: </label>
+                                        <div class="col-sm-7">
+                                            <input name="Address" type="text" id="Address" required class="form-control valid" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6 mb-10">
+                                    <div class="form-group">
+                                        <label for="NameAr" class="col-sm-5 control-label required">سعر الطلب: </label>
+                                        <div class="col-sm-7">
+                                            <input name="Cost" type="number" id="Cost" required class="form-control valid" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6 mb-10">
+                                    <div class="form-group">
+                                        <label for="NameAr" class="col-sm-5 control-label required">خدمة التوصيل: </label>
+                                        <div class="col-sm-7">
+                                            <input name="DeliveryFees" type="number" id="DeliveryFees" required class="form-control valid" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6 mb-10">
+                                    <div class="form-group">
+                                        <label for="NameAr" class="col-sm-5 control-label required">ملاحظات الطلب : </label>
+                                        <div class="col-sm-7">
+                                            @* @Html.TextArea("Notes", htmlAttributes: new { @class = "form-control", rows = 7 }) *@
+                                            @Html.TextArea("Notes", ViewBag.Note as string, new { @class = "form-control", rows = 7 })
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <button type="submit" class="btn btn-success">إضافة</button>
+                        }
+                    </div>
+
+                }
+            </div>
+        </div>
+
+    </div>
+</div>
+<script>
+    function Delete(url) {
+        swal({
+            title: "هل متأكد؟",
+            text: "عند مسح هذا الطلب سوف يتم نقله إلى الطلبات المحذوفة",
+            icon: "warning",
+            dangerMode: true
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "Delete",
+                    url: url,
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setInterval('location.reload()', 2500);
+                        }
+                        else {
+                            toastr.error(data.message);
+                        }
+                    }
+                })
+            }
+        })
+    }
+    function Resotre(url) {
+        swal({
+            title: "هل متأكد؟",
+            text: "هل تريد استراجع هذا الطلب مرة أخرى",
+            icon: "success"
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "Delete",
+                    url: url,
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setInterval('location.reload()', 2500);
+                        }
+                        else {
+                            toastr.error(data.message);
+                        }
+                    }
+                })
+            }
+        })
+    }
+</script>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

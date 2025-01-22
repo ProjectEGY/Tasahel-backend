@@ -1,0 +1,101 @@
+﻿.container {
+    max-width: 100%;
+    margin: 20px auto;
+    padding: 20px;
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f4;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.title {
+    font-size: 24px;
+    color: #333;
+}
+
+.actions .btn {
+    margin-left: 20px;
+    font-size: 18px;
+    padding: 10px 20px;
+    border-radius: 4px;
+}
+
+.apply-btn {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: #fff;
+    margin: 15px;
+}
+
+.barcode-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: space-between;
+}
+
+.barcode-item {
+    width: 50mm;
+    height: 40mm;
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.3s ease-in-out;
+}
+
+    .barcode-item:hover {
+        transform: translateY(-5px);
+    }
+
+.barcode-image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/*.barcode-image {
+    max-width: 100%;
+    height: auto;
+}*/
+
+.order-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    /*height: 40%;*/
+    padding: 2px;
+    margin-top: 10px;
+}
+
+.client-name,
+.address-city {
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.total-cost {
+    font-size: 18px;
+    margin-bottom: 0px;
+    /*color: #28a745;*/
+}
+
+.info-text {
+    font-size: 12px;
+    margin-bottom: 2px;
+    text-align: center;
+}
+
+.checkbox {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+}

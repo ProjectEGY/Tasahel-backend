@@ -1,0 +1,33 @@
+﻿@model IEnumerable<PostexS.Models.Domain.ApplicationUser>
+@{
+    ViewData["Title"] = "PendingIndex";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+        <div class="table-responsive">
+            <table id="table" cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th style="text-align:center">اسم الراسل</th>
+                       
+                        <th style="text-align:center ">التحكم</th>
+                    </tr>
+                </thead>
+                <tbody style="text-align:center">
+                    @foreach (var item in Model)
+                    {
+                    <tr>
+                        <td>
+                            @item.Name
+                        </td>
+                    
+                        <td>
+                        <a href="@Url.Action("Accpet","Users",new{UserId=item.Id})" class="btn btn-success"><i class="fa fa-edit"></i></a>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+

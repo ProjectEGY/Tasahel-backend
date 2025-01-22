@@ -1,0 +1,45 @@
+﻿@model PostexS.Models.Domain.Notification
+@{
+    ViewBag.Title = "الاشعارات";
+}
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-shopping-cart"></i> @Model.Title</h3>
+    </div>
+    <div class="panel-body">
+        <a class="btn btn-default" style="width:auto" href="@Url.Action("All", "Notification")">العودة للإشعارات</a>
+        <br />
+        <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
+            <div class="panel panel-success">
+                <div id="collapseOne" class="panel-collapse" role="tabpanel" aria-labelledby="headingOne">
+                    <div class="panel-body">
+                        @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+                        @using (Html.BeginForm("Save", "TermsAndConditions", FormMethod.Post))
+                        {
+                            @Html.HiddenFor(x => x.Id)
+                            @Html.AntiForgeryToken()
+                            <div width="100%" height="1000px;">
+                                @Html.TextAreaFor(model => model.Body, 10, 20, new { @class = "form-control", @readonly = "true" })
+                                @if (Model.ImageUrl != null && Model.ImageUrl != "")
+                                {
+                                    <img src="~/Images/OrderReturns/@Model.ImageUrl" class="img-fluid" alt="صورة الطلب " />
+                                }
+                            </div>
+                            <br />
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*@section Scripts{
+    <script src="~/Scripts/tinymce/tinymce.js"></script>
+    <script>
+        tinymce.init({
+            selector: "textarea",
+            readonly: 1
+        });
+    </script>
+    }*@

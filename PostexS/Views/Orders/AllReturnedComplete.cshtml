@@ -1,0 +1,270 @@
+﻿@model IEnumerable<PostexS.Models.Domain.Order>
+@{
+    ViewData["Title"] = "مخزن المرتجعات";
+    var senders = ViewBag.senders as List<PostexS.Models.Domain.ApplicationUser>;
+    var tempModel = Model;
+    if (ViewBag.branchId != -1)
+    {
+        tempModel = Model.Where(x => x.Client.BranchId == ViewBag.branchId).ToList();
+        senders = senders.Where(x => x.BranchId == ViewBag.branchId || ViewBag.branchId == -1).ToList();
+    }
+    var branchs = ViewBag.Branchs as List<PostexS.Models.Domain.Branch>;
+
+}
+<style>
+    /* تأكد من أن الصورة تتناسب مع حجم المودال */
+    .modal-body img {
+        max-width: 100%; /* يضمن أن الصورة لا تتجاوز عرض المودال */
+        height: auto; /* يحافظ على نسب العرض والارتفاع */
+    }
+</style>
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> جميع المرتجعات</h3>
+    </div>
+    <div class="panel-body">
+        <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
+            <div class="panel panel-success">
+                @if (TempData["CountryErrors"] != null)
+                {
+                    var Errors = TempData["CountryErrors"] as List<string>;
+                    <div class="alert alert-danger text-center p-5 m-5">
+                        <ul style="list-style:none;">
+                            @foreach (var error in Errors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+            </div>
+        </div>
+        @if (!User.IsInRole("HighAdmin"))
+        {
+            <div class="row">
+                @using (Html.BeginForm("AllReturnedComplete", "Orders", FormMethod.Get, new { @class = "form-inline" }))
+                {
+                    <div class="form-group">
+                        <label for="BranchId" class="mr-2">برجاء اختيار الفرع</label>
+                        <select name="branchId" id="BranchId" class="select2 form-control">
+                            @if (ViewBag.branchId == -1)
+                            {
+                                <option selected="selected" value="-1">جميع الفروع</option>
+                            }
+                            @foreach (var branch in branchs)
+                            {
+                                if (@ViewBag.branchId == branch.Id)
+                                {
+                                    <option selected="selected" value="@branch.Id">@branch.Name - @branch.Address</option>
+                                }
+                                else
+                                {
+                                    <option value="@branch.Id">@branch.Name - @branch.Address</option>
+                                }
+                            }
+                        </select>
+
+                    </div>
+                    <button type="submit" style="margin-top: 20px;" class="btn btn-primary ml-2">
+                        تحديد الفرع
+                    </button>
+                    <hr />
+                }
+            </div>
+        }
+        @if (!User.IsInRole("Client"))
+        {
+            <div class="row no-print">
+
+                @using (Html.BeginForm("AllReturnedComplete", "Orders", FormMethod.Get))
+                {
+                    <div class="form-group">
+                        <label for="StoreId">برجاء اختيار الراسل</label>
+                        <select name="UserIds" id="UserIds" class="select2 form-control" multiple>
+                            @foreach (var user in senders)
+                            {
+                                @if (user.BranchId == @ViewBag.branchId || ViewBag.branchId == 0)
+                                {
+                                    <option value="@user.Id">@user.Name - @user.PhoneNumber</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-info">اختيار</button>
+                }
+            </div>
+        }
+        <div class="table-responsive">
+            <table id="" cellpadding="0" cellspacing="0" border="0" class=" table-striped table-bordered table-hover" style="width:100%">
+                <thead>
+                    <tr>
+                        <th style="text-align:center">رقم الطلب</th>
+                        <th style="text-align:center">الحالة</th>
+                        <th style="text-align:center">الفرع الحالي</th>
+                        <th style="text-align:center">ملاحظات</th>
+                        <th style="text-align:center">اسم الراسل</th>
+                        <th style="text-align:center">اسم المرسل إلية</th>
+                        <th style="text-align:center">المندوب</th>
+                        <th style="text-align:center ">مبلغ المرتجع</th>
+                        <th style="text-align:center ">العنوان</th>
+                        <th style="text-align:center">ملاحظات المندوب</th>
+                    </tr>
+                </thead>
+                <tbody style="text-align:center">
+                    @foreach (var item in tempModel)
+                    {
+                        <tr>
+                            <td style="padding:8px;">
+                                <span class="badge" style="font-size:15px;">@(item.Code)</span>
+                                @if (item.Returned_Image != null)
+                                {
+                                    <button type="button" class="btn btn-danger mt-5" style="border-radius: 20px;font-size: x-small;" data-toggle="modal" data-target="#imageModal-@item.Id">
+                                        صورة المرتجع <i class="fas fa-image"></i>
+                                    </button>
+
+                                    <!-- Modal -->
+                                    <div class="modal fade" id="imageModal-@item.Id" tabindex="-1" role="dialog" aria-labelledby="imageModalLabel@item.Id" aria-hidden="true">
+                                        <div class="modal-dialog" role="document">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="imageModalLabel-@item.Id">صورة الطلب المرتجع : @item.Code</h5>
+                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <img src="~/Images/OrderReturns/@item.Returned_Image" class="img-fluid" alt="صورة الطلب المرتجع" />
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">غلق</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+
+                            </td>
+                            <td>
+                                @if (item.IsDeleted == true)
+                                {
+                                    <span class="badge bg-red">محذوف</span>
+                                }
+                                else if (item.Status == PostexS.Models.Enums.OrderStatus.Placed)
+                                {
+                                    <span class="badge bg-gray">جديد</span>
+                                }
+                                else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
+                                {
+                                    <span class="badge bg-yellow-active mt-8 mb-8" style="font-size: medium; padding:8px;">مرتجع جزئي</span>
+                                }
+                                else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned)
+                                {
+                                    <span class="badge bg-yellow mt-8 mb-8" style="background-color: #f36f12 !important;font-size: medium; padding:8px;">مرتجع كامل</span>
+                                }
+                                else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
+                                {
+                                    <span class="badge mt-8 mb-8" style="background-color: #e7ef38 !important;font-size: medium; padding:8px;">مرتجع وشحن على الراسل</span>
+                                }
+                                else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
+                                {
+                                    <span class="badge mt-8 mb-8" style="background-color: #688c8c !important;font-size: medium; padding:8px;">مرتجع ودفع شحن </span>
+                                }
+                                else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
+                                {
+                                    <span class="badge bg-blue-active">تم التوصيل مع تعديل السعر</span>
+                                }
+                                else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+                                {
+                                    <span class="badge bg-blue-active">تم التوصيل جزئي</span>
+                                }
+                                else if (item.Status == PostexS.Models.Enums.OrderStatus.Assigned)
+                                {
+                                    <span class="badge bg-green">جارى التوصيل</span>
+                                }
+                                else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered)
+                                {
+                                    <span class="badge bg-blue-active">تم التوصيل</span>
+                                }
+                                else if (item.Status == PostexS.Models.Enums.OrderStatus.Rejected)
+                                {
+                                    <span class="badge bg-yellow">مرفوض</span>
+                                }
+                                else if (item.Status == PostexS.Models.Enums.OrderStatus.Waiting)
+                                {
+                                    <span class="badge bg-orange">مؤجل</span>
+                                }
+                                else if (item.Status == PostexS.Models.Enums.OrderStatus.Completed)
+                                {
+                                    <span class="badge bg-light-blue">تم تسويته</span>
+                                }
+                                @if (!item.Finished)
+                                {
+                                    <br />
+                                    <span class="badge bg-red mb-8" style="padding:5px;">لم يتم استلامه من المندوب</span>
+                                }
+                            </td>
+                            <td style="padding:8px;">
+                                <span class="badge">@(item.Branch.Name)</span>
+                                @if (item.BranchId != item.Client.BranchId)
+                                {
+                                    <br />
+                                    <span class="badge bg-blue">
+                                        تم تحويله من فرع @item.Client.Branch.Name
+                                    </span>
+                                }
+                            </td>
+                            <td style="width: 150px">@item.Notes</td>
+                            <td>
+                                @item.Client.Name
+                            </td>
+                            <td>
+                                @item.ClientName
+                            </td>
+                            <td>
+                                @if (item.DeliveryId != null)
+                                {
+                                    @item.Delivery.Name
+                                    @item.Delivery.PhoneNumber
+                                }
+                            </td>
+                            @if (item.Status == PostexS.Models.Enums.OrderStatus.PartialReturned
+                           || item.Status == PostexS.Models.Enums.OrderStatus.Returned
+                           || item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender
+                           || item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost
+                           )
+                            {
+                                <td class="text-danger">
+                                    @(item.ReturnedCost) جنيه
+                                </td>
+                            }
+                            else
+                            {
+                                <td></td>
+                            }
+                            <td style="width: 150px">
+                                @item.AddressCity -  @item.Address
+                            </td>
+                            <td style="width:150px">
+                                @if (@item.OrderNotes.Count() > 0)
+                                {
+                                    <span>
+                                        @item.OrderNotes.OrderBy(x => x.Id).Last().Content
+                                    </span>
+                                }
+                            </td>
+
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <table class="table table-striped table-bordered table-hover">
+                <tr>
+                    <td style="width:50%;text-align:left">
+                    </td>
+                    <td id="cost" style="width:50%;text-align:right;color:green">
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>

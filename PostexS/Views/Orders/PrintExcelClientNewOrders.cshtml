@@ -1,0 +1,230 @@
+﻿@using PostexS.Models.Enums;
+@model List<PostexS.Models.Domain.Order>
+@using System
+@using System.Globalization
+@{
+    ViewBag.Title = "طباعه طلبات جديده ";
+    Func<DateTime, int, string> ConvertToEgyptTime = (DateTime utcDateTime, int hoursToAdd) =>
+        {
+            var egyptTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+            var egyptTime = TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, egyptTimeZone);
+            return egyptTime.ToString("MM/dd/yyyy h:mm:ss tt", CultureInfo.InvariantCulture);
+        };
+}
+<div class="row">
+    <div class="col-md-12">
+        <div class="box box-info">
+            <div class="box-header with-border">
+                <h3 class="box-title no-print">@ViewBag.Title</h3>
+                <div class="box-tools pull-right">
+                    <button class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                </div>
+                <h4 style="margin: 10px; text-align: center;" class="no-print">
+                    <br />
+                    <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
+                    <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
+
+                </h4>
+            </div><!-- /.box-header -->
+
+
+
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    @if (Model.FirstOrDefault() != null)
+                    {
+                        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> طباعة شحنات مندوب: @Model.FirstOrDefault().Delivery.Name  </h3>
+                    }
+                </div>
+                <div class="panel-body">
+                    @* <div class="box-body">
+                    <div class="text-center" style="margin-bottom:10px;">
+                    <h4 style="margin:10px" class="no-print">
+                    <a href="/Orders/Complete" class="btn btn-default no-print">العودة</a>
+                    <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
+                    </h4>
+                    </div>
+                    </div>*@
+                    <table class="table text-center table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="text-align:center">رقم الطلب</th>
+                                <th style="text-align:center">تاريخ انشاء الطلب</th>
+                                <th style="text-align:center">اسم الراسل</th>
+                                <th style="text-align:center ">رقم الراسل</th>
+                                <th style="text-align:center">اسم المرسل إلية</th>
+                                <th style="text-align:center ">رقم المرسل الية</th>
+                                <th style="text-align:center ">الملاحظات</th>
+                                <th style="text-align:center ">العنوان</th>
+                                <th style="text-align:center ">الاجمالي</th>
+                                <th style="text-align:center ">تحديد</th>
+
+
+                            </tr>
+                        </thead>
+                        <tbody style="text-align:center">
+                            <form asp-action="ExportToExecl" asp-controller="Orders">
+                                <button type="submit" class="btn-btn-success">طباعة المحدد شيت إكسيل</button>
+                                <br />
+                                <label style="position:center">
+                                    <input type="checkbox" onClick="toggle(this)" title="حدد جميع الطلبات المعروضة" /> حدد جميع الطلبات المعروضة
+                                </label>
+                                @for (int i = 0; i < Model.Count; i++)
+                                {
+                                <tr>
+
+                                    <td>
+                                            @(Model[i].Code)
+                                    </td>
+                                    <td>
+                                            @ConvertToEgyptTime(Model[i].CreateOn, 2)
+                                    </td>
+                                    <td>
+
+                                            @Model[i].Client.Name
+                                    </td>
+                                    <td>
+                                            @Model[i].Client.PhoneNumber
+                                    </td>
+                                    <td>
+
+                                            @Model[i].ClientName
+                                    </td>
+
+                                    <td>
+                                            @Model[i].ClientPhone
+                                    </td>
+
+                                    <td style="width:150px">
+                                            @* @if (Model[i].OrderNotes.Count > 0)
+                                    {
+                                    @Model[i].OrderNotes.OrderBy(x => x.Id).Last().Content
+                                    }*@
+                                            @if (Model[i].Notes != "")
+                                            {
+                                                @Model[i].Notes
+                                            }
+                                            else
+                                            {
+                                            <span>--</span>
+                                            }
+                                    </td>
+                                    <td style="width:150px">
+                                            @Model[i].AddressCity - @Model[i].Address
+                                    </td>
+                                    <td style="color:green">
+                                            @Model[i].TotalCost جنية
+                                    </td>
+                                    <td>
+                                        <input class="check-box" type="checkbox" name="OrdersId[]" value="@Model[i].Id">
+
+                                    </td>
+
+                                </tr>
+                                }
+
+                            </form>
+
+                        </tbody>
+                    </table>
+                    <table class="table text-center table-bordered">
+                        <tr>
+                            <td style="width:50%;text-align:left">
+                                المبلغ المستحق للتحصيل :
+                            </td>
+                            <td style="width:50%;text-align:right;color:green">
+                                @Model.Sum(x => x.TotalCost) جنية
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+
+
+
+            @*
+            @foreach (var item in Model)
+            {
+            <div class="box-body">
+            <div class="text-center" style="margin-bottom:10px;">
+            <h4 style="margin-bottom:20px;">الطلب رقم @(item.Code)</h4>
+            <h4 style="margin:10px">
+            @if (item.IsDeleted == true)
+            {
+            <span class="badge bg-red">محذوف</span> }
+
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Placed)
+            {
+            <span class="badge bg-gray">جديد</span> }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Assigned)
+            {
+            <span class="badge bg-green">جارى التوصيل</span> }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Deliverd)
+            {
+            <span class="badge bg-blue-active">تم التوصيل</span> }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Rejected)
+            {
+            <span class="badge bg-yellow">مرفوض</span> }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Waiting)
+            {
+            <span class="badge bg-orange">مؤجل</span> }
+
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Completed)
+            {
+            <span class="badge bg-light-blue">تم تسويته</span>}
+            </h4>
+
+            </div>
+            <div>
+            <table  class="table text-center table-bordered" dir="rtl">
+
+            <tbody>
+            <tr>
+            <td style="width:40%">
+            <span>الراسل</span>
+            <br />
+            <p>@item.Client.Name</p>
+            <p>الهاتف :  <a dir="auto" href="tel:@item.Client.PhoneNumber">@item.Client.PhoneNumber</a> </p>
+            <p>العنوان : @item.Client.Address</p>
+            </td>
+            <td style="width:20%">
+            <img src="~/Content/Images/TasahelExpress.png" width="150" height="110" />
+            </td>
+            <td style="width:40%">
+            <span>المرسل إليه</span>
+            <br />
+
+            <p>@item.ClientName</p>
+            <p>الهاتف :  <a dir="auto" href="tel:@item.ClientPhone">@item.ClientPhone</a> </p>
+            <p>العنوان : @item.Address</p>
+
+            </td>
+            </tr>
+            <tr>
+            <td>
+            ملاحظات
+            </td>
+            <td>
+            <span>الاجمالي : @item.TotalCost جنية</span>
+            </td>
+            <td>@item.NameAr</td>
+            </tr>
+            </tbody>
+            </table>
+            </div>
+
+            </div>}*@
+            <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
+        </div>
+    </div>
+</div>
+<script>
+    function toggle(source) {
+        checkboxes = document.getElementsByName('OrdersId[]');
+        for (var i = 0, n = checkboxes.length; i < n; i++) {
+            checkboxes[i].checked = source.checked;
+        }
+    }
+</script>
+

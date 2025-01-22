@@ -1,0 +1,622 @@
+﻿@using PostexS.Models.Enums
+@using System.Linq
+@using System.ComponentModel.DataAnnotations
+@model IEnumerable<PostexS.Models.Domain.ApplicationUser>
+@{
+    var x = ViewBag.r;
+    long temp = 1;
+    if (ViewBag.branch == -1)
+    {
+        temp = 0;
+    }
+    if (ViewBag.r == 0)
+    {
+        if (ViewBag.deleted == 1)
+        {
+            ViewData["Title"] = "الراسلين المحذوفين";
+        }
+        else
+        {
+            ViewData["Title"] = "الراسلين";
+        }
+    }
+    else if (ViewBag.r == 1)
+    {
+        if (ViewBag.deleted == 1)
+        {
+            ViewData["Title"] = "المناديب المحذوفين";
+        }
+        else
+        {
+            ViewData["Title"] = "المناديب";
+        }
+    }
+    else if (ViewBag.r == 2)
+    {
+        if (ViewBag.deleted == 1)
+        {
+            ViewData["Title"] = "الزائرين المحذوفين";
+        }
+        else
+        {
+            ViewData["Title"] = "الزائرين";
+        }
+    }
+    else if (ViewBag.r == 4)
+    {
+        if (ViewBag.deleted == 1)
+        {
+            ViewData["Title"] = "مسؤولي نظام المحذوفين";
+        }
+        else
+        {
+            ViewData["Title"] = "مسؤولي نظام";
+        }
+    }
+    else
+    {
+        if (ViewBag.deleted == 1)
+        {
+            ViewData["Title"] = "المستخدمين المحذوفين";
+        }
+        else
+        {
+            ViewData["Title"] = "المستخدمين";
+        }
+    }
+    var branchs = ViewBag.Branchs as List<PostexS.Models.Domain.Branch>;
+    string message = ViewBag.message;
+}
+<style>
+    .server-status {
+        font-family: Arial, sans-serif;
+        font-weight: bold;
+        padding: 5px;
+        border-radius: 5px;
+        text-align: center;
+        display: inline-block;
+        color: #fff;
+    }
+
+    .server-domain {
+        background-color: #4CAF50; /* أخضر */
+    }
+
+    .server-subdomain1 {
+        background-color: #2196F3; /* أزرق */
+    }
+
+    .server-subdomain2 {
+        background-color: #FF9800; /* برتقالي */
+    }
+
+    .server-subdomain3 {
+        background-color: #E91E63; /* وردي */
+    }
+
+    .server-default {
+        background-color: #9E9E9E; /* رمادي */
+    }
+
+</style>
+@if (ViewBag.message != null)
+{
+    <!-- Include jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+    <script>
+        $(document).ready(function () {
+            swal({
+                title: "تنبيه",
+                html: true,
+                text: "@Html.Raw(message)",
+                icon: "info",
+                button: "OK",
+            });
+        });
+    </script>
+
+}
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.css">
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- DataTables JS -->
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.js"></script>
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> @ViewData["Title"]</h3>
+    </div>
+    <div class="panel-body">
+        @if (!User.IsInRole("Accountant"))
+        {
+            <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
+                <div class="panel panel-success">
+                    @if (TempData["CountryErrors"] != null)
+                    {
+                        var Errors = TempData["CountryErrors"] as List<string>;
+                        <div class="alert alert-danger text-center p-5 m-5">
+                            <ul style="list-style:none;">
+                                @foreach (var error in Errors)
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    @if (@ViewBag.deleted == 0)
+                    {
+                        <div class="panel-heading collapsed" role="tab" id="headingOne" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                            <h4 class="panel-title">
+                                <a class="pointer"><i class="fa fa-fw fa-plus"></i> إضافة مستخدم</a>
+                            </h4>
+                        </div>
+
+
+                        <div id="collapseOne" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+                            <div class="panel-body">
+
+
+                                @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+                                @using (Html.BeginForm("CreateClient", "Users", FormMethod.Post, new { enctype = "multipart/form-data" }))
+                                {
+                                    @Html.AntiForgeryToken()
+                                    <input name="page" type="text" id="page" value="ss" hidden />
+                                    <div class="row" style="margin:10px;">
+                                        <div class="col-lg-6 mb-10">
+                                            <div class="form-group">
+                                                <label for="NameEn" class="col-sm-5 control-label required">اسم الفرع:</label>
+                                                <div class="col-sm-7">
+                                                    <select name="BranchId" id="BranchId" class="select2 form-control">
+                                                        @foreach (var branch in branchs)
+                                                        {
+                                                            <option value="@branch.Id">@branch.Name - @branch.Address</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 mb-10">
+                                            <div class="form-group">
+                                                <label for="NameAr" class="col-sm-5 control-label required">نوع المستخدم: </label>
+                                                <div class="col-sm-7">
+                                                    <select name="UserType" id="UserType" class="form-control">
+                                                        @if (ViewBag.q == "c")
+                                                        {
+                                                            <option value="0">راسل</option>
+                                                        }
+                                                        @if (ViewBag.q == "d")
+                                                        {
+                                                            <option value="1">مندوب</option>
+                                                        }
+
+                                                        @if (!User.IsInRole("HighAdmin") && !User.IsInRole("Accountant") && !User.IsInRole("LowAdmin"))
+                                                        {
+                                                            <option value="3">مشرف عادى</option>
+                                                            <option value="4">مشرف مميز</option>
+                                                            <option value="6">محاسب</option>
+                                                        }
+                                                        @if (User.IsInRole("Admin"))
+                                                        {
+                                                            <option value="5">أدمن</option>
+                                                            <option value="7">مساعد أدمن</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 mb-10">
+                                            <div class="form-group">
+                                                <label for="NameAr" class="col-sm-5 control-label required">الاسم: </label>
+                                                <div class="col-sm-7">
+                                                    <input name="Name" type="text" id="Name" required class="form-control valid" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 mb-10">
+                                            <div class="form-group">
+                                                <label for="NameAr" class="col-sm-5 control-label required">الايميل (اختياري): </label>
+                                                <div class="col-sm-7">
+                                                    <input name="Email" type="email" id="Email" class="form-control valid" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 mb-10">
+                                            <div class="form-group">
+                                                <label for="NameEn" class="col-sm-5 control-label required">رقم الوتساب:</label>
+                                                <div class="col-sm-7">
+                                                    <input name="WhatsappPhone" type="text" required id="WhatsappPhone" class="form-control valid" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 mb-10">
+                                            <div class="form-group">
+                                                <label for="NameEn" class="col-sm-5 control-label required">رقم الهاتف:</label>
+                                                <div class="col-sm-7">
+                                                    <input name="Phone" type="text" required id="Phone" class="form-control valid" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 mb-10">
+                                            <div class="form-group">
+                                                <label for="NameEn" class="col-sm-5 control-label required">العنوان:</label>
+                                                <div class="col-sm-7">
+                                                    <input name="Address" type="text" required id="Address" class="form-control valid" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @if (!User.IsInRole("HighAdmin") && !User.IsInRole("Accountant") && !User.IsInRole("LowAdmin"))
+                                        {
+                                            @*  <div class="col-lg-6 mb-10">
+                                                <div class="form-group">
+                                                    <label for="site" class="col-sm-5 control-label required">السيرفر:</label>
+                                                    <div class="col-sm-7">
+                                                        @Html.DropDownList(
+                                                                 "site",
+                                                                 new SelectList(Enum.GetValues(typeof(Site)).Cast<Site>().Select(s => new
+                                                                 {
+                                                                     Value = s,
+                                                                     Text = GetEnumDisplayName(s)
+                                                                 }), "Value", "Text", ViewBag.Site),
+                                                                 "-- اختر السيرفر --",
+                                                                 new { @class = "form-control", id = "site" }
+                                                                 )
+                                                    </div>
+                                                </div>
+                                            </div> *@
+                                        }
+                                        <hr>
+                                        <div class="col-lg-12 mb-10">
+                                            <h5 style="text-align:center"> في حالة ان المستخدم مندوب</h5>
+                                        </div>
+                                        <div class="col-lg-6 mb-10">
+                                            <div class="form-group">
+                                                <label for="NameEn" class="col-sm-5 control-label required">وجة  صورة البطاقة:</label>
+                                                <div class="col-sm-7">
+                                                    <input name="IdentityFrontPhoto" type="file" id="IdentityFrontPhoto" class="form-control valid" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 mb-10">
+                                            <div class="form-group">
+                                                <label for="NameEn" class="col-sm-5 control-label required">ضهر  صورة البطاقة:</label>
+                                                <div class="col-sm-7">
+                                                    <input name="IdentityBackPhoto" type="file" id="IdentityBackPhoto" class="form-control valid" />
+                                                </div>
+                                            </div>
+                                        </div> <div class="col-lg-6 mb-10">
+                                            <div class="form-group">
+                                                <label for="NameEn" class="col-sm-5 control-label required">   رخصة القيادة:</label>
+                                                <div class="col-sm-7">
+                                                    <input name="RidingLecencePhoto" type="file" id="RidingLecencePhoto" class="form-control valid" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 mb-10">
+                                            <div class="form-group">
+                                                <label for="NameEn" class="col-sm-5 control-label required">   رخصة المركبة :</label>
+                                                <div class="col-sm-7">
+                                                    <input name="ViecleLecencePhoto" type="file" id="ViecleLecencePhoto" class="form-control valid" />
+                                                </div>
+                                            </div>
+                                        </div><div class="col-lg-6 mb-10">
+                                            <div class="form-group">
+                                                <label for="NameEn" class="col-sm-5 control-label required">   فيش جنائي :</label>
+                                                <div class="col-sm-7">
+                                                    <input name="FishPhotoPhoto" type="file" id="FishPhotoPhoto" class="form-control valid" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-success">إضافة</button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            @if (@ViewBag.deleted == 0)
+            {
+                if (@ViewBag.q != "a")
+                {
+                    <a class="btn btn-info mb-5 mr-5" href="@Url.Action("PendingIndex","Users")">طلبات الاشتراك</a>
+                }
+                <a class="btn btn-danger mb-5 mr-5" href="@Url.Action("Index", "Users", new { q = ViewBag.q, deleted = true,BranchId=ViewBag.branch })"> المحذوفين</a>
+            }
+            else
+            {
+                <a class="btn btn-success mb-5 mr-5" href="@Url.Action("Index", "Users", new { q = ViewBag.q,BranchId=ViewBag.branch  })"> المتاحين</a>
+            }
+        }
+
+        <div class="row">
+            @if (!User.IsInRole("HighAdmin") && !User.IsInRole("Accountant"))
+            {
+                @using (Html.BeginForm("index", "Users", FormMethod.Get))
+                {
+                    <input hidden name="q" id="q" value="@ViewBag.q" />
+                    <input hidden name="deleted" id="deleted" value="@ViewBag.deleted" />
+                    <div class="form-group">
+                        <label for="StoreId">برجاء اختيار الفرع</label>
+                        <select name="BranchId" id="BranchId" class="select2 form-control">
+                            if (@temp == 0)
+                            {
+                            <option selected="selected" value="-1">جميع الفروع</option>
+                            }
+                            @foreach (var branch in branchs)
+                            {
+                                if (ViewBag.branch == branch.Id)
+                                {
+                                    <option selected="selected" value="@branch.Id">@branch.Name - @branch.Address</option>
+                                }
+                                else
+                                {
+                                    <option value="@branch.Id">@branch.Name - @branch.Address</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-info">اختيار</button>
+                }
+
+            }
+            <a href="@Url.Action("ExportToExecl","Users",new {spec=x})" class="btn btn-warning mb-5 mr-5">Export to excel</a>
+
+        </div>
+        <div class="table-responsive">
+            <table id="table2" cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th style="text-align:center ">النوع</th>
+                        <th style="text-align:center">الاسم </th>
+                        <th style="text-align:center">الفرع </th>
+                        @if (User.IsInRole("HighAdmin") || User.IsInRole("Accountant") || User.IsInRole("LowAdmin") || User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+                        {
+                            <th style="text-align:center ">الايميل</th>
+                        }
+                        <th style="text-align:center ">رقم الهاتف</th>
+                        <th style="text-align:center ">رقم الوتساب</th>
+                        <th style="text-align:center">العنوان</th>
+                        @if (ViewBag.r == 4)
+                        {
+                            <th style="text-align:center">السيرفر</th>
+                        }
+                        <th style="text-align:center ">التحكم</th>
+                    </tr>
+                </thead>
+                <tbody style="text-align:center">
+                    @foreach (var item in ViewBag.deleted == 1 ? Model.Where(x => x.IsDeleted).ToList() : Model)
+                    {
+                        <tr>
+                            <td>
+                                @if (item.UserType == PostexS.Models.Enums.UserType.Client)
+                                {
+                                    <span class="badge bg-green">راسل</span>
+                                }
+                                else if (item.UserType == PostexS.Models.Enums.UserType.Driver)
+                                {
+                                    <span class="badge bg-gray">مندوب</span>
+                                }
+                                else if (item.UserType == PostexS.Models.Enums.UserType.LowAdmin)
+                                {
+                                    <span class="badge bg-yellow">مشرف</span>
+                                }
+                                else if (item.UserType == PostexS.Models.Enums.UserType.HighAdmin)
+                                {
+                                    <span class="badge bg-orange">مشرف مميز</span>
+                                }
+                                else if (item.UserType == PostexS.Models.Enums.UserType.Admin)
+                                {
+                                    <span class="badge bg-red-gradient">مسؤول</span>
+                                }
+                                else if (item.UserType == PostexS.Models.Enums.UserType.Accountant)
+                                {
+                                    <span class="badge bg-blue-gradient">محاسب</span>
+                                }
+                            </td>
+                            <td>
+                                @item.Name
+                            </td>
+                            <td>
+                                @item.Branch.Name
+                            </td>
+                            @if (User.IsInRole("Accountant") || User.IsInRole("HighAdmin") || User.IsInRole("Accountant") || User.IsInRole("LowAdmin") || User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+                            {
+                                <td style="text-align:center ">@item.Email</td>
+                            }
+                            <td>
+                                @item.PhoneNumber
+                            </td>
+                            <td>
+                                @item.WhatsappPhone
+                            </td>
+                            <td>
+                                @item.Address
+                            </td>
+                            @if (ViewBag.r == 4)
+                            {
+                                @*   @switch (item.site)
+                                {
+                                    case Site.Domain:
+                                        <td><span class="server-status server-domain">السيرفر الاساسي</span></td>
+                                        break;
+                                    case Site.SubDomain1:
+                                        <td><span class="server-status server-subdomain1">السيرفر رقم 1</span></td>
+                                        break;
+                                    case Site.SubDomain2:
+                                        <td><span class="server-status server-subdomain2">السيرفر رقم 2</span></td>
+                                        break;
+                                    case Site.SubDomain3:
+                                        <td><span class="server-status server-subdomain3">السيرفر رقم 3</span></td>
+                                        break;
+                                    default:
+                                        <td><span class="server-status server-default">السيرفر الاساسي</span></td>
+                                        break;
+                                } *@
+                            }
+                            <td>
+                                @if (!item.IsDeleted)
+                                {
+                                    @if (User.IsInRole("Accountant"))
+                                    {
+                                        <a asp-action="CompletedWallet" asp-controller="Orders" asp-route-id="@item.Id" class="btn btn-success">تسويات العميل</a>
+                                    }
+                                    else
+                                    {
+                                        <a asp-action="Edit" asp-controller="users" asp-route-id="@item.Id" asp-route-type="@ViewBag.q">تعديل</a>
+                                        <span>|</span>
+                                        <a href="/users/ChangePassword?UserId=@item.Id&q=@ViewBag.q">تغيير كلمة السر</a>
+                                        <span>|</span>
+                                        @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+                                        {
+                                            <a onclick="Delete('/Users/Delete?id=@item.Id')">حذف</a>
+                                        }
+                                        @if (item.UserType == PostexS.Models.Enums.UserType.Driver)
+                                        {
+                                            <span>|</span>
+                                            <a target="_blank" asp-action="DriverStatistics" asp-controller="users" asp-route-id="@item.Id">إحصائيات المندوب</a>
+                                            <span>|</span>
+                                            <a asp-action="AssignOrders" asp-controller="users" asp-route-id="@item.Id">إضافة طلبات</a>
+                                            <span>|</span>
+
+                                            <a asp-action="PrintAllNew" asp-controller="Orders" asp-route-Driver="@item.Id">طباعة طلباته</a>
+                                            <span>|</span>
+                                            @if (User.IsInRole("HighAdmin"))
+                                            {
+                                                <a asp-action="FinshedOrders" class="btn btn-success" asp-controller="users" asp-route-id="@item.Id">تقفيل الطلبات</a>
+                                                <span>|</span>
+                                                <a asp-action="FinshedReturnedOrders" class="btn btn-danger" asp-controller="users" asp-route-id="@item.Id">تقفيل المرتجعات</a>
+                                                <span>|</span>
+                                            }     <a asp-action="Users" asp-controller="Orders" asp-route-id="@item.Id" asp-route-type="d">طلبات المندوب</a>
+
+                                        }
+                                        else if (item.UserType == PostexS.Models.Enums.UserType.Client)
+                                        {
+                                            <span>|</span>
+                                            <a target="_blank" asp-action="Statistics" asp-controller="users" asp-route-id="@item.Id">إحصائيات الراسل</a>
+                                            <span>|</span>
+                                            <a asp-action="Users" asp-controller="Orders" asp-route-id="@item.Id" asp-route-type="c">طلبات العميل</a>
+                                            <span>|</span>
+                                            <a asp-action="CompletedWallet" asp-controller="Orders" asp-route-id="@item.Id">تسويات العميل</a>
+                                            <span>|</span>
+                                            <a asp-action="CompletedReturnedWallet" asp-controller="Orders" asp-route-id="@item.Id" class="btn btn-danger" style="margin-top: 5px;">تسويات المرتجعات</a>
+                                            <a asp-action="createOrders" asp-controller="Users" asp-route-id="@item.Id" class="btn btn-warning" style="margin-top: 5px;">إضافة طلبات</a>
+                                            <a asp-action="AcceptOrders" asp-controller="Users" asp-route-id="@item.Id" class="btn btn-success" style="margin-top: 5px;"> الطلبات المعلقة</a>
+                                        }
+                                        @if ((User.IsInRole("Admin") || User.IsInRole("TrustAdmin")) && (item.UserType == PostexS.Models.Enums.UserType.HighAdmin || item.UserType == PostexS.Models.Enums.UserType.Admin || item.UserType == PostexS.Models.Enums.UserType.Accountant))
+                                        {
+                                            <span>|</span>
+                                            <a asp-action="Wallet" asp-controller="users" asp-route-id="@item.Id">المحفظة</a>
+                                            @* <a asp-action="TestWallet" asp-controller="users" asp-route-id="@item.Id">المحفظة</a> *@
+                                        }
+
+                                        @if (ViewBag.r == 1)
+                                        {
+                                            <span>|</span>
+                                            <a asp-action="PrintClientOrders" asp-controller="Orders" asp-route-Id="@item.Id">بيان التحميل</a>
+                                        }
+                                    }
+                                    @if (item.Latitude != null && item.Longitude != null && item.Tracking)
+                                    {
+                                        <span>|</span>
+                                        <a target="_blank" href="https://www.google.com/maps/search/?api=1&query=@item.Latitude,@item.Longitude" class="btn btn-outline-primary" title="مشاهده السائق على خريطه جوجل">مشاهده السائق على خريطه جوجل</a>
+                                        <span>|</span>
+                                        <a asp-action="TrackingList" asp-controller="users" asp-route-id="@item.Id">مشاهده خط السير للمندوب</a>
+                                    }
+                                }
+                                else
+                                {
+                                    <a onclick="Resotre('/Users/Delete?id=@item.Id')">إستعاده</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@functions {
+    public string GetEnumDisplayName(Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attribute = field.GetCustomAttributes(typeof(DisplayAttribute), false).FirstOrDefault() as DisplayAttribute;
+        return attribute != null ? attribute.Name : value.ToString();
+    }
+}
+<script>
+    function Delete(url) {
+        swal({
+            title: "هل متأكد؟",
+            text: "عند مسح هذا المستخدم سوف يتم نقله إلى المستخدمين المحذوفين",
+            icon: "warning",
+            dangerMode: true
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "Get",
+                    url: url,
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setInterval('location.reload()', 2500);
+                        }
+                        else {
+                            toastr.error(data.message);
+                        }
+                    }
+                })
+            }
+        })
+    }
+    function Resotre(url) {
+        swal({
+            title: "هل متأكد؟",
+            text: "هل تريد استراجع هذا المستخدم مرة أخرى",
+            icon: "success"
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "Get",
+                    url: url,
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setInterval('location.reload()', 2500);
+                        }
+                        else {
+                            toastr.error(data.message);
+                        }
+                    }
+                })
+            }
+        })
+    }
+</script>
+<script>
+    $(document).ready(function () {
+        $('#table2').DataTable({
+            "pageLength": 50, // عدد العناصر المعروضة افتراضيًا
+            "language": {
+                "lengthMenu": "عرض _MENU_ عناصر لكل صفحة",
+                "zeroRecords": "لا توجد نتائج",
+                "info": "عرض صفحة _PAGE_ من _PAGES_",
+                "infoEmpty": "لا توجد بيانات",
+                "infoFiltered": "(تمت التصفية من _MAX_ إجمالي السجلات)",
+                "search": "بحث:",
+                "paginate": {
+                    "next": "التالي",
+                    "previous": "السابق"
+                }
+            }
+        });
+    });
+</script>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

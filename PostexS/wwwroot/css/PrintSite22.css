@@ -1,0 +1,150 @@
+﻿@media print {
+    /* إخفاء العناصر التي لا يجب طباعتها */
+    .no-print {
+        display: none;
+    }
+
+    /* ضمان أن الجدول يستخدم العرض الكامل ويضيق الحدود */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: auto; /* يضمن التوسع حسب المحتوى */
+    }
+
+    /* تكرار رؤوس الجدول في كل صفحة مطبوعة */
+    thead {
+        display: table-header-group;
+    }
+
+    /* تنسيق رؤوس الجدول والخلايا */
+    th, td {
+        border: 1px solid black;
+        padding: 5px;
+        font-size: 12px; /* تعديل حجم الخط لتحسين العرض */
+        overflow: hidden; /* منع تجاوز النص */
+        text-overflow: ellipsis; /* إظهار النقاط إذا كان النص أطول */
+        text-align: center;
+    }
+
+    /* تخصيص عرض الأعمدة بحد أدنى مع السماح بالتوسع حسب المحتوى */
+    .status-column {
+        min-width: 8%; /* حد أدنى لعرض العمود */
+        white-space: nowrap; /* منع التفاف النص */
+    }
+
+    .order-code-column {
+        min-width: 10%; /* زيادة العرض */
+        white-space: nowrap;
+        text-overflow: clip;
+    }
+
+    .sender-name-column {
+        min-width: 10%; /* السماح بزيادة العرض */
+        white-space: nowrap;
+    }
+
+    .recipient-data-column {
+        min-width: 15%;
+        white-space: normal;
+        word-wrap: break-word; /* لف النص عند الضرورة */
+    }
+
+    .paid-column {
+        min-width: 8%;
+        white-space: nowrap;
+        text-overflow: clip;
+    }
+
+    .sender-percentage-column {
+        min-width: 10%; /* زيادة العرض */
+        white-space: nowrap;
+        text-overflow: clip;
+    }
+
+    .delegate-column {
+        min-width: 12%;
+        white-space: nowrap;
+    }
+
+    .notes-column {
+        min-width: 16%;
+        white-space: normal;
+        word-wrap: break-word;
+    }
+
+    /* منع تقسيم الصفوف عبر الصفحات */
+    tr {
+        page-break-inside: avoid;
+    }
+
+    /* منع قص الجدول بواسطة الحاوية */
+    .table-responsive {
+        overflow: visible !important;
+    }
+
+    /* منع قطع محتوى اللوحة */
+    .panel-body {
+        page-break-inside: avoid;
+    }
+
+    /* التحكم في التفاف النص */
+    td {
+        white-space: normal; /* السماح بلف النص حيثما يسمح */
+        overflow: visible; /* منع تجاوز النص */
+        text-overflow: clip; /* عرض النص بالكامل دون النقاط */
+    }
+
+    /* ضبط الهوامش */
+    @page {
+        margin: 1cm; /* يمكن تعديل الهوامش حسب الحاجة */
+    }
+
+    /* تحسين الطباعة للألوان والخطوط */
+    body {
+        -webkit-print-color-adjust: exact;
+        font-family: Arial, sans-serif;
+    }
+
+    /* ضمان عرض الشارات والعناصر الداخلية بشكل صحيح */
+    .badge {
+        display: inline-block;
+        padding: 2px 6px;
+        font-size: 10px;
+        border-radius: 4px;
+    }
+
+    /* منع تقسيم الكلمات في الأعمدة المهمة */
+    .status-column,
+    .order-code-column,
+    .sender-name-column,
+    .paid-column,
+    .recipient-data-column,
+    .sender-percentage-column,
+    .delegate-column {
+        word-break: keep-all; /* منع تقسيم الكلمات */
+    }
+
+  
+}
+
+
+/* تخصيص تنسيق معلومات المندوب */
+.delegate-info {
+    white-space: nowrap; /* منع التفاف النصوص */
+    overflow: hidden; /* إخفاء النصوص التي تتجاوز الحدود */
+    text-overflow: ellipsis; /* إظهار النقاط (...) إذا كان النص أطول من العرض */
+}
+
+/* تخصيص رقم الهاتف */
+.phone-number {
+    white-space: nowrap; /* منع التفاف النصوص */
+    overflow: hidden; /* إخفاء النصوص التي تتجاوز الحدود */
+    text-overflow: ellipsis; /* إظهار النقاط (...) إذا كان النص أطول من العرض */
+}
+
+/* تخصيص تنسيق hr ليمتد بعرض العمود بالكامل */
+.full-width-hr {
+    border: 0;
+    border-top: 1px solid #000;
+    margin: 5px 0; /* إضافة بعض الهوامش العلوية والسفلية */
+}

@@ -1,0 +1,25 @@
+﻿/*@media print {
+    .box-body {
+        page-break-inside: avoid;
+    }
+
+    .no-print {
+        display: none;
+    }
+
+    .box-header {
+        display: none;
+    }
+
+    .box {
+        margin: 10mm;
+    }
+}
+*/
+@media print {
+    .box-body {
+        page-break-inside: avoid;
+        width: 100%;
+        height: 95%;
+    }
+}

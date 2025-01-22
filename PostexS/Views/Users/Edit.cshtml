@@ -1,0 +1,307 @@
+﻿@using PostexS.Models.Enums
+@using System.ComponentModel.DataAnnotations
+@model PostexS.Models.Domain.ApplicationUser
+@{
+    ViewBag.Title = "تعديل المستخدم  " + Model.Name;
+    var branchs = ViewBag.Branchs as List<PostexS.Models.Domain.Branch>;
+}
+<style>
+    .form-group {
+        display: flex;
+        align-items: center;
+    }
+
+        .form-group label {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+    .button-group {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+        .button-group button {
+            flex: 1;
+            margin: 0 5px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            cursor: pointer;
+        }
+
+            .button-group button:hover {
+                background-color: #ddd;
+            }
+
+            .button-group button.active {
+                background-color: #bdb133;
+                color: white;
+            }
+
+            .button-group button:first-child {
+                border-top-left-radius: 5px;
+                border-bottom-left-radius: 5px;
+            }
+
+            .button-group button:last-child {
+                border-top-right-radius: 5px;
+                border-bottom-right-radius: 5px;
+            }
+</style>
+<h1 class="text-center mb-30">@ViewBag.Title</h1>
+@Html.ValidationSummary(false, "", new { @class = "text-danger" })
+@using (Html.BeginForm("Edit", "Users", FormMethod.Post, new { enctype = "multipart/form-data" }))
+{
+    <input name="type" value="@ViewBag.q" hidden />
+    @Html.HiddenFor(d => d.Id)
+    @Html.HiddenFor(d => d.UserType)
+    @* @Html.HiddenFor(d => d.site) *@
+    @Html.AntiForgeryToken()
+    <div class="row" style="margin:10px;">
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">الاسم:</label>
+                <div class="col-sm-7">
+                    <input asp-for="Name" type="text" required id="Name" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">اسم الفرع:</label>
+                <div class="col-sm-7">
+                    <select asp-for="BranchId" name="BranchId" id="BranchId" class="select2 form-control">
+                        @foreach (var branch in branchs)
+                        {
+                            if (Model.BranchId == branch.Id)
+                            {
+                                <option selected="selected" value="@branch.Id">@branch.Name - @branch.Address</option>
+                            }
+                            else
+                            {
+                                <option value="@branch.Id">@branch.Name - @branch.Address</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">الايميل:</label>
+                <div class="col-sm-7">
+                    <input asp-for="Email" type="email" required id="Email" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">رقم الوتساب:</label>
+                <div class="col-sm-7">
+                    <input asp-for="WhatsappPhone" type="text" required id="Instgram" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">رقم الهاتف:</label>
+                <div class="col-sm-7">
+                    <input asp-for="PhoneNumber" type="text" required id="WhatsApp" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">العنوان:</label>
+                <div class="col-sm-7">
+                    <input asp-for="Address" type="text" required id="WhatsApp" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        @if (ViewBag.q == "a")
+        {
+           @*  <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="site" class="col-sm-5 control-label required">السيرفر:</label>
+                    <div class="col-sm-7">
+                        @Html.DropDownListFor(
+                                 model => model.site,  // Assuming your model has a 'Site' property
+                                 new SelectList(Enum.GetValues(typeof(Site)).Cast<Site>().Select(s => new
+                                 {
+                                     Value = s,
+                                     Text = GetEnumDisplayName(s)
+                                 }), "Value", "Text"),
+                                 "-- اختر السيرفر --", // Optional default prompt
+                                 new { @class = "form-control", id = "site" } // HTML attributes
+                                 )
+                    </div>
+                </div>
+            </div> *@
+        }
+        @if (Model.UserType == PostexS.Models.Enums.UserType.Client)
+        {
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="OrdersGeneralNote" class="col-sm-5 control-label required">ملاحظة عامة للطلبات : </label>
+                    <div class="col-sm-7">
+                        @* @Html.TextArea("OrdersGeneralNote", htmlAttributes: new { @class = "form-control", rows = 7 }) *@
+                        @Html.TextAreaFor(model => model.OrdersGeneralNote, new { @class = "form-control", rows = 7 })
+                    </div>
+                </div>
+            </div>
+        }
+        @if (Model.UserType == PostexS.Models.Enums.UserType.Driver)
+        {
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required">تكلفة التوصيل :</label>
+                    <div class="col-sm-7">
+                        <input asp-for="DeliveryCost" type="number" min="0" id="DeliveryCost" class="form-control valid" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="Tracking" class="col-sm-5 control-label required">تتبع المندوب :</label>
+                    <div class="col-sm-7">
+                        <div class="button-group">
+                            <button type="button" id="yesButton" onclick="selectYes()">نعم</button>
+                            <button type="button" id="noButton" onclick="selectNo()">لا</button>
+                        </div>
+                        <input type="hidden" id="Tracking" name="Tracking" value="@Model.Tracking.ToString().ToLower()" />
+                    </div>
+                </div>
+            </div>
+            <hr>
+            <div class="col-lg-12"></div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required">وجة صورة البطاقة:</label>
+                    <div class="col-sm-7">
+                        <input name="IdentityFrontPhoto" type="file" id="IdentityFrontPhoto" class="form-control valid" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required">وجة صورة البطاقة:</label>
+                    <div class="col-sm-7">
+                        <img src="/Images/Users/@Model.IdentityFrontPhoto" style="width:10rem" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required">ضهر صورة البطاقة:</label>
+                    <div class="col-sm-7">
+                        <input name="IdentityBackPhoto" type="file" id="IdentityBackPhoto" class="form-control valid" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required">ضهر  صورة البطاقة:</label>
+                    <div class="col-sm-7">
+                        <img src="/Images/Users/@Model.IdentityBackPhoto" style="width:10rem" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required">   رخصة القيادة:</label>
+                    <div class="col-sm-7">
+                        <input name="RidingLecencePhoto" type="file" id="RidingLecencePhoto" class="form-control valid" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required"> رخصة القيادة:</label>
+                    <div class="col-sm-7">
+                        <img src="/Images/Users/@Model.RidingLecencePhoto" style="width:10rem" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required">   رخصة المركبة :</label>
+                    <div class="col-sm-7">
+                        <input name="ViecleLecencePhoto" type="file" id="ViecleLecencePhoto" class="form-control valid" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required"> رخصة المركبة:</label>
+                    <div class="col-sm-7">
+                        <img src="/Images/Users/@Model.ViecleLecencePhoto" style="width:10rem" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required">   فيش جنائي :</label>
+                    <div class="col-sm-7">
+                        <input name="FishPhotoPhoto" type="file" id="FishPhotoPhoto" class="form-control valid" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required">  فيش جنائي:</label>
+                    <div class="col-sm-7">
+                        <img src="/Images/Users/@Model.FishPhotoPhoto" style="width:10rem" />
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="row" style="margin:10px;">
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required"></label>
+                <div class="col-sm-7">
+                    <button style="text-align:center !important" type="submit" class="btn btn-success">تعديل</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@functions {
+    public string GetEnumDisplayName(Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attribute = field.GetCustomAttributes(typeof(DisplayAttribute), false).FirstOrDefault() as DisplayAttribute;
+        return attribute != null ? attribute.Name : value.ToString();
+    }
+}
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function selectYes() {
+            document.getElementById('Tracking').value = 'true';
+            document.getElementById('yesButton').classList.add('active');
+            document.getElementById('noButton').classList.remove('active');
+        }
+
+        function selectNo() {
+            document.getElementById('Tracking').value = 'false';
+            document.getElementById('noButton').classList.add('active');
+            document.getElementById('yesButton').classList.remove('active');
+        }
+
+        // Set initial state based on Tracking value
+        document.addEventListener('DOMContentLoaded', function () {
+            var trackingValue = document.getElementById('Tracking').value;
+            if (trackingValue === 'true') {
+                selectYes();
+            } else {
+                selectNo();
+            }
+        });
+    </script>
+}

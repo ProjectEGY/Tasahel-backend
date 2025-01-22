@@ -1,0 +1,139 @@
+﻿@model PostexS.Models.Domain.Branch
+@{
+    ViewBag.Title = "تعديل فرع " ;
+}
+
+<h1 class="text-center mb-30">@ViewBag.Title</h1>
+@Html.ValidationSummary(false, "", new { @class = "text-danger" })
+@using (Html.BeginForm("Edit", "Branchs", FormMethod.Post, new { enctype = "multipart/form-data" }))
+{
+@Html.HiddenFor(d=>d.CreateOn)
+@Html.HiddenFor(d=>d.DeletedOn)
+@Html.HiddenFor(d=>d.Id)
+@Html.HiddenFor(d=>d.IsDeleted)
+@Html.HiddenFor(d=>d.IsModified)
+@Html.HiddenFor(d=>d.ModifiedOn)
+        @Html.HiddenFor(d=>d.Latitude)
+      @Html.HiddenFor(d=>d.Longitude)
+@Html.AntiForgeryToken()
+<div class="row" style="margin:10px;">
+    <div class="col-lg-6 mb-10">
+        <div class="form-group">
+            <label for="NameEn" class="col-sm-5 control-label required">اسم الفرع:</label>
+            <div class="col-sm-7">
+                <input asp-for="Name" type="text" required id="FaceBook" class="form-control valid" />
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-10">
+        <div class="form-group">
+            <label for="NameEn" class="col-sm-5 control-label required">العنوان:</label>
+            <div class="col-sm-7">
+                <input asp-for="Address" type="text" required id="Twitter" class="form-control valid" />
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-10">
+        <div class="form-group">
+            <label for="NameEn" class="col-sm-5 control-label required">رقم الوتساب:</label>
+            <div class="col-sm-7">
+                <input asp-for="Whatsapp" type="text" required id="Instgram" class="form-control valid" />
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-10">
+        <div class="form-group">
+            <label for="NameEn" class="col-sm-5 control-label required">رقم الهاتف:</label>
+            <div class="col-sm-7">
+                <input asp-for="PhoneNumber" type="text" required id="WhatsApp" class="form-control valid" />
+            </div>
+        </div>
+    </div>
+</div>
+  <div class="row" style="margin:10px;">
+                                <input id="Addresss" name="Addresss"
+                                       class="controls form-control"
+                                       style="text-align:center"
+                                       type="text" 
+                                       placeholder="برجاء أدخال موقع المتجر" />
+                                <div id="map" style="width:100% ; height:400px;"></div>
+                            </div>
+<div class="row" style="margin:10px;">
+    <div class="col-lg-6 mb-10">
+        <div class="form-group">
+            <label for="NameEn" class="col-sm-5 control-label required"></label>
+            <div class="col-sm-7">
+                <button style="text-align:center !important" type="submit" class="btn btn-success">تعديل</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+ }
+@section Scripts{
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCSOoFAB-bipL5HnpDoUGQ_mv97-HnjkMc&callback=initAutocomplete&libraries=places&v=weekly"
+            defer></script>
+    <script>
+        "use strict";
+        function initAutocomplete() {
+            const map = new google.maps.Map(document.getElementById("map"), {
+                center: {
+                    lat: 26.638744414485046,
+                    lng: 29.634362261560685
+                },
+                zoom: 7,
+                mapTypeId: "roadmap"
+            }); // Create the search box and link it to the UI element.
+
+            const input = document.getElementById("Addresss");
+            const searchBox = new google.maps.places.SearchBox(input);
+            map.controls[google.maps.ControlPosition.TOP_LEFT].push(input); // Bias the SearchBox results towards current map's viewport.
+
+            map.addListener("bounds_changed", () => {
+                searchBox.setBounds(map.getBounds());
+            });
+            let marker;
+            searchBox.addListener("places_changed", () => {
+                const places = searchBox.getPlaces();
+
+                if (places.length == 0) {
+                    return;
+                }
+                const bounds = new google.maps.LatLngBounds();
+                places.forEach(place => {
+                    if (!place.geometry) {
+                        console.log("Returned place contains no geometry");
+                        return;
+                    }
+                    marker = new google.maps.Marker({
+                        map,
+                        title: place.name,
+                        position: place.geometry.location,
+                        draggable: true
+                    });
+
+                    google.maps.event.addListener(marker, 'dragend', (function (marker) {
+                        return function () {
+                            $("#Latitude").val(marker.getPosition().lat());
+                            $("#Longitude").val(marker.getPosition().lng());
+                        }
+                    })(marker));
+
+                    $("#Latitude").val(marker.getPosition().lat());
+                    $("#Longitude").val(marker.getPosition().lng());
+                    if (place.geometry.viewport) {
+                        // Only geocodes have viewport.
+                        bounds.union(place.geometry.viewport);
+                    } else {
+                        bounds.extend(place.geometry.location);
+                    }
+                });
+                map.fitBounds(bounds);
+            });
+        }
+    </script>
+}

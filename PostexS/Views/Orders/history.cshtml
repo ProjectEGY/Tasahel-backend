@@ -1,0 +1,327 @@
+﻿@using PostexS.Models.ViewModels
+@model PostexS.Models.Domain.OrderOperationHistory
+
+@{
+    Layout = null;
+    var transferrHistories = ViewBag.transferrHistories as List<TransferrHistory>;
+    int count = 1;
+}
+<!-- ClientSide Validation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.1/jquery.validate.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.11/jquery.validate.unobtrusive.min.js"></script>
+
+<!-- Start Styling -->
+<style>
+    .modal-content {
+        background-color: #f9f9f9;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+    }
+
+    .modal-header {
+        border-bottom: 0px solid #ccc;
+        margin-bottom: 20px;
+    }
+
+    .modal-body h2 {
+        color: #1b3249;
+        font-weight: bold;
+        font-size: 24px;
+        margin-bottom: 20px;
+    }
+
+    .form-group h4 {
+        color: #506c8c;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    .form-group label {
+        font-size: 16px;
+        color: #333;
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+        .custom-table th,
+        .custom-table td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ccc;
+        }
+
+        .custom-table th {
+            background-color: #f4c23a;
+            color: #1b3249;
+            font-weight: bold;
+        }
+
+        .custom-table td {
+            background-color: #fff;
+        }
+
+    .modal-footer {
+        text-align: right;
+    }
+
+    .btn-info-model {
+        background-color: #1b3249;
+        color: white;
+        border-radius: 5px;
+        padding: 10px 20px;
+        font-size: 16px;
+        font-weight: bold;
+        border: none;
+        transition: background-color 0.3s;
+    }
+
+        .btn-info-model:hover {
+            background-color: #506c8c;
+        }
+
+    .close i {
+        font-size: 24px; /* Adjust size */
+        color: #333; /* Change color */
+    }
+
+        .close i:hover {
+            color: #f4c23a; /* Hover color */
+        }
+
+
+    .operation-details {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: 15px;
+    }
+
+        .operation-details label {
+            margin-left: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+</style><!-- End Styling -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<div class="modal-content">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+    </div>
+    <div class="modal-body" style="padding:0px!important;">
+
+        @if (Model != null)
+        {
+            <div class="panel">
+                <h2 class="text-center">عمليات الطلب : <kbd>@(Model.Order.Code)</kbd></h2>
+            </div>
+            <div class="panel-body">
+                <!-- جدول عمليات الطلب -->
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>العملية</th>
+                            <th>القائم بالعملية</th>
+                            <th>التاريخ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Create_UserId != null)
+                        {
+                            <tr>
+                                <td>إنشاء الطلب</td>
+                                <td>@(Model.Create_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.CreateDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.Accept_UserId != null)
+                        {
+                            <tr>
+                                <td>الموافقة على الطلب</td>
+                                <td>@(Model.Accept_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.AcceptDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.Reject_UserId != null)
+                        {
+                            <tr>
+                                <td>رفض الطلب</td>
+                                <td>@(Model.Reject_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.RejectDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.Edit_UserId != null)
+                        {
+                            <tr>
+                                <td>تعديل الطلب</td>
+                                <td>@(Model.Edit_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.EditDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.Delete_UserId != null)
+                        {
+                            <tr>
+                                <td>حذف الطلب</td>
+                                <td>@(Model.Delete_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.DeleteDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.Restore_UserId != null)
+                        {
+                            <tr>
+                                <td>استعادة الطلب</td>
+                                <td>@(Model.Restore_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.RestoreDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.Transfer_UserId != null)
+                        {
+                            <tr>
+                                <td>اخر تحويل للطلب</td>
+                                <td>@(Model.Transfer_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.TransferDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.AcceptTransfer_UserId != null)
+                        {
+                            <tr>
+                                <td>تأكيد اخر تحويل للطلب</td>
+                                <td>@(Model.AcceptTransfer_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.AcceptTransferDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+
+                        @if (Model.Assign_To_Driver_UserId != null)
+                        {
+                            <tr>
+                                <td>تحميل الطلب علي مندوب</td>
+                                <td>@(Model.Assign_To_Driver_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.Assign_To_DriverDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.Finish_UserId != null)
+                        {
+                            <tr>
+                                <td>تقفيل الطلب</td>
+                                <td>@(Model.Finish_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.FinishDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.Complete_UserId != null)
+                        {
+                            <tr>
+                                <td>تسوية الطلب</td>
+                                <td>@(Model.Complete_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.CompleteDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.ReturnedFinish_UserId != null)
+                        {
+                            <tr>
+                                <td>تقفيل المرتجع</td>
+                                <td>@(Model.Finish_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.FinishDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.ReturnedComplete_UserId != null)
+                        {
+                            <tr>
+                                <td>تسوية المرتجع</td>
+                                <td>@(Model.Complete_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.CompleteDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.EditComplete_UserId != null)
+                        {
+                            <tr>
+                                <td>تعديل تسوية الطلب</td>
+                                <td>@(Model.EditComplete_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.EditCompleteDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.TransferReturned_UserId != null)
+                        {
+                            <tr>
+                                <td>تحويل المرتجع</td>
+                                <td>@(Model.TransferReturned_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.TransferReturnedDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                        @if (Model.AcceptTransferReturned_UserId != null)
+                        {
+                            <tr>
+                                <td>تأكيد تحويل المرتجع</td>
+                                <td>@(Model.AcceptTransferReturned_User.Name)</td>
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(Model.AcceptTransferReturnedDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <!-- عرض التحويلات في جدول -->
+                @if (transferrHistories != null && transferrHistories.Count > 0)
+                {
+                    <h4 class="text-center">تفاصيل التحويلات</h4>
+                    <div class="table-responsive">
+                        <table class="custom-table" style="font-size:11px;">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>الحاله</th>
+                                    <th>من الفرع</th>
+                                    <th>إلى الفرع</th>
+                                    <th>قام بالتحويل</th>
+                                    <th>تاريخ التحويل</th>
+                                    <th>قام بتأكيد الاستلام</th>
+                                    <th>تاريخ تأكيد الاستلام</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var history in transferrHistories)
+                                {
+                                    <tr>
+                                        <td>@(count++)</td>
+                                        @if (history.TransferCancel)
+                                        {
+                                            <td>تم الإلغاء</td>
+                                        }
+                                        else if (history.AcceptTransfer_UserName == null)
+                                        {
+                                            <td>لم يتم تأكيد التحويل</td>
+                                        }
+                                        else if (history.AcceptTransfer_UserName != null)
+                                        {
+                                            <td>تم تأكيد التحويل</td>
+                                        }
+                                        <td>@history.FromBranchName</td>
+                                        <td>@history.ToBranchName</td>
+                                        <td>@history.Transfer_UserName</td>
+                                        <td>@TimeZoneInfo.ConvertTimeFromUtc(history.TransferDate, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)</td>
+                                        <td>@(history.AcceptTransfer_UserName != null ? history.AcceptTransfer_UserName : "ـــ")</td>
+                                        <td>@(history.AcceptTransferDate.HasValue ? TimeZoneInfo.ConvertTimeFromUtc(history.AcceptTransferDate.Value, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")).ToString("dd/MM/yyyy hh:mm tt", System.Globalization.CultureInfo.InvariantCulture) : "ـــ")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+            </div>
+        }
+        else
+        {
+            <h2 class="text-center">لا توجد عمليات للطلب رقم @(": " + (Model.Order.Code).ToString()) </h2>
+        }
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-info-model" data-dismiss="modal">اغلاق</button>
+    </div>
+</div>

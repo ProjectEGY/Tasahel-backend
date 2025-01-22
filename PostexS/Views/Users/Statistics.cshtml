@@ -1,0 +1,270 @@
+﻿@model PostexS.Models.ViewModels.DriverStatisticsVM
+@{
+}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
+
+    .panel {
+        margin-top: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+    }
+
+    .panel-heading {
+        background-color: #007bff;
+        color: white;
+        padding: 20px;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        font-size: 1.5em;
+    }
+
+    .panel-title {
+        margin: 0;
+    }
+
+    .stat-value {
+        font-size: 2.5em;
+        font-weight: bold;
+        color: #007bff;
+        margin-bottom: 10px;
+    }
+
+    .percentage {
+        font-size: 1.2em;
+        color: #28a745;
+    }
+
+    .panel-body {
+        padding: 30px;
+    }
+
+    .stat-card {
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s;
+        background-color: #ffffff;
+        padding: 20px;
+        min-height: 200px; /* حدد ارتفاع ثابت */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+        .stat-card:hover {
+            transform: translateY(-7px);
+            background-color: #79ff87;
+        }
+
+        .stat-card .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .sub-title {
+            font-size: 1.2em;
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        .stat-card hr {
+            border-top: 1px solid #eeeeee;
+            margin: 20px 0;
+        }
+
+        .stat-card .d-flex {
+            display: flex;
+            justify-content: space-between;
+        }
+
+            .stat-card .d-flex div {
+                flex: 1;
+                text-align: center;
+            }
+
+            .stat-card .d-flex .stat-value {
+                font-size: 2em;
+                margin-bottom: 5px;
+            }
+
+    .mt-4 {
+        margin-top: 1.5rem !important;
+    }
+
+</style>
+
+<div class="container">
+    <div class="panel panel-primary">
+        <div class="panel-heading">
+            <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> @ViewBag.Title</h3>
+        </div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card stat-card text-center">
+                        <div class="card-body">
+                            <div class="stat-value">@Model.CurrentOrdersCount</div>
+                            <div>الطلبات الحالية</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card text-center">
+                        <div class="card-body">
+                            <div class="stat-value">@Model.DeliveredCount</div>
+                            <div class="sub-title">الطلبات المستلمة</div>
+                            <div class="percentage">(@Model.DeliveredPercentage.ToString("0.00")%)</div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="stat-value">@Model.DeliveredFinishedCount</div>
+                                    <div class="sub-title">تم تقفيلها </div>
+                                </div>
+                                <div>
+                                    <div class="stat-value">@(Model.DeliveredCount - Model.DeliveredFinishedCount)</div>
+                                    <div class="sub-title">لم يتم التقفيل</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card text-center">
+                        <div class="card-body">
+                            <div class="stat-value">@Model.RejectedCount</div>
+                            <div>الطلبات المرفوضة</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="card stat-card text-center">
+                        <div class="card-body">
+                            <div class="stat-value">@Model.PartialDeliveredCount</div>
+                            <div class="sub-title">الطلبات المستلمة جزئياً</div>
+                            <div class="percentage">(@Model.PartialDeliveredPercentage.ToString("0.00")%)</div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="stat-value">@Model.PartialReturned_ReceivedCount</div>
+                                    <div class="sub-title">تم تسليم المرتجع </div>
+                                </div>
+                                <div>
+                                    <div class="stat-value">@(Model.PartialDeliveredCount - Model.PartialReturned_ReceivedCount)</div>
+                                    <div class="sub-title">لم يتم تسليم المرتجع</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card text-center">
+                        <div class="card-body">
+                            <div class="stat-value">@Model.WaitingCount</div>
+                            <div class="sub-title">الطلبات المؤجله</div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="stat-value">@Model.Returned_ReceivedCount</div>
+                                    <div class="sub-title">تم التسليم للفرع </div>
+                                </div>
+                                <div>
+                                    <div class="stat-value">@(Model.ReturnedCount - Model.Returned_ReceivedCount)</div>
+                                    <div class="sub-title">لم يتم التسليم</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card text-center">
+                        <div class="card-body">
+                            <div class="stat-value">@Model.ReturnedCount</div>
+                            <div class="sub-title">إجمالي المرتجعات الكامله</div>
+                            <div class="percentage">(@Model.ReturnedPercentage.ToString("0.00")%)</div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="stat-value">@Model.Returned_ReceivedCount</div>
+                                    <div class="sub-title">تم التسليم للفرع </div>
+                                </div>
+                                <div>
+                                    <div class="stat-value">@(Model.ReturnedCount - Model.Returned_ReceivedCount)</div>
+                                    <div class="sub-title">لم يتم التسليم</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="card stat-card text-center">
+                        <div class="card-body">
+                            <div class="stat-value">@Model.AllOrdersCount</div>
+                            <div>إجمالي الطلبات</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card text-center">
+                        <div class="card-body">
+                            <div class="stat-value">@Model.OrdersMoney ج</div>
+                            <div>إجمالي المبلغ</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card text-center">
+                        <div class="card-body">
+                            <div class="stat-value">@Model.DriverMoney ج</div>
+                            <div>نسبة المندوب</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <canvas id="ordersChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var count = @Model.AllOrdersCount
+                                                                    var ctx = document.getElementById('ordersChart').getContext('2d');
+    var ordersChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['الطلبات الحاليه', 'طلبات تم التوصيل', 'طلبات مرفوضه', 'طلبات تسليم جزئي', 'طلبات مؤجله', 'طلبات مرتجعه'],
+            datasets: [{
+                label: 'جميع الطلبات: ' + count,
+                data: [@Model.CurrentOrdersCount, @Model.DeliveredCount, @Model.RejectedCount, @Model.PartialDeliveredCount, @Model.WaitingCount, @Model.ReturnedCount],
+                backgroundColor: [
+                    '#007bff',
+                    '#28a745',
+                    '#dc3545',
+                    '#ffc107',
+                    '#17a2b8',
+                    '#6c757d'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>

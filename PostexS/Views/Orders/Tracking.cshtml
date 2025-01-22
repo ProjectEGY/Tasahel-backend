@@ -1,0 +1,126 @@
+﻿@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تتبع شحنتك</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <link href="~/Start/images/TasahelExpress.png" type="image/png" rel="icon">
+    <link href="~/Start/images/TasahelExpress.png" type="image/png" rel="apple-touch-icon">
+    <!-- Add your other stylesheets and scripts here -->
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #fffbf1;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #f39c12;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px;
+            box-sizing: border-box;
+            border: 1px solid #f39c12;
+            border-radius: 5px;
+            font-size: 18px;
+        }
+
+        .search-btn {
+            margin-left: 10px;
+            padding: 15px 20px; /* Adjust padding for a better look */
+            background-color: #f39c12;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        #orderDetails {
+            text-align: center;
+            margin-top: 20px;
+            border: 1px solid #f39c12;
+            padding: 20px;
+            border-radius: 5px;
+            background-color: #fff8e1;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        @*<h1>تتبع الطلبات</h1>*@
+        <img src="~/Start/images/TasahelExpress.png" alt="Logo" style="height: 350px; width: 100%;margin-bottom: 15px;">
+
+        <div class="form-group">
+            <div class="input-group">
+                <input type="text" class="form-control search-input" id="orderNumber" placeholder="رقم الطلب" name="orderNumber" onkeypress="return handleEnter(event)">
+                <button class="search-btn" onclick="searchOrder()">
+                    بحث
+                </button>
+            </div>
+        </div>
+
+        <div id="orderDetails" style=" border-width: thick;" class="text-center">
+            <!-- تفاصيل الطلب ستظهر هنا -->
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script>
+        function searchOrder() {
+            var orderNumber = $('#orderNumber').val();
+            $.ajax({
+                url: '/Orders/SearchOrder',
+                type: 'Get',
+                data: { orderNumber: orderNumber },
+                success: function (result) {
+                    $('#orderDetails').html(result);
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') {
+                searchOrder();
+                return false; // Prevent form submission
+            }
+            return true;
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,534 @@
+﻿@model List<PostexS.Models.Domain.Order>
+@using PostexS.Models.Enums;
+@using System
+@using System.Globalization
+@{
+    Layout = null;
+    var i = ViewBag.PageStartRowNum;
+    var users = ViewBag.Drivers as List<PostexS.Models.Domain.ApplicationUser>;
+
+    Func<DateTime, int, string> ConvertToEgyptTime = (DateTime utcDateTime, int hoursToAdd) =>
+        {
+            var egyptTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+            var egyptTime = TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, egyptTimeZone);
+            return egyptTime.ToString("MM/dd/yyyy h:mm:ss tt", CultureInfo.InvariantCulture);
+        };
+}
+@*  <form asp-action="ExportToExecl" asp-controller="Orders" >
+                                         <button class="btn btn-info form-control" type="submit">  طباعة المحدد شيت اكسيل </button>*@
+
+@foreach (var item in (User.IsInRole("Admin") || User.IsInRole("TrustAdmin")) ? Model : Model.Where(x => !x.IsDeleted))
+{
+    <tr>
+        <td>
+            @switch (item.OrderCompleted)
+            {
+                case OrderCompleted.OK:
+                    <span class="badge g-light-blue">تم تسويتة</span>
+                    break;
+                case OrderCompleted.NOK:
+                    <span class="badge bg-gray">لم يتم تسويتة</span>
+                    break;
+            }
+            @if (item.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender || item.Status == OrderStatus.Returned_And_Paid_DeliveryCost)
+            {
+                <br />
+                @switch (item.ReturnedOrderCompleted)
+                {
+                    case OrderCompleted.OK:
+                        <span class="badge g-light-blue">تم تسوية المرتجع</span>
+                        break;
+                    case OrderCompleted.NOK:
+                        <span class="badge bg-gray">لم يتم تسوية المرتجع</span>
+                        break;
+                }
+            }
+            @if (item.CompletedOn.HasValue)
+            {
+                var OrderOn = TimeZoneInfo.ConvertTimeFromUtc(item.CompletedOn.Value, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
+                <br />
+                <span>@OrderOn.ToString("dd/MM/yyyy HH:mm")</span>
+            }
+
+            @if ((User.IsInRole("Admin") || !(item.Status == OrderStatus.Completed || item.Finished == true || item.IsDeleted ||
+           item.OrderCompleted == OrderCompleted.OK)) && item.Status != OrderStatus.PartialReturned && !User.IsInRole("Client"))
+            {
+                <a asp-action="EditStatus" class="btn btn-info mt-5" style="border-radius: 15px;" asp-controller="Orders" asp-route-id="@item.Id">تعديل الحاله</a>
+
+                <div class="d-flex justify-content-between">
+                    <!-- Trigger the modal with a button -->
+                    <button type="button" class="btn btn-primary mt-5" style="   border-radius: 15px;" data-toggle="modal" data-target="#addNotesModal-@item.Code">
+                        إضافة ملاحظات
+                    </button>
+                </div>
+                <!-- Add Notes Modal -->
+                <div id="addNotesModal-@item.Code" class="modal fade" role="dialog">
+                    <div class="modal-dialog">
+                        <!-- Modal content-->
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                <h4 class="modal-title">إضافة ملاحظات</h4>
+                            </div>
+                            <div class="modal-body">
+                                <form id="addNotesForm-@item.Code">
+                                    <textarea class="form-control mt-4" id="NewNote-@item.Id" rows="5" placeholder="ملاحظاتك"></textarea>
+                                    <input type="hidden" id="OrderId-@item.Id" value="@item.Id">
+                                    <button class="btn btn-primary mt-4 save-notes" type="button" data-order-id="@item.Id" data-toggle="modal" data-target="#addNotesModal-@item.Code">حفظ</button>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            }
+
+        </td>
+        <td>
+            @if (item.IsDeleted == true)
+            {
+                <span class="badge bg-red">محذوف</span>
+            }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Placed)
+            {
+                <span class="badge bg-gray">جديد</span>
+            }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
+            {
+                <span class="badge bg-yellow-active">مرتجع جزئي</span>
+            }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned)
+            {
+                <span class="badge bg-yellow">مرتجع كامل</span>
+            }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
+            {
+                <span class="badge bg-yellow">مرتجع وشحن على الراسل</span>
+            }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
+            {
+                <span class="badge bg-yellow">مرتجع ودفع شحن </span>
+            }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
+            {
+                <span class="badge bg-blue-active">تم التوصيل مع تعديل السعر</span>
+            }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+            {
+                <span class="badge bg-blue-active">تم التوصيل جزئي</span>
+            }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Assigned)
+            {
+                <span class="badge bg-green">جارى التوصيل</span>
+            }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered)
+            {
+                <span class="badge bg-blue-active">تم التوصيل</span>
+            }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Rejected)
+            {
+                <span class="badge bg-yellow">مرفوض</span>
+            }
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Waiting)
+            {
+                <span class="badge bg-orange">مؤجل</span>
+            }
+
+            else if (item.Status == PostexS.Models.Enums.OrderStatus.Completed)
+            {
+                <span class="badge bg-light-blue">تم تسويته</span>
+            }
+
+            @if (item.BranchId != item.Client.BranchId && !item.TransferredConfirmed)
+            {
+                @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+                {
+                    <br />
+                    if (@ViewBag.BranchId == item.BranchId)
+                    {
+                        @if (item.PreviousBranchId != null)
+                        {
+                            <span class="badge bg-light-blue">
+                                تم تحويله من فرع @item.PreviousBranch.Name
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-light-blue">
+                                تم تحويله من فرع @item.Client.Branch.Name
+                            </span>
+                        }
+                        <br />
+                        @if (item.TransferredConfirmed == true)
+                        {
+                            <span class="badge bg-green">تم تأكيد التحويل</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-red">لم يتم تأكيد التحويل</span>
+                        }
+                    }
+                    else
+                    {
+                        @if (item.PreviousBranchId != null)
+                        {
+                            <span class="badge bg-light-blue">
+                                تم تحويله من فرع @item.PreviousBranch.Name لفرع @item.Branch.Name
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-light-blue">
+                                تم تحويله لفرع @item.Branch.Name
+                            </span>
+                        }
+                        <br />  @if (item.TransferredConfirmed == true)
+                        {
+                            <span class="badge bg-green">تم تأكيد التحويل</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-red">لم يتم تأكيد التحويل</span>
+                        }
+                    }
+                }
+                else if (User.IsInRole("Client") || User.IsInRole("HighAdmin") || User.IsInRole("Accountant"))
+                {
+                    if (@ViewBag.BranchId == item.BranchId)
+                    {
+                        @if (item.PreviousBranchId != null)
+                        {
+                            <span class="badge bg-light-blue">
+                                تم تحويله من فرع @item.PreviousBranch.Name
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-light-blue">
+                                تم تحويله من فرع @item.Client.Branch.Name
+                            </span>
+                        }
+                        <br />
+                        @if (item.TransferredConfirmed == true)
+                        {
+                            <span class="badge bg-green">تم تأكيد التحويل</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-red">لم يتم تأكيد التحويل</span>
+                        }
+                    }
+                    else
+                    {
+                        @if (item.PreviousBranchId != null)
+                        {
+                            <span class="badge bg-light-blue">
+                                تم تحويله من فرع @item.PreviousBranch.Name لفرع @item.Branch.Name
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-light-blue">
+                                تم تحويله لفرع @item.Branch.Name
+                            </span>
+                        }
+                        <br />
+                        @if (item.TransferredConfirmed == true)
+                        {
+                            <span class="badge bg-green">تم تأكيد التحويل</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-red">لم يتم تأكيد التحويل</span>
+                        }
+
+                    }
+                }
+            }
+
+            @if (item.LastUpdated.HasValue && !item.CompletedOn.HasValue)
+            {
+                var OrderOn = TimeZoneInfo.ConvertTimeFromUtc(item.LastUpdated.Value, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
+                <br />
+                <span>@OrderOn.ToString("dd/MM/yyyy HH:mm")</span>
+            }
+        </td>
+        <td>
+            <span class="badge" style="font-size: 16px!important;">@(item.Code)</span><br />
+            <div style="border: 2px solid black; padding: 5px;margin-top:5px; display: inline-block; font-size:13px;border-radius: 15px;">
+                @ConvertToEgyptTime(item.CreateOn, 2)
+            </div>
+        </td>
+
+        <td>
+            <!-- فرع العميل الأساسي -->
+            <span class="badge" style="background-color: #28a745; color: white;">@item.Client.Branch.Name</span>
+            @* @item.Client.Branch.Name</td> *@
+        <td>
+            <!-- الفرع الحالي للطلب -->
+            <span class="badge" style="background-color: #007bff; color: white;">@item.Branch.Name</span>
+                @* @item.Branch.Name *@
+        </td>
+            @if (item.Status != OrderStatus.PartialReturned)
+            {
+            <td>
+                    @item.Cost جنية
+                    @if (item.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+                    {
+                    <div class="badge" style="border-radius: 10px; padding: 10px; margin-top: 10px;background-color:#eee;">
+                        <div style="color: blue;">
+                            <strong>إستلام:</strong> @(item.ArrivedCost) جنية
+                        </div>
+                        <div style="color: red; margin-top: 5px;">
+                            <strong>مرتجع:</strong> @(item.TotalCost - item.ArrivedCost) جنية
+                        </div>
+                    </div>
+                    }
+            </td>
+
+            }
+            else
+            {
+            <td>
+                    @item.ReturnedCost جنية
+            </td>
+            }
+            @if (item.Status != OrderStatus.PartialReturned)
+            {
+            <td>
+                    @item.DeliveryFees جنية
+            </td>
+            }
+            else
+            {
+            <td>
+                ـــ
+            </td>
+            }
+        <td style="width: 150px">
+                @item.AddressCity - @item.Address
+        </td>
+            @* @if (item.BranchId != item.Client.BranchId)
+    {
+    <td>@item.Branch.Name</td>
+    }
+    else{<td></td>}*@
+        <td>@item.Client.Name</td>
+        <td>@item.ClientName</td>
+        <td>
+                @if (item.DeliveryId != null)
+                {
+                    @item.Delivery.Name
+                    @item.Delivery.PhoneNumber
+                }
+        </td>
+        <td style="width: 150px">@item.Notes</td>
+        <td style="width:150px">
+                @if (item.OrderNotes.Count > 0)
+                {
+                    foreach (var x in item.OrderNotes)
+                    {
+                    <p>@x.Content</p>
+                    }
+                }
+        </td>
+        <td>
+            <a asp-action="Reviews" asp-controller="Orders" asp-route-id="@item.Id">ملاحظات</a>
+            <span>|</span>
+            <a asp-action="Details" asp-controller="Orders" asp-route-id="@item.Id">التفاصيل</a>
+                @if (!User.IsInRole("Client") && !User.IsInRole("TrustAdmin"))
+                {
+                    @if (User.IsInRole("Admin") || !(item.Status == OrderStatus.Completed || item.Finished == true || item.IsDeleted ||
+                   item.OrderCompleted == OrderCompleted.OK))
+                    {
+                    <span>|</span>
+                    <a asp-action="Edit" asp-controller="Orders" asp-route-id="@item.Id">تعديل</a>
+                    }
+                    @if (item.Pending)
+                    {
+                    <span>|</span>
+                    <a asp-action="Accept" asp-controller="Orders" asp-route-id="@item.Id">موافقة على الطلب</a>
+                    }
+                }
+            <span>|</span>
+            <button type="button" data-toggle="modal" data-target=".myModal" onclick="FillPopup('/Orders/Copy?id=@item.Id')">
+                نسخ
+            </button>
+                @* @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+        { *@
+                @if (!User.IsInRole("Client"))
+                {
+                <span>|</span>
+                <button type="button" data-toggle="modal" data-target=".myModal" onclick="FillPopup('/Orders/history?id=@item.Id')">
+                    عمليات الطلب
+                </button>
+                }
+                @* } *@
+                @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+                {
+                    @*  if (item.Status == OrderStatus.Placed && item.DeliveryId == null && !item.IsDeleted && !item.Pending)
+        {
+        <span>|</span>
+        <a asp-action="EditBranch" asp-controller="Orders" asp-route-id="@item.Id">تحويل الطلب </a>
+        } *@
+                }
+                @*  else if (User.IsInRole("TrustAdmin"))
+        {
+        <span>|</span>
+        if ((item.Status == OrderStatus.Placed || (item.Status == OrderStatus.Waiting && item.DeliveryId == null)) && !item.IsDeleted && !item.Pending && ((item.BranchId == item.Client.BranchId) || (item.BranchId == item.Client.BranchId && item.TransferredConfirmed)))
+        {
+        <a asp-action="EditBranch" asp-controller="Orders" asp-route-id="@item.Id">تحويل الطلب </a>
+        }
+        } *@
+                @if (User.IsInRole("Admin") @* || User.IsInRole("TrustAdmin") *@)
+                {
+                <span>|</span>
+                    @if (!item.IsDeleted @* && item.Status != PostexS.Models.Enums.OrderStatus.PartialReturned *@)
+                    {
+                    <a onclick="Delete('Delete?id=@item.Id')">حذف</a>
+                    }
+                    else if (item.IsDeleted @* && item.Status != PostexS.Models.Enums.OrderStatus.PartialReturned *@)
+                    {
+                    <a onclick="Resotre('Delete?id=@item.Id')">إستعادة</a>
+                    }
+                }
+        </td>
+            @*  @if (!User.IsInRole("Client"))
+    { *@
+            @if (@ViewBag.q != "pen")
+            {
+            <td id="switch2" style="display:block">
+                    @* @if (item.Status == OrderStatus.Placed && item.DeliveryId == null && !item.IsDeleted && !item.Pending)
+        { *@
+                <input class="check-box no-print" type="checkbox" name="OrderId" value="@item.Id" />
+                    @* } *@
+            </td>
+            <td id="delete2" style="display:none"><input class="check-box no-print" type="checkbox" name="OrderId" value="@item.Id" /></td>
+            }
+            else
+            {
+            <td id="delete2" style="display:block"><input class="check-box no-print" type="checkbox" name="OrderId" value="@item.Id" /></td>
+            }
+            @* } *@
+            @* <td >
+    <input class="check-box" type="checkbox" name="OrdersId" value="@item.Id">
+
+
+    </td>*@
+
+    </tr>
+}
+@*</form>
+*@@*<tr>
+    <td colspan="8">
+        <span>مجموع هذه الطلبات</span>
+    </td>
+    <td colspan="4">
+        <span> @Model.Sum(x => x.Cost + x.DeliveryFees)</span>
+    </td>
+</tr>*@
+<script>
+    function myFunction() {
+        // Get the checkbox
+        var checkBox = document.getElementById("check");
+        var input = document.getElementById("del");
+        // Get the output text
+        var text = document.getElementById("delete");
+        var text2 = document.getElementById("switch");
+        var text3 = document.querySelectorAll('#delete2');
+        var text4 = document.querySelectorAll('#switch2');
+
+        // If the checkbox is checked, display the output text
+        if (checkBox.checked == true) {
+            text.style.display = "block";
+            text2.style.display = "none";
+            text3.forEach(function (element) {
+                element.style.display = "block";
+            });
+            text4.forEach(function (element) {
+                element.style.display = "none";
+            });
+            // text3.style.display = "block";
+            // text4.style.display = "none";
+            input.value = "1";
+        } else {
+            text.style.display = "none";
+            text2.style.display = "block";
+            text3.forEach(function (element) {
+                element.style.display = "none";
+            });
+            text4.forEach(function (element) {
+                element.style.display = "block";
+            });
+            // text3.style.display = "none";
+            // text4.style.display = "block";
+            input.value = "0";
+        }
+    }
+
+</script>
+<script>
+    function myFunction2() {
+        // Get the checkbox
+        var checkBox = document.getElementById("check2");
+        var input = document.getElementById("del");
+        // Get the output text
+        var text = document.getElementById("reject");
+        var text2 = document.getElementById("accept");
+
+        // If the checkbox is checked, display the output text
+        if (checkBox.checked == true) {
+            text.style.display = "block";
+            text2.style.display = "none";
+            input.value = "1";
+        }
+        else {
+            text.style.display = "none";
+            text2.style.display = "block";
+            input.value = "0";
+        }
+    }
+
+</script>
+<!-- jQuery -->
+
+<script>
+    $(document).ready(function () {
+        $('.save-notes').on('click', function () {
+            var orderId = $(this).data('order-id'); // Get the order ID
+            var newNote = $('#NewNote-' + orderId).val(); // Get the note value
+
+            if (!newNote) {
+                alert('Please enter a note.');
+                return;
+            }
+
+            var formData = { OrderId: orderId, NewNote: newNote }; // Construct form data
+
+            // AJAX request
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("AddNotes", "Orders")',
+                data: formData,
+                success: function (response) {
+                    if (response.success) {
+                        // Close the modal
+                        var modalId = '#addNotesModal-' + orderId;
+                        $(modalId).modal('hide');
+
+                        alert(response.message);
+                        location.reload(); // Reload the page on success
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    alert('An error occurred while saving notes: ' + error);
+                }
+            });
+        });
+    });
+</script>

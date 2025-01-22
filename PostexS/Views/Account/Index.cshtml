@@ -1,0 +1,209 @@
+﻿@model PostexS.Models.Domain.ApplicationUser
+@{
+    ViewData["Title"] = "API Keys";
+}
+<style>
+
+    /* Styling the card */
+    .card {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        background-color: #ffffff;
+        position: relative;
+        padding: 10px;
+    }
+
+    /* Styling the card header and logo */
+    .card-header {
+        background-color: #ddd;
+        color: #2d2862;
+        border-radius: 15px;
+        padding: 0px 20px 0px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between; /* Space between logo, title, and language switch */
+        position: relative;
+    }
+
+    .header-content {
+        display: flex;
+        align-items: center;
+        width: 100%; /* Ensure header-content takes full width */
+    }
+
+    .logo-container {
+        flex: 1;
+        display: flex;
+        justify-content: center; /* Center logo */
+    }
+
+    .card-header img {
+        max-height: 15ch;
+    }
+
+    .language-switch {
+        margin-left: auto; /* Push language switch to the right */
+    }
+
+        .language-switch .btn {
+            font-size: 14px;
+            padding: 7px 15px;
+            color: #fff;
+            background-color: #2d2862;
+            border: none;
+            transition: background-color 0.3s ease-in-out;
+        }
+
+            .language-switch .btn:hover {
+                background-color: #fd5c28;
+            }
+
+
+    /* Alert box styling */
+    .alert-custom {
+        background-color: #e2f3ec;
+        border-radius: 15px;
+        padding: 20px;
+        font-size: 17px;
+        border: 1px solid #d1e7dd;
+        margin: 15px 0;
+    }
+
+        .alert-custom .alert-heading {
+            font-size: 18px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .alert-custom .alert-content p {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .alert-custom .form-group {
+            margin-bottom: 15px;
+        }
+
+    /* Table styling */
+    .table-responsive {
+        margin-top: 20px;
+    }
+
+    table {
+        width: 100%;
+        margin-bottom: 1rem;
+        background-color: transparent;
+    }
+
+        table th, table td {
+            padding: 15px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+        }
+
+    thead th {
+        background-color: #343a40;
+        color: #fff;
+    }
+
+    .badge-success {
+        background-color: #28a745;
+    }
+
+    /* Button styling */
+    .btn-outline-info {
+        color: #f89d13;
+        border-color: #f89d13;
+    }
+
+        .btn-outline-info:hover {
+            background-color: #fd5c28;
+            color: #fff;
+        }
+</style>
+
+<!-- Card -->
+<div class="card shadow-lg mt-5" dir="ltr">
+    <div class="card-header">
+        <div class="header-content">
+            <!-- Centered Logo -->
+            <!-- Title on the Left -->
+            <h3 class="mb-0 mt-0"><i class="fa fa-fw fa-key"></i> API Keys</h3>
+            <div class="logo-container">
+                <img src="~/Start/images/TasahelExpress.png" alt="Postex Logo" />
+            </div>
+            <!-- Language Switch Button on the Right -->
+            <div class="language-switch">
+                <a href="@Url.Action("IndexAr", "Account")" class="btn">اللغه العربيه</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="alert alert-custom mt-4" role="alert">
+            <div class="alert-content">
+                <p><strong>URL-endpoint:</strong> <span id="currentDomain" class="text-success" style="color: cornflowerblue;"></span>/api/</p>
+                <p><strong>API-CreateOrder:</strong> <a href="https://red-crescent-864158.postman.co/workspace/My-Workspace~47e31ebf-d4d7-4fd7-8031-7491c9710b7e/request/11873279-45021e9a-9850-44bc-915c-747bcee7c88d?ctx=documentation" target="_blank" class="text-success" style="color: cornflowerblue;">API Create Order [Postman]</a></p>
+                <hr>
+                @using (Html.BeginForm("DownloadFile", "Account", FormMethod.Get))
+                {
+                    <div class="form-group">
+                        <label class="font-weight-bold">Download Postman Collection</label>
+                        <button type="submit" id="downloadButton" class="btn btn-outline-info btn-sm">
+                            <i class="fa fa-download"></i> Download
+                        </button>
+                    </div>
+                }
+                <p class="mt-3">Your API requests are authenticated using the account's API key. If you do not include your key when making an API request or use an incorrect one, we return an error.</p>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive mt-5">
+            @if (Model.APIkeys_UpdateOn != null)
+            {
+                <table class="table table-bordered table-hover">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Public Key</th>
+                            <th>Private Key<br />(Keep Confidential)</th>
+                            <th>Status</th>
+                            <th>Updated On</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>@Model.PublicKey</td>
+                            <td>@Model.PrivateKey</td>
+                            <td><span class="badge badge-success">Enabled</span></td>
+                            <td>
+                                @Model.APIkeys_UpdateOn.Value.ToString("MMMM dd, yyyy")<br />
+                                @Model.APIkeys_UpdateOn.Value.ToShortTimeString()
+                            </td>
+                            <td>
+                                <a asp-action="UpdateApiKeys" asp-controller="Account" asp-route-lang="en" class="btn btn-success btn-sm">Update</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <a asp-action="UpdateApiKeys" asp-controller="Account" asp-route-lang="en" class="btn btn-primary btn-sm">Create New</a>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var currentDomain = window.location.hostname;
+            document.getElementById("currentDomain").textContent = currentDomain;
+        });
+    </script>
+}

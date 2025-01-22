@@ -1,0 +1,75 @@
+﻿@model IEnumerable<PostexS.Models.Domain.Location>
+@{
+    var user = ViewBag.User as PostexS.Models.Domain.ApplicationUser;
+}
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> خط السير لـ @user.Name</h3>
+    </div>
+    <div class="panel-body">
+        <div class="table-responsive" style="max-height: 300px;">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>التوقيت</th>
+                        <th>العنوان</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var location in Model)
+                    {
+                        <tr>
+                            <td>
+                                <span dir="auto">@location.CreateOn.ToString("dd MMM, yyyy")</span><br />
+                                <span dir="auto">@location.CreateOn.ToString("hh:mm tt")</span>
+                            </td>
+                            <td>@location.Address</td>
+                            <td><a target="_blank" href="https://www.google.com/maps/search/?api=1&amp;query=@location.Latitude,@location.Longitude" class="btn btn-outline-primary" title="مشاهده السائق على خريطه جوجل">مشاهده السائق على خريطه جوجل</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Ensure Google Maps API is loaded asynchronously -->
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDR45xVCCyl8qLGg7tnQZcsAm4DGrhypFY&callback=initMap"></script>
+
+<!-- JavaScript code to initialize the map -->
+<script>
+    function initMap() {
+        // Initialize the map
+        var map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 12,
+            center: { lat: @Model.First().Latitude, lng: @Model.First().Longitude }, // Center map on the first location
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        });
+
+        // Define an array to hold all markers
+        var markers = [];
+
+        // Loop through the locations to create markers
+    @foreach (var location in Model)
+    {
+        <text>
+                    var marker = new google.maps.Marker({
+                    position: { lat: @location.Latitude, lng: @location.Longitude },
+                    map: map,
+                    title: '@location.Address'
+                });
+            markers.push(marker);
+        </text>
+    }
+
+            // Change the icon of the first marker to differentiate it
+            if (markers.length > 0) {
+            markers[0].setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png'); // Example icon URL
+        }
+    }
+</script>
+
+<!-- Map container -->
+<div id="map" style="height: 400px;"></div>

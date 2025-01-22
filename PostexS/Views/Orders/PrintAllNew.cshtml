@@ -1,0 +1,135 @@
+﻿@model List<PostexS.Models.Domain.Order>
+@{
+    ViewBag.Title = "طباعه الطلبات";
+    var Ids = Model.Select(x => x.Id);
+}
+<link href="~/css/printsite.css" rel="stylesheet" />
+<div class="row">
+    <div class="box-header with-border no-print">
+        <h3 class="box-title no-print">@ViewBag.Title</h3>
+        <div class="box-tools pull-right no-print">
+            <button class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+        </div>
+        <h4 style="margin: 10px; text-align: center;" class="no-print">
+            <br />
+            <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
+            <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
+
+        </h4>
+    </div><!-- /.box-header -->
+    <form asp-action="PrintAllNew" asp-controller="Orders" method="get">
+        <button class="btn btn-success form-control no-print" type="submit">تطبيق التحديد</button>
+        @for (var i = 0; i < Model.Count; i++)
+        {
+            <div class="box-body row" style="height: auto;margin:auto">
+                <div class="text-center" style="margin-bottom:4px;">
+                    @if (Model[i].BarcodeImage != null)
+                    {
+                        <img src="data:image/png;base64,@Convert.ToBase64String(Model[i].BarcodeImage)" alt="Barcode" style="position: absolute;right: 20px; margin-top:0px;">
+                    }
+                    <h4 style="margin-bottom:8px;">الطلب رقم @(Model[i].Code)</h4>
+                    <div>
+                        <h4 style="margin:4px">
+                            @if (Model[0].IsDeleted == true)
+                            {
+                                <span class="badge bg-red">محذوف</span>
+                            }
+                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Placed)
+                            {
+                                <span class="badge bg-gray">جديد</span>
+                            }
+                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
+                            {
+                                <span class="badge bg-yellow-active">مرتجع جزئي</span>
+                            }
+                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Returned)
+                            {
+                                <span class="badge bg-yellow">مرتجع كامل</span>
+                            }
+                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
+                            {
+                                <span class="badge bg-yellow">مرتجع وشحن على الراسل</span>
+                            }
+                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
+                            {
+                                <span class="badge bg-yellow">مرتجع ودفع شحن </span>
+                            }
+                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
+                            {
+                                <span class="badge bg-blue-active">تم التوصيل مع تعديل السعر</span>
+                            }
+                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+                            {
+                                <span class="badge bg-blue-active">تم التوصيل جزئي</span>
+                            }
+                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Assigned)
+                            {
+                                <span class="badge bg-green">جارى التوصيل</span>
+                            }
+                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Delivered)
+                            {
+                                <span class="badge bg-blue-active">تم التوصيل</span>
+                            }
+                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Rejected)
+                            {
+                                <span class="badge bg-yellow">مرفوض</span>
+                            }
+                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Waiting)
+                            {
+                                <span class="badge bg-orange">مؤجل</span>
+                            }
+
+                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Completed)
+                            {
+                                <span class="badge bg-light-blue">تم تسويته</span>
+                            }
+                        </h4>
+                    </div>
+                </div>
+                <div>
+                    <table class="table text-center table-bordered" dir="rtl">
+                        <tbody>
+                            <tr>
+                                <td style="width:38%">
+                                    <span>الراسل</span>
+                                    <br />
+                                    <p>@Model[i].Client.Name</p>
+                                    <p>الفرع :  @Model[i].Branch.Name </p>
+                                    <p>الهاتف :  <a dir="auto" href="tel:@Model[i].Client.PhoneNumber">@Model[i].Client.PhoneNumber</a> </p>
+                                    <p>العنوان : @Model[i].Client.Address</p>
+                                </td>
+                                <td style="width:20%">
+                                    <img src="~/Content/Images/TasahelExpress.png" width="150" height="110" />
+                                    <h5 style="text-align:center;margin-top: 5px !important;margin-bottom: 5px !important;">01100061263</h5>
+                                    <h5 style="text-align:center;margin-top: 5px !important;margin-bottom: 5px !important;">01000525908</h5>
+                                    <h5 style="text-align:center;margin-top: 5px !important;margin-bottom: 5px !important;">01000329151</h5>
+                                </td>
+                                <td style="width:42%">
+                                    <span>المرسل إليه</span>
+                                    <br />
+                                    <p>@Model[i].ClientName</p>
+                                    <p>الهاتف :  <a dir="auto" href="tel:@Model[i].ClientPhone">@Model[i].ClientPhone</a> </p>
+                                    <p>العنوان : @Model[i].AddressCity - @Model[i].Address</p>
+                                </td>
+                                <td><input class="check-box no-print" type="checkbox" name="Orders" value="@Model[i].Id" /></td>
+
+                            </tr>
+                            <tr>
+                                <td>
+                                    ملاحظات
+                                </td>
+                                <td>
+                                    <span>الاجمالي : @Model[i].TotalCost جنية</span>
+                                </td>
+                                <td style="font-size: 12px;">
+                                    @Model[i].Notes
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </form>
+    <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
+</div>

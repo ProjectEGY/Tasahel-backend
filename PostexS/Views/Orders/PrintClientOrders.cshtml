@@ -1,0 +1,357 @@
+﻿@using PostexS.Models.Enums;
+@model List<PostexS.Models.Domain.Order>
+@using System
+@using System.Globalization
+@{
+    ViewBag.Title = "طباعه طلبات جديده ";
+    var userID = ViewBag.Id;
+    Func<DateTime, int, string> ConvertToEgyptTime = (DateTime utcDateTime, int hoursToAdd) =>
+    {
+        var egyptTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+        var egyptTime = TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, egyptTimeZone);
+        return egyptTime.ToString("MM/dd/yyyy h:mm:ss tt", CultureInfo.InvariantCulture);
+    };
+}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<div class="row">
+    <div class="col-md-12">
+        <div class="box box-info">
+            <div class="box-header with-border">
+                <h3 class="box-title no-print">@ViewBag.Title</h3>
+                <div class="box-tools pull-right">
+                    <button class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                </div>
+                <h4 style="margin: 10px; text-align: center;" class="no-print">
+                    <br />
+                    <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
+                    <a href="/Orders/PrintExcelClientOrders?Id=@userID" class="btn btn-default "><i class="fa fa-print"></i> طباعة الطلبات</a>
+                    <a target="_blank" asp-action="CurrentStatistics" asp-controller="users" asp-route-id="@userID" class="btn btn-default">
+                        إحصائيات الطلبات الحاليه للمندوب
+                        <i class="fa fa-line-chart"></i>
+                    </a>
+                    @*                     <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
+                    *@
+                </h4>
+            </div><!-- /.box-header -->
+
+
+
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    @if (Model.FirstOrDefault() != null)
+                    {
+                        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> طباعة شحنات مندوب: @Model.FirstOrDefault().Delivery.Name  </h3>
+                    }
+                </div>
+                <div class="panel-body">
+                    @* <div class="box-body">
+                    <div class="text-center" style="margin-bottom:10px;">
+                    <h4 style="margin:10px" class="no-print">
+                    <a href="/Orders/Complete" class="btn btn-default no-print">العودة</a>
+                    <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
+                    </h4>
+                    </div>
+                    </div>*@
+                    <table class="table text-center table-bordered">
+                        <tr>
+                            <td style="width:50%;text-align:left">
+                                إجمالي الطلبات   :
+                            </td>
+                            <td style="width:50%;text-align:right">
+                                @Model.Count() طلب
+
+                                <!-- Trigger the modal with a button -->
+                                <button type="button" class="btn btn-info ml-3 " style="border-radius: 5px;" data-toggle="modal" data-target="#finishAllOrdersModal">انهاء جميع الطلبات</button>
+
+                                <!-- Finish All Orders Modal -->
+                                <div id="finishAllOrdersModal" class="modal fade" role="dialog">
+                                    <div class="modal-dialog" style="width:auto!important;margin:100px;">
+                                        <!-- Modal content-->
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                                <h4 class="modal-title">إنهاء جميع الطلبات</h4>
+                                            </div>
+                                            <div class="modal-body">
+                                                <form asp-action="FinishAllOrders" method="post" enctype="multipart/form-data">
+                                                    <input name="DeliveryId" value="@userID" hidden>
+
+                                                    <!-- اختيار الطلبات -->
+                                                    <select name="OrdersIds" id="OrdersSelect" class="form-control select2" multiple="multiple">
+                                                        @foreach (var order in Model)
+                                                        {
+                                                            <option value="@order.Id">@(order.Code) - @order.TotalCost جنية</option>
+                                                        }
+                                                    </select>
+
+                                                    <!-- اختيار الحالة -->
+                                                    <select name="Status" class="form-control mt-4">
+                                                        <option value="@OrderStatus.Delivered">تم التوصيل</option>
+                                                        <option value="@OrderStatus.Waiting">مؤجل</option>
+                                                    </select>
+
+                                                    <!-- حقل الملاحظات -->
+                                                    <textarea class="form-control mt-4" name="Note" rows="5" placeholder="ملاحظات لجميع الطلبات"></textarea>
+
+                                                    <!-- زر الحفظ -->
+                                                    <button class="btn btn-primary mt-4" type="submit">حفظ</button>
+                                                </form>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </td>
+                        </tr>
+                    </table>
+                    <table class="table text-center table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="text-align:center">رقم الطلب</th>
+                                <th style="text-align:center">تاريخ انشاء الطلب</th>
+                                <th style="text-align:center">اسم الراسل</th>
+                                <th style="text-align:center ">رقم الراسل</th>
+                                <th style="text-align:center">اسم المرسل إلية</th>
+                                <th style="text-align:center ">رقم المرسل الية</th>
+                                <th style="text-align:center ">الملاحظات</th>
+                                <th style="text-align:center ">العنوان</th>
+                                <th style="text-align:center ">الاجمالي</th>
+                                @*                                 <th style="text-align:center ">تحديد</th>
+                                *@
+
+                            </tr>
+                        </thead>
+                        <tbody style="text-align:center">
+                            @*   <form asp-action="ExportToExecl" asp-controller="Orders">
+                            <button type="submit"  class="btn-btn-success">طباعة المحدد شيت إكسيل</button>
+                            <br />
+                            <label style="position:center">
+                            <input type="checkbox" onClick="toggle(this)" title="حدد جميع الطلبات المعروضة" /> حدد جميع الطلبات المعروضة
+                            </label>
+                            *@
+                            @for (int i = 0; i < Model.Count; i++)
+                            {
+                                <tr>
+
+                                    <td>
+
+                                        <kbd style="font-size:18px;">
+                                            @(Model[i].Code)
+                                        </kbd>
+                                        <div class="d-flex justify-content-between mt-5">
+                                            <!-- Trigger the modal with a button -->
+                                            <button type="button" class="btn btn-info ml-3 " style="border-radius: 5px;" data-toggle="modal" data-target="#finishOrderModal-@Model[i].Id">انهاء</button>
+                                            <!-- Trigger the modal with a button -->
+                                            <button type="button" class="btn btn-info" style="border-radius: 5px;" data-toggle="modal" data-target="#addNotesModal-@Model[i].Code">
+                                                إضافة ملاحظات
+                                            </button>
+                                        </div>
+
+                                        <!-- Finish Order Modal -->
+                                        <div id="finishOrderModal-@Model[i].Id" class="modal fade" role="dialog">
+                                            <div class="modal-dialog">
+                                                <!-- Modal content-->
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                                        <h4 class="modal-title">Finish Order</h4>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <form asp-action="FinishOrder" method="post" enctype="multipart/form-data">
+                                                            <input class="form-control mt-4" name="Paid" type="number" placeholder="ادخل القيمة المدفوعة" value="0" step="0.0001">
+                                                            <label for="OrderImage" class="col-sm-3 control-label mt-4">صورة للطلب:</label>
+                                                            <input name="OrderImage" type="file" id="OrderImage" class="col-sm-9 form-control valid mt-4" />
+                                                            <textarea class="form-control mt-4" name="Note" rows="5" placeholder="ملاحظاتك"></textarea>
+                                                            <select name="Status" class="form-control mt-4">
+                                                                <option value="@OrderStatus.Delivered">تم التوصيل</option>
+                                                                <option value="@OrderStatus.Delivered_With_Edit_Price">تسليم مع تعديل سعر</option>
+                                                                <option value="@OrderStatus.PartialDelivered">تسليم جزئي</option>
+                                                                <option value="@OrderStatus.Returned_And_Paid_DeliveryCost">مرتجع ودفع شحن</option>
+                                                                <option value="@OrderStatus.Returned_And_DeliveryCost_On_Sender">مرتجع وشحن على الراسل</option>
+                                                                <option value="@OrderStatus.Returned">مرتجع</option>
+                                                                <option value="@OrderStatus.Waiting">مؤجل</option>
+                                                            </select>
+                                                            <input name="OrderId" value="@Model[i].Id" hidden>
+                                                            <button class="btn btn-primary mt-4" type="submit">حفظ</button>
+                                                        </form>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Add Notes Modal -->
+                                        <div id="addNotesModal-@Model[i].Code" class="modal fade" role="dialog">
+                                            <div class="modal-dialog">
+                                                <!-- Modal content-->
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                                        <h4 class="modal-title">إضافة ملاحظات</h4>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <form id="addNotesForm-@Model[i].Code">
+                                                            <textarea class="form-control mt-4" id="NewNote-@Model[i].Id" rows="5" placeholder="ملاحظاتك"></textarea>
+                                                            <input type="hidden" id="OrderId-@Model[i].Id" value="@Model[i].Id">
+                                                            <button class="btn btn-primary mt-4 save-notes" type="button" data-order-id="@Model[i].Id" data-toggle="modal" data-target="#addNotesModal-@Model[i].Code">حفظ</button>
+                                                        </form>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @ConvertToEgyptTime(Model[i].CreateOn, 2)
+                                    </td>
+                                    <td>
+
+                                        @Model[i].Client.Name
+                                    </td>
+                                    <td>
+                                        @Model[i].Client.PhoneNumber
+                                    </td>
+                                    <td>
+
+                                        @Model[i].ClientName
+                                    </td>
+
+                                    <td>
+                                        @Model[i].ClientPhone
+                                    </td>
+
+                                    <td style="width:150px">
+                                        @* @if (Model[i].OrderNotes.Count > 0)
+                                    {
+                                    @Model[i].OrderNotes.OrderBy(x => x.Id).Last().Content
+                                    }*@
+                                        @if (Model[i].Notes != "")
+                                        {
+                                            @Model[i].Notes
+                                        }
+                                        else
+                                        {
+                                            <span>--</span>
+                                        }
+                                    </td>
+                                    <td style="width:150px">
+                                        @Model[i].AddressCity - @Model[i].Address
+                                    </td>
+                                    <td style="color:green">
+                                        @Model[i].TotalCost جنية
+                                    </td>
+                                    @*  <td>
+                                <input class="check-box" type="checkbox" name="OrdersId[]" value="@Model[i].Id">
+
+                                </td> *@
+
+                                </tr>
+                            }
+
+                            @*                             </form>
+                            *@
+                        </tbody>
+                    </table>
+
+                    <table class="table text-center table-bordered">
+                        <tr>
+                            <td style="width:50%;text-align:left">
+                                المبلغ المستحق للتحصيل :
+                            </td>
+                            <td style="width:50%;text-align:right;color:green">
+                                @Model.Sum(x => x.TotalCost) جنية
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
+        </div>
+    </div>
+</div>
+<script>
+    function toggle(source) {
+        checkboxes = document.getElementsByName('OrdersId[]');
+        for (var i = 0, n = checkboxes.length; i < n; i++) {
+            checkboxes[i].checked = source.checked;
+        }
+    }
+</script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+    @if (ViewBag.Message != null)
+    {
+        <text>
+                // عرض الرسالة باستخدام toastr
+                toastr.success('@ViewBag.Message', '', {
+                    "closeButton": true,
+                    "debug": false,
+                    "newestOnTop": false,
+                    "progressBar": true,
+                    "positionClass": "toast-top-center",
+                    "preventDuplicates": false,
+                    "onclick": null,
+                    "showDuration": "300",
+                    "hideDuration": "1000",
+                    "timeOut": "5000",
+                    "extendedTimeOut": "1000",
+                    "showEasing": "swing",
+                    "hideEasing": "linear",
+                    "showMethod": "fadeIn",
+                    "hideMethod": "fadeOut"
+                });
+        </text>
+    }
+            $('.save-notes').on('click', function () {
+                var orderId = $(this).data('order-id'); // Get the order ID
+                var newNote = $('#NewNote-' + orderId).val(); // Get the note value
+
+                if (!newNote) {
+                    alert('Please enter a note.');
+                    return;
+                }
+
+                var formData = { OrderId: orderId, NewNote: newNote }; // Construct form data
+
+                // AJAX request
+                $.ajax({
+                    type: 'POST',
+                    url: '@Url.Action("AddNotes", "Orders")',
+                    data: formData,
+                    success: function (response) {
+                        if (response.success) {
+                            // Close the modal
+                            var modalId = '#addNotesModal-' + orderId;
+                            $(modalId).modal('hide');
+
+                            alert(response.message);
+                            location.reload(); // Reload the page on success
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        alert('An error occurred while saving notes: ' + error);
+                    }
+                });
+            });
+    });
+</script>
+<script>
+    $(document).ready(function () {
+        // عند فتح المودال، حدد جميع الخيارات
+        $('#finishAllOrdersModal').on('show.bs.modal', function () {
+            $('#OrdersSelect option').prop('selected', true); // تحديد جميع الطلبات
+            $('#OrdersSelect').trigger('change'); // تحديث الـ select2
+        });
+    });
+</script>

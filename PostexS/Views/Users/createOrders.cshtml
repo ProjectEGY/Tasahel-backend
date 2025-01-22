@@ -1,0 +1,49 @@
+﻿@model PostexS.Models.ViewModels.OrdersVM
+@{
+    ViewBag.Title = "اضافه أكثر من طلب";
+}
+<div>
+    @using (Html.BeginForm("DownloadFile", "Users", FormMethod.Get))
+    {
+        <label>تحميل ملف إكسيل الخاص بإضافة الطلبات</label>
+        <input type="submit" id="downloadButton" value="Download" class="btn btn-info" />
+    }
+</div>
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-plus"></i> @ViewBag.Title</h3>
+    </div>
+
+    <div class="panel-body">
+        <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
+            <div class="panel panel-success">
+                <div id="collapseOne" class="panel-collapse" role="tabpanel" aria-labelledby="headingOne">
+                    <div class="panel-body">
+                        <p>في حاله ان الراسل لديه ملاحظة اساسيه لكل الطلبات , سيتم اضافتها مع كل طلب .</p>
+                        <hr />
+                        <div id="model-errors" style="display:none;">
+                            <ul class="text-danger" id="ul-errors"></ul>
+                            <hr />
+                        </div>
+                        <form asp-action="createOrders" asp-controller="Users" method="post" enctype="multipart/form-data">
+                            <input asp-for="ClientId" hidden />
+                            <div class="col-lg-6">
+                                <div class="form-group">
+                                    <label for="" class="col-sm-5 control-label">إدخال ملف الإكسل الخاص بالطلبات </label>
+                                    <div class="col-sm-7">
+                                        <input name="file" id="file" required type="file" class="form-control valid" />
+                                        @Html.ValidationMessageFor(d => d.file, "", new { @class = "text-danger" })
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success" id="add-product-btn">اضافه  <i class="fa fa-spinner fa-spin" id="loader" style="display:none;"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div>
+            @Html.ActionLink("العودة", "Index", "Orders", new { @class = "btn btn-default" })
+        </div>
+    </div>
+</div>

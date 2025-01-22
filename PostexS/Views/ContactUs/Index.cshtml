@@ -1,0 +1,56 @@
+﻿@model PostexS.Models.Domain.ContactUs
+@{
+    ViewBag.Title = "بيانات التواصل " ;
+}
+
+<h1 class="text-center mb-30">@ViewBag.Title</h1>
+@Html.ValidationSummary(false, "", new { @class = "text-danger" })
+@using (Html.BeginForm("Index", "ContactUs", FormMethod.Post, new { enctype = "multipart/form-data" }))
+{
+@Html.HiddenFor(d=>d.CreateOn)
+@Html.HiddenFor(d=>d.DeletedOn)
+@Html.HiddenFor(d=>d.Id)
+@Html.HiddenFor(d=>d.IsDeleted)
+@Html.HiddenFor(d=>d.IsModified)
+@Html.HiddenFor(d=>d.ModifiedOn)
+@Html.AntiForgeryToken()
+<div class="row" style="margin:10px;">
+    <div class="col-lg-6 mb-10">
+        <div class="form-group">
+            <label for="NameEn" class="col-sm-5 control-label required">لينك فيسبوك:</label>
+            <div class="col-sm-7">
+                <input asp-for="FaceBook" type="text"  id="FaceBook" class="form-control valid" />
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-10">
+        <div class="form-group">
+            <label for="NameEn" class="col-sm-5 control-label required">لينك تويتر:</label>
+            <div class="col-sm-7">
+                <input asp-for="Twitter" type="text"  id="Twitter" class="form-control valid" />
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-10">
+        <div class="form-group">
+            <label for="NameEn" class="col-sm-5 control-label required">لينك انستجرام:</label>
+            <div class="col-sm-7">
+                <input asp-for="Instgram" type="text"  id="Instgram" class="form-control valid" />
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row" style="margin:10px;">
+    <div class="col-lg-6 mb-10">
+        <div class="form-group">
+            <label for="NameEn" class="col-sm-5 control-label required"></label>
+            <div class="col-sm-7">
+                <button style="text-align:center !important" type="submit" class="btn btn-success">تعديل</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+ }

@@ -1,0 +1,218 @@
+﻿@model List<PostexS.Models.Domain.Order>
+@{
+    ViewData["Title"] = " طباعة تسوية الشحنات";
+    var senders = ViewBag.senders as List<PostexS.Models.Domain.ApplicationUser>;
+    var returned = ViewBag.returned as bool? ?? false;
+}
+<link href="~/css/printsite2.css" rel="stylesheet" />
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> طباعة تسوية الشحنات</h3>
+    </div>
+    <div class="panel-body">
+        <div class="box-body">
+            <div class="text-center" style="margin-bottom:10px;">
+                <h4 style="margin:10px" class="no-print">
+                    @if (returned)
+                    {
+                        <a href="@Url.Action("ReturnedComplete", "Orders")" class="btn btn-default no-print">العودة</a>
+                    }
+                    else
+                    {
+                        <a href="@Url.Action("Complete", "Orders")" class="btn btn-default no-print">العودة</a>
+                    }
+
+                    <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
+                    @if (!User.IsInRole("Client"))
+                    {
+                        <a href="@Url.Action("ExportToExeclWalletForAdmins","Orders",new{userWallet=@Model.First().CompletedId})" class="btn btn-warning">Export to Excel</a>
+                    }
+                    else
+                    {
+                        <a href="@Url.Action("ExportToExeclWallet","Orders",new{userWallet=@Model.First().CompletedId})" class="btn btn-warning">Export to Excel</a>
+                    }
+                    <a class="btn btn-info  no-print" target="_blank" href="/Orders/PrintReceipt?walletId=@Model.First().CompletedId
+                    ">طباعه إيصال الاستلام</a>
+                </h4>
+            </div>
+        </div>
+        <table class="table text-center table-bordered">
+            <thead>
+                <tr>
+                    @* <th class="status-column" style="text-align:center!important;">الحالة</th> *@
+                    <th class="order-code-column" style="text-align:center!important;">رقم الطلب</th>
+                    <th class="sender-name-column" style="text-align:center!important;">اسم الراسل</th>
+                    <th class="recipient-data-column" style="text-align:center!important;">بيانات المرسل إليه</th>
+                    <th class="paid-column" style="text-align:center!important;">تم تسديده</th>
+                    <th class="sender-percentage-column" style="text-align:center!important;">نسبة الراسل</th>
+                    <th class="delegate-column" style="text-align:center!important;">المندوب وملاحظاته</th>
+                    @* <th class="delegate-notes-column">ملاحظات المندوب</th> *@
+                    <th class="notes-column" style="text-align:center!important;">الملاحظات</th>
+                </tr>
+            </thead>
+            <tbody style="text-align:center">
+                @foreach (var item in Model)
+                {
+                    <tr>
+
+                        <td class="order-code-column">
+                            <span class="badge" style="font-size:15px;">@item.Code</span>  <br /> @if (item.IsDeleted == true)
+                            {
+                                <span class="badge bg-red">محذوف</span>
+                            }
+                            else if (item.Status == PostexS.Models.Enums.OrderStatus.Placed)
+                            {
+                                <span class="badge bg-gray">جديد</span>
+                            }
+                            else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
+                            {
+                                <span class="badge bg-yellow-active">مرتجع جزئي</span>
+                            }
+                            else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned)
+                            {
+                                <span class="badge bg-yellow">مرتجع كامل</span>
+                            }
+                            else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
+                            {
+                                <span class="badge bg-yellow">مرتجع وشحن على الراسل</span>
+                            }
+                            else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
+                            {
+                                <span class="badge bg-yellow">مرتجع ودفع شحن </span>
+                            }
+                            else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
+                            {
+                                <span class="badge bg-blue-active">تم التوصيل مع تعديل السعر</span>
+                            }
+                            else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+                            {
+                                <span class="badge bg-blue-active">تم التوصيل جزئي</span>
+                            }
+                            else if (item.Status == PostexS.Models.Enums.OrderStatus.Assigned)
+                            {
+                                <span class="badge bg-green">جارى التوصيل</span>
+                            }
+                            else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered)
+                            {
+                                <span class="badge bg-blue-active">تم التوصيل</span>
+                            }
+                            else if (item.Status == PostexS.Models.Enums.OrderStatus.Rejected)
+                            {
+                                <span class="badge bg-yellow">مرفوض</span>
+                            }
+                            else if (item.Status == PostexS.Models.Enums.OrderStatus.Waiting)
+                            {
+                                <span class="badge bg-orange">مؤجل</span>
+                            }
+
+                            else if (item.Status == PostexS.Models.Enums.OrderStatus.Completed)
+                            {
+                                <span class="badge bg-light-blue">تم تسويته</span>
+                            }
+                        </td>
+                        <td class="sender-name-column">@item.Client.Name</td>
+                        <td class="recipient-data-column">
+                            <div>
+                                <strong>@item.ClientName</strong><br />
+                                <span class="phone-number">@item.ClientPhone</span><br />
+                                <span>@item.AddressCity - @item.Address</span>
+                            </div>
+                        </td>
+                        <td class="paid-column @(item.ArrivedCost != item.TotalCost ? "text-danger" : "")">
+                            @item.ArrivedCost
+                        </td>
+                        <td class="sender-percentage-column">@item.ClientCost</td>
+                        <td class="delegate-notes-column">
+                            <div class="delegate-container">
+                                <div class="delegate-info">
+                                    @if (item.DeliveryId != null)
+                                    {
+                                        <span class="phone-number">@item.Delivery.Name</span>
+                                        <br />
+                                        <span class="phone-number">@item.Delivery.PhoneNumber</span>
+                                    }
+                                </div>
+                                <div class="delegate-notes">
+                                    @if (item.DeliveryId != null && item.OrderNotes.Any())
+                                    {
+                                        var latestNote = item.OrderNotes.OrderBy(x => x.Id).Last().Content;
+                                        if (!string.IsNullOrWhiteSpace(latestNote))
+                                        {
+                                            <hr class="full-width-hr" />
+                                            @latestNote
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </td>
+                        <td class="notes-column">@item.Notes</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <table class="table text-center table-bordered">
+            <tr>
+                <td style="width:50%;text-align:left">
+                    المبلغ المستحق للراسل :
+                </td>
+                <td style="width:50%;text-align:right;color:green">
+                    @Model.Sum(x => x.ClientCost) جنية
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<script>
+    function Delete(url) {
+        swal({
+            title: "هل متأكد؟",
+            text: "عند مسح هذا الطلب سوف يتم نقله إلى الطلبات المحذوفة",
+            icon: "warning",
+            dangerMode: true
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "Delete",
+                    url: url,
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setInterval('location.reload()', 2500);
+                        }
+                        else {
+                            toastr.error(data.message);
+                        }
+                    }
+                })
+            }
+        })
+    }
+    function Resotre(url) {
+        swal({
+            title: "هل متأكد؟",
+            text: "هل تريد استراجع هذا الطلب مرة أخرى",
+            icon: "success"
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "Delete",
+                    url: url,
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setInterval('location.reload()', 2500);
+                        }
+                        else {
+                            toastr.error(data.message);
+                        }
+                    }
+                })
+            }
+        })
+    }
+</script>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+}

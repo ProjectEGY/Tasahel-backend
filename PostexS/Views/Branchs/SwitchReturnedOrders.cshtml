@@ -1,0 +1,340 @@
+﻿@using System
+@using System.Globalization
+@{
+    var orders = ViewBag.Orders as List<PostexS.Models.Domain.Order>;
+    var TransferedOrdersUnConfirmed = ViewBag.TransferedOrdersUnConfirmed as List<PostexS.Models.Domain.Order>;
+    var branch = ViewBag.Branch as PostexS.Models.Domain.Branch;
+    ViewBag.Title = " تحويل مرتجعات لفرع [ " + branch.Name + " ]";
+    ViewBag.label = " مرتجعات محولة لفرع [ " + branch.Name + " ]";
+    Func<DateTime, int, string> ConvertToEgyptTime = (DateTime utcDateTime, int hoursToAdd) =>
+        {
+            var egyptTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+            var egyptTime = TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, egyptTimeZone);
+            return egyptTime.ToString("MM/dd/yyyy h:mm:ss tt", CultureInfo.InvariantCulture);
+        };
+}
+
+<h1 class="text-center mb-30">@ViewBag.Title</h1>
+@Html.ValidationSummary(false, "", new { @class = "text-danger" })
+@using (Html.BeginForm("SwitchReturnedOrders", "Branchs", FormMethod.Post, new { enctype = "multipart/form-data" }))
+{
+    @Html.AntiForgeryToken()
+    <input name="BranchId" type="hidden" id="BranchId" value="@ViewBag.BranchId" />
+    <div class="row" style="margin:10px;">
+        <div class="col-lg-12 mb-10">
+            <div class="form-group">
+                <label for="NameAr" class="col-sm-2 control-label required">اختار المرتجعات: </label>
+                <div class="col-sm-10">
+                    <select name="Orders" id="Orders" class="select2 form-control" multiple>
+                        @foreach (var order in orders)
+                        {
+                            <option value="@order.Id">@(order.Code) - @order.TotalCost جنية</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="SelectAllReturned" class="col-sm-2 control-label">اختر جميع المرتجعات:</label>
+                <div class="col-sm-10">
+                    <input type="checkbox" id="SelectAllReturned" />
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row" style="margin:10px;">
+        <div class="col-lg-12 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-2 control-label required"></label>
+                <div class="col-sm-10">
+                    <button style="text-align:center !important" type="submit" class="btn btn-danger">تحويل</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="box box-info">
+
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 style="display: inline;" class="panel-title">
+                        @* <i class="fa fa-fw fa-shopping-basket"></i> @ViewBag.label <h4 style="color:red;display: contents;">هذه المرتجعات لم يتم تأكيد إستلامها بعد </h4> *@
+                        <i class="fa fa-fw fa-undo"></i> بيان المرتجعات
+                    </h3>
+                </div>
+                <a id="printSelectedBtn" style=" margin: 10px;padding:10px;" class="btn btn-danger">
+                    طباعة المرتجعات المحدده
+                </a>
+                <div class="form-group">
+                    <label for="SelectAll" class="col-sm-2 control-label"> تحديد جميع المرتجعات:</label>
+                    <div class="col-sm-10">
+                        <input type="checkbox" id="SelectAll" />
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <table class="table text-center table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="text-align:center ">تحديد</th>
+                                <th style="text-align:center">رقم الطلب</th>
+
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <th style="text-align:center">الفرع الحالي</th>
+                                }
+                                <th style="text-align:center">تاريخ انشاء الطلب</th>
+                                <th style="text-align:center">اسم الراسل</th>
+                                @* <th style="text-align:center ">رقم الراسل</th> *@
+                                <th style="text-align:center">اسم المرسل إلية</th>
+                                @* <th style="text-align:center ">رقم المرسل الية</th> *@
+                                <th style="text-align:center ">الملاحظات</th>
+                                <th style="text-align:center ">العنوان</th>
+                                <th style="text-align:center ">ملاحظات المندوب</th>
+                                <th style="text-align:center ">الاجمالي</th>
+                                <th style="text-align:center ">إلغاء التحويل</th>
+                            </tr>
+                        </thead>
+                        <tbody style="text-align:center">
+                            @foreach (var item in TransferedOrdersUnConfirmed)
+                            {
+                                <tr>
+
+                                    <td>
+                                        <input class="check-box" type="checkbox" name="OrdersId" value="@item.Id">
+                                    </td>
+                                    <td>
+                                        @*   <!-- Trigger the modal with a button -->
+                                    <button type="button" class="btn btn-info btn-lg" data-toggle="modal" data-target="#@Model[i].Id">انهاء </button>
+                                    *@
+                                        @(item.Code)
+
+                                        <br />
+                                        @if (item.IsDeleted == true)
+                                        {
+                                            <span class="badge bg-red">محذوف</span>
+                                        }
+                                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Placed)
+                                        {
+                                            <span class="badge bg-gray">جديد</span>
+                                        }
+                                        else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
+                                        {
+                                            <span class="badge bg-yellow-active">مرتجع جزئي</span>
+                                        }
+                                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned)
+                                        {
+                                            <span class="badge bg-yellow">مرتجع كامل</span>
+                                        }
+                                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
+                                        {
+                                            <span class="badge bg-yellow">مرتجع وشحن على الراسل</span>
+                                        }
+                                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
+                                        {
+                                            <span class="badge bg-yellow">مرتجع ودفع شحن </span>
+                                        }
+                                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
+                                        {
+                                            <span class="badge bg-blue-active">تم التوصيل مع تعديل السعر</span>
+                                        }
+                                        else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+                                        {
+                                            <span class="badge bg-blue-active">تم التوصيل جزئي</span>
+                                        }
+                                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Assigned)
+                                        {
+                                            <span class="badge bg-green">جارى التوصيل</span>
+                                        }
+                                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered)
+                                        {
+                                            <span class="badge bg-blue-active">تم التوصيل</span>
+                                        }
+                                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Rejected)
+                                        {
+                                            <span class="badge bg-yellow">مرفوض</span>
+                                        }
+                                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Waiting)
+                                        {
+                                            <span class="badge bg-orange">مؤجل</span>
+                                        }
+                                    </td>
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <td>@item.Branch.Name</td>
+                                    }
+                                    <td>
+                                        @ConvertToEgyptTime(item.CreateOn, 2)
+                                    </td>
+                                    <td>
+
+                                        @item.Client.Name<br />
+                                        @item.Client.PhoneNumber
+                                    </td>
+                                    <td>
+
+                                        @item.ClientName<br />
+                                        @item.ClientPhone
+                                    </td>
+
+                                    <td style="width:150px">
+                                        @* @if (item.OrderNotes.Count > 0)
+                                    {
+                                    @item.OrderNotes.OrderBy(x => x.Id).Last().Content
+                                    }*@
+                                        @if (item.Notes != "")
+                                        {
+                                            @item.Notes
+                                        }
+                                        else
+                                        {
+                                            <span>--</span>
+                                        }
+                                    </td>
+                                    <td style="width:150px">
+                                        @item.AddressCity - @item.Address
+                                    </td>
+                                    <td>
+                                        @if (item.OrderNotes.Count > 0)
+                                        {
+                                            foreach (var x in item.OrderNotes)
+                                            {
+                                                <p>@x.Content</p>
+                                            }
+                                        }
+                                    </td>
+                                    <td style="color:green">
+                                        @item.TotalCost جنية
+                                    </td>
+                                    <td style="color:red">
+                                        @if (item.PendingReturnTransferrConfirmed)
+                                        {
+                                            <a href="/Branchs/CancelReturnedTransfer?id=@item.Id&BranchId=@ViewBag.BranchId
+                                                                                                                                                                                                                    " class="btn btn-danger no-print">إلغاء </a>
+                                        }
+                                        else
+                                        {
+                                            <span>ـــ</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+
+            <a href="/Branchs/Index" class="btn btn-default no-print">العودة</a>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        document.getElementById('SelectAllReturned').addEventListener('change', function () {
+            var select = document.getElementById('Orders');
+            var options = select && select.options;
+
+            if (!options) return;
+
+            for (var i = 0; i < options.length; i++) {
+                options[i].selected = this.checked;
+            }
+
+            // Trigger select2 to update the display
+            $('#Orders').trigger('change');
+        });
+
+        // Initialize select2
+        $(document).ready(function () {
+            $('#Orders').select2();
+        });
+    </script>
+}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const printSelectedBtn = document.getElementById('printSelectedBtn');
+
+        printSelectedBtn.addEventListener('click', function () {
+            const selectedOrderIds = [];
+
+            // Find all checkboxes that are checked
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]:not(#SelectAll)');
+            checkboxes.forEach(function (checkbox) {
+                if (checkbox.checked) {
+                    selectedOrderIds.push(parseInt(checkbox.value));
+                }
+            });
+
+            // Call the server-side method
+            if (selectedOrderIds.length > 0) {
+                const driver = ""; // You can pass a driver name here if needed
+                fetch('/Orders/PrintBarcodeSelectedOrders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        Orders: selectedOrderIds,
+                        Driver: driver
+                    })
+                })
+                    .then(response => {
+                        console.log('Response status:', response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Response data:', data);
+                        if (data.redirectUrl) {
+                            //window.location.href = data.redirectUrl; // Navigate to the redirect URL
+                            window.open(data.redirectUrl, '_blank'); // Open the redirect URL in a new tab
+                        } else {
+                            console.error('Redirect URL not found in response');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            } else {
+                alert('من فضلك قم بإختيار طلب واحد علي الاقل.');
+            }
+        });
+    });
+</script>
+<script>
+    document.getElementById('SelectAll').addEventListener('change', function () {
+        // احصل على جميع صناديق الاختيار الخاصة بالمرتجعات
+        var checkboxes = document.querySelectorAll('.check-box');
+
+        // تحديد أو إلغاء تحديد جميع صناديق الاختيار بناءً على حالة "تحديد الجميع"
+        checkboxes.forEach(function (checkbox) {
+            checkbox.checked = document.getElementById('SelectAll').checked;
+        });
+    });
+
+    // وظيفة لتحديث حالة "تحديد الجميع" بناءً على حالة صناديق الاختيار الفردية
+    function updateSelectAllCheckbox() {
+        var checkboxes = document.querySelectorAll('.check-box');
+        var selectAllCheckbox = document.getElementById('SelectAll');
+        var allChecked = true;
+
+        // التحقق مما إذا كانت جميع صناديق الاختيار محددة
+        checkboxes.forEach(function (checkbox) {
+            if (!checkbox.checked) {
+                allChecked = false;
+            }
+        });
+
+        // تحديث حالة زر "تحديد الجميع"
+        selectAllCheckbox.checked = allChecked;
+    }
+
+    // أضف حدث لكل مربع اختيار فردي لتحديث حالة "تحديد الجميع" عند تغييره
+    document.querySelectorAll('.check-box').forEach(function (checkbox) {
+        checkbox.addEventListener('change', updateSelectAllCheckbox);
+    });
+</script>

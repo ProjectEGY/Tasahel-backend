@@ -1,0 +1,124 @@
+﻿@model PostexS.Models.ViewModels.ReceiptViewModel
+@using PostexS.Models.Enums;
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Receipt</title>
+    <style>
+        .receipt-container {
+            width: 80%;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-family: Arial, sans-serif;
+            position: relative;
+        }
+
+        .receipt-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* Space between image and text */
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+            .receipt-header .logo {
+                margin-left: 20px; /* Space between image and text */
+            }
+
+            .receipt-header h4 {
+                flex: 1;
+                text-align: center; /* Center the text */
+                margin: 0;
+            }
+
+            .receipt-header img {
+                width: 150px;
+                height: auto;
+            }
+
+        .receipt-body {
+            margin-bottom: 20px;
+        }
+
+        .receipt-footer {
+            text-align: center;
+        }
+
+        .receipt-field {
+            margin-bottom: 10px;
+            font-size: large;
+        }
+
+            .receipt-field span {
+                font-weight: bold;
+            }
+    </style>
+</head>
+<body>
+    <div class="text-center" style="margin-bottom:10px;">
+        <h4 style="margin:10px" class="no-print">
+            <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
+        </h4>
+    </div>
+    @if (Model.type == TransactionType.OrderComplete)
+    {
+        <div class="receipt-container">
+            <div class="receipt-header">
+                <h4>إيصال استلام فاتورة رقم <strong>@Model.Code</strong></h4>
+                <div class="logo">
+                    <img src="~/Content/Images/TasahelExpress.png" alt="Logo">
+                </div>
+            </div>
+            <div class="receipt-body">
+                <div class="receipt-field">
+                    <span>الراسل: </span> @Model.SenderName
+                </div>
+                <div class="receipt-field">
+                    <span>إجمالي الأوردرات المسلمة: </span> @Model.TotalDeliveredOrders
+                </div>
+                <div class="receipt-field">
+                    <span>تم تسويتها بتاريخ: </span> @Model.SettlementDate.ToString("dd/MM/yyyy")
+                </div>
+                <div class="receipt-field">
+                    <span>إجمالي المبلغ: </span> @Model.TotalAmount جنيه
+                </div>
+            </div>
+            <div class="receipt-footer">
+                <p>شكراً لتعاملكم معنا!</p>
+            </div>
+        </div>
+    }
+    else if (Model.type == TransactionType.OrderReturnedComplete)
+    {
+        <div class="receipt-container">
+            <div class="receipt-header">
+                <h4>إيصال استلام فاتورة مرتجعات رقم <strong>@Model.Code</strong></h4>
+                <div class="logo">
+                    <img src="~/Content/Images/TasahelExpress.png" alt="Logo">
+                </div>
+            </div>
+            <div class="receipt-body">
+                <div class="receipt-field">
+                    <span>الراسل: </span> @Model.SenderName
+                </div>
+                <div class="receipt-field">
+                    <span>إجمالي الأوردرات المرتجعه: </span> @Model.TotalDeliveredOrders
+                </div>
+                <div class="receipt-field">
+                    <span>تم تسويتها بتاريخ: </span> @Model.SettlementDate.ToString("dd/MM/yyyy HH:mm:ss")
+                </div>
+                <div class="receipt-field">
+                    <span>إجمالي المبلغ: </span> @Model.TotalAmount جنيه
+                </div>
+            </div>
+            <div class="receipt-footer">
+                <p>شكراً لتعاملكم معنا!</p>
+            </div>
+        </div>
+    }
+</body>
+</html>

@@ -1,0 +1,130 @@
+﻿@model List<PostexS.Models.Domain.Wallet>
+@using PostexS.Models.Enums;
+@{
+    Layout = null;
+    var i = ViewBag.PageStartRowNum;
+    double sumamount = 0;
+}
+@foreach (var item in Model)
+{
+    <tr style="@(!item.AddedToAdminWallet? "background-color:#ffff0073" : "")">
+        <td>
+            @if (!item.AddedToAdminWallet)
+            {
+                @item.Id
+                <br />
+                <span class="badge" style="color :red;font-size:15px;background-color:#fff;"><strong style="font-size:16px;">يوجد مشكلة في العمليه </strong><br /> لم يتم إضافة مبلغ العمليه في المحفظة</span>
+            }
+            else
+            {
+                @item.Id
+            }
+
+        </td>
+        <td>
+            @switch (item.TransactionType)
+            {
+
+                case PostexS.Models.Enums.TransactionType.AddedByAdmin:
+                    <span class="badge bg-green">تم تسديده </span>
+                    break;
+                case PostexS.Models.Enums.TransactionType.RemovedByAdmin:
+                    <span class="badge bg-yellow">تم خصمه</span>
+                    break;
+                case PostexS.Models.Enums.TransactionType.OrderFinished:
+                    <span class="badge bg-red-gradient">مديونية من تقفيلة</span>
+                    break;
+                case PostexS.Models.Enums.TransactionType.OrderComplete:
+                    <span class="badge bg-light-blue-active">تسوية طلبات</span>
+                    break;
+                case PostexS.Models.Enums.TransactionType.OrderReturnedComplete:
+                    <span class="badge bg-red">تسوية طلبات مرتجع</span>
+                    break;
+                case PostexS.Models.Enums.TransactionType.ReAddToWallet:
+                    <span class="badge bg-light-yellow-active">حل مشكلة تقفيله</span>
+                    break;
+            }
+        </td>
+        <td>
+            @if (item.ActualUserId != null)
+            {
+                <span>@item.ActualUser.Name</span>
+            }
+            else
+            {
+                <span>-</span>
+            }
+        </td>
+        <td>
+            <span>@item.Amount جنيه</span>
+
+        </td>
+        <td>
+            @if (item.Orders.Count == 0)
+            {
+                <span>----</span>
+            }
+            else
+            {
+                foreach (var order in item.Orders.ToList())
+                {
+                    if (order.Status != OrderStatus.PartialReturned && order.Status != OrderStatus.Returned)
+                        sumamount += order.ArrivedCost - order.DeliveryCost;
+                }
+
+                <span>@sumamount جنيه</span>
+            }
+        </td>
+        <td>
+
+            @if (item.Orders.Count == 0)
+            {
+                <span>----</span>
+            }
+            else
+            {
+                {
+                    sumamount -= item.Amount;
+                }
+                <span>@sumamount جنيه</span>
+
+                {
+                    sumamount = 0;
+                }
+            }
+        </td>
+        <td>
+            @if (item.UserWalletLast != null)
+            {
+                <span>@item.UserWalletLast</span>
+            }
+            else
+            {
+                <span>---</span>
+            }
+        </td>
+        <td>
+            @{
+                var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(item.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Sudan Standard Time"));
+            }
+            @CreatedOn.ToString("dd MMMM yyyy")<br />
+            @CreatedOn.ToString("hh:mm tt")
+        </td>
+        <td>
+            @if (item.TransactionType == PostexS.Models.Enums.TransactionType.OrderFinished)
+            {
+                <a class="btn btn-success" href="/Users/WalletOrders?walletId=@item.Id">طلبات التقفيلة</a>
+            }
+            else if (!string.IsNullOrEmpty(item.Note))
+            {
+                <p>@item.Note</p>
+            }
+            @if (!item.AddedToAdminWallet)
+            {
+                <a class="btn btn-warning mt-5" onclick="ReAddToWallet('/Users/ReAddToWallet?walletId=@item.Id')">إضغط لحل المشكلة</a>
+            }
+
+        </td>
+    </tr>
+
+}

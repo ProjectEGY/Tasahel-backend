@@ -1,0 +1,145 @@
+﻿@model PostexS.Models.Domain.Order
+@{
+    ViewBag.Title = "تعديل طلب ";
+    var branchs = ViewBag.Branchs as List<PostexS.Models.Domain.Branch>;
+
+}
+
+<h1 class="text-center mb-30">@ViewBag.Title</h1>
+@Html.ValidationSummary(false, "", new { @class = "text-danger" })
+@using (Html.BeginForm("Edit", "Orders", FormMethod.Post, new { enctype = "multipart/form-data" }))
+{
+    @Html.HiddenFor(d => d.CreateOn)
+    @Html.HiddenFor(d => d.DeletedOn)
+    @Html.HiddenFor(d => d.Id)
+    @Html.HiddenFor(d => d.IsDeleted)
+    @Html.HiddenFor(d => d.OrderOperationHistoryId)
+    @Html.HiddenFor(d => d.IsModified)
+    @Html.HiddenFor(d => d.ModifiedOn)
+    @Html.HiddenFor(x => x.BranchId)
+    @Html.HiddenFor(x => x.ClientId)
+    @Html.HiddenFor(x => x.DeliveryId)
+    @Html.HiddenFor(x => x.CompletedId)
+    @Html.HiddenFor(x => x.WalletId)
+    @Html.HiddenFor(x => x.OrderCompleted)
+    @Html.HiddenFor(d => d.Code)
+    @Html.HiddenFor(d => d.Status)
+    @Html.HiddenFor(d => d.Pending)
+    @Html.HiddenFor(d => d.TransferredConfirmed)
+    @Html.HiddenFor(d => d.ArrivedCost)
+    @Html.HiddenFor(d => d.DeliveryCost)
+    @Html.HiddenFor(d => d.ClientCost)
+    @Html.HiddenFor(d => d.ReturnedCost)
+    @Html.HiddenFor(d => d.BarcodeImage)
+    @Html.HiddenFor(d => d.Finished)
+    @Html.HiddenFor(d => d.CompletedOn)
+    @Html.HiddenFor(d => d.LastUpdated)
+    @Html.AntiForgeryToken()
+    <div class="row" style="margin:10px;">
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">اسم المرسل إليه:</label>
+                <div class="col-sm-7">
+                    <input asp-for="ClientName" type="text" required id="FaceBook" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">العنوان:</label>
+                <div class="col-sm-7">
+                    <input asp-for="Address" type="text" required id="Twitter" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">رقم هاتف المرسل إليه:</label>
+                <div class="col-sm-7">
+                    <input asp-for="ClientPhone" type="text" required id="Instgram" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="AddressCity" class="col-sm-5 control-label required">عنوان المحافظة للمرسل إليه:</label>
+                <div class="col-sm-7">
+                    <input asp-for="AddressCity" type="text" required id="WhatsApp" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">عنوان المرسل إليه:</label>
+                <div class="col-sm-7">
+                    <input asp-for="Address" type="text" required id="WhatsApp" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameAr" class="col-sm-5 control-label required">سعر الطلب: </label>
+                <div class="col-sm-7">
+                    <input asp-for="Cost" type="number" id="Cost" required class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        @*  @if (User.IsInRole("Admin") || User.IsInRole("HighAdmin")|| User.IsInRole("Accountant"))
+    {
+    <div class="col-lg-6 mb-10">
+    <div class="form-group">
+    <label for="NameEn" class="col-sm-5 control-label "> تحويل الطلب لفرع اخر:</label>
+    <div class="col-sm-7">
+    <select asp-asp-for="BranchId" name="BranchId" id="BranchId" class="select2 form-control">
+    @foreach (var branch in branchs)
+    {
+    if (Model.BranchId == branch.Id)
+    {
+    <option selected="selected" value="@branch.Id">@branch.Name - @branch.Address</option>
+    }
+    else
+    {
+    <option value="@branch.Id">@branch.Name - @branch.Address</option>
+    }
+    }
+    </select>
+    </div>
+    </div>
+    </div>
+    }*@
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameAr" class="col-sm-5 control-label required">خدمة التوصيل: </label>
+                <div class="col-sm-7">
+                    <input asp-for="DeliveryFees" type="number" id="DeliveryFees" required class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameAr" class="col-sm-5 control-label required">ملاحظات الطلب : </label>
+                <div class="col-sm-7">
+                    @Html.TextAreaFor(x => x.Notes, htmlAttributes: new { @class = "form-control", rows = 7 })
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row" style="margin:10px;">
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required"></label>
+                <div class="col-sm-7">
+                    <button style="text-align:center !important" type="submit" class="btn btn-success">تعديل</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+}
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+}

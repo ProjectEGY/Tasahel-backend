@@ -1,0 +1,49 @@
+﻿@model PostexS.Helper.PagedList<PostexS.Models.Domain.Order>
+@using PostexS.Models.ViewModels;
+@using PostexS.Helper
+@{
+    ViewData["Title"] = "تحويل الطلبات المحدده";
+    var branchs = ViewBag.Branchs as List<PostexS.Models.Domain.Branch>;
+    var OrderId = ViewBag.OrderId as List<long>;
+}
+<style>
+    #inpSearch {
+        display: none;
+    }
+</style>
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i>تحويل الطلبات</h3>
+    </div>
+    <div class="panel-body">
+        @using (Html.BeginForm("Switch", "Orders", FormMethod.Post))
+        {
+            @foreach (var order in OrderId)
+            {
+                <input hidden name="OrderId" value="@order">
+            }
+            <div class="form-group">
+                <label for="StoreId">برجاء اختيار الفرع لتحويل الطلبات اليه</label>
+                <select name="BranchId" id="BranchId" class="select2 form-control">
+
+                    @foreach (var branch in branchs)
+                    {
+                        if (@ViewBag.BranchId != branch.Id)
+                        {
+                            <option value="@branch.Id">@branch.Name - @branch.Address</option>
+                        }
+                    }
+                    @*           @foreach (var branch in branchs)
+                {
+                <option value="@branch.Id">@branch.Name - @branch.Address</option>
+                }*@
+                </select>
+            </div>
+            <button type="submit" class="btn btn-info">اختيار</button>
+        }
+
+    </div>
+</div>
+@section Scripts{
+    <partial name="_ValidationScriptsPartial" />
+}

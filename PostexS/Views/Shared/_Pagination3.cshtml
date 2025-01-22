@@ -1,0 +1,72 @@
+﻿@model PostexS.Models.ViewModels.PaginationVM
+@{
+    var prevDisabled = !Model.PreviousPage ? "disabled" : "";
+    var nextDisabled = !Model.NextPage ? "disabled" : "";
+    var tbl_footer_msg = "عرض " + Model.StartIndex + " الى " + Model.EndIndex + " من " + Model.ItemsCount + " مدخلات ";
+    var index = 1;
+    var end = 10;
+    if (Model.PageIndex > 5)
+    {
+        index = Model.PageIndex - 5;
+        end = Model.PageIndex + 5;
+    }
+
+}
+<div class="row">
+    <div class="col-sm-4 mt-15">
+        <p>
+            @tbl_footer_msg
+        </p>
+    </div>
+    <div class="col-sm-8" style="text-align:left">
+        <a class="btn btn-default btnpagination @prevDisabled"
+           onclick="ReloadPagination(@(Model.PageIndex - 1))">السابق</a>
+        @for (var i = index; i <= end; i++)
+        {
+            if (Model.PageIndex == i)
+            {
+                <a class="btn btn-info btnpagination"
+                   onclick="ReloadPagination(@i)">@i</a>
+            }
+            else
+            {
+                <a class="btn btn-default btnpagination"
+                   onclick="ReloadPagination(@i)">@i</a>
+            }
+
+        }
+        <a class="btn btn-default btnpagination @nextDisabled"
+           onclick="ReloadPagination(@(Model.PageIndex + 1))">التالي</a>
+    </div>
+</div>
+<script type="text/javascript">
+    function ReloadPagination(pageNum) {
+        var AccountantId = document.getElementById("AccountantId").value;
+        var inpSearchVal = document.getElementById("inpSearch").value;
+        var FilterTime = document.getElementById("FilterTime").value;
+        var FilterTimeTo = document.getElementById("FilterTimeTo").value;
+        var pageSize = 50;
+        if ($("#entires") != null || $("#entires") != undefined) {
+            pageSize = $("#entires").val();
+        }
+        $.ajax({
+            url: "@Model.GetItemsUrl",
+            type: "GET",
+            data: { searchStr: inpSearchVal, FilterTime, FilterTimeTo, AccountantId, pageNumber: pageNum, pageSize: pageSize },
+            success: function (results) {
+                $("#tbBody").empty();
+                $("#tbBody").html(results);
+                $.ajax({
+                    url: "@Model.GetPaginationUrl",
+                    type: "GET",
+                    data: { AccountantId, searchStr: inpSearchVal, FilterTime, FilterTimeTo, pageNumber: pageNum, pageSize: pageSize },
+                    success: function (results) {
+                        $("#dvPagination").empty();
+                        $("#dvPagination").html(results);
+
+                    }
+                });
+            }
+        });
+    }
+</script>

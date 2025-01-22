@@ -1,0 +1,32 @@
+﻿.status-colors {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.status-item {
+    /*flex: 0 0 10%;*/ /* This ensures 4 items per row */
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px; /* Adjust spacing between rows */
+    margin-right: 10px; /* Adjust spacing between rows */
+}
+
+.status-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+/* Adjust font size and spacing for smaller screens */
+@media (max-width: 768px) {
+    .status-item {
+        flex: 0 0 33%; /* Two items per row for smaller screens */
+    }
+}
+
+@media (max-width: 576px) {
+    .status-item {
+        flex: 1 0 50%; /* Single item per row for extra small screens */
+    }
+}

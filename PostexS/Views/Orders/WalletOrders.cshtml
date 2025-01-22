@@ -1,0 +1,168 @@
+﻿@model IEnumerable<PostexS.Models.Domain.Order>
+@{
+    ViewData["Title"] = "طلبات التسوية";
+    var users = ViewBag.Drivers as List<PostexS.Models.Domain.ApplicationUser>;
+    var branchs = ViewBag.Branchs as List<PostexS.Models.Domain.Branch>;
+}
+@using PostexS.Models.Enums;
+
+<!-- Link to the consolidated print CSS -->
+<link href="~/css/printsite2.css" rel="stylesheet" />
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> طلبات التسوية</h3>
+    </div>
+    <div class="panel-body">
+        <div class="text-center" style="margin-bottom:10px;">
+            <h4 style="margin:10px" class="no-print">
+                <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
+            </h4>
+        </div>
+        <div class="table-responsive">
+            <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th class="status-column" style="text-align:center!important;">الحالة</th>
+                        <th class="order-code-column" style="text-align:center!important;">رقم الطلب</th>
+                        <th class="sender-name-column" style="text-align:center!important;">اسم الراسل</th>
+                        <th class="recipient-data-column" style="text-align:center!important;">بيانات المرسل إليه</th>
+                        <th class="paid-column" style="text-align:center!important;">تم تسديده</th>
+                        <th class="sender-percentage-column" style="text-align:center!important;">نسبة الراسل</th>
+                        <th class="delegate-column" style="text-align:center!important;">المندوب وملاحظاته</th>
+                        @* <th class="delegate-notes-column">ملاحظات المندوب</th> *@
+                        <th class="notes-column" style="text-align:center!important;">الملاحظات</th>
+                    </tr>
+                </thead>
+
+                <tbody style="text-align:center">
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                @if (item.IsDeleted)
+                                {
+                                    <span class="badge bg-red">محذوف</span>
+                                }
+                                else
+                                {
+                                    switch (item.Status)
+                                    {
+                                        case PostexS.Models.Enums.OrderStatus.Placed:
+                                            <span class="badge bg-gray">جديد</span>
+                                            break;
+                                        case PostexS.Models.Enums.OrderStatus.PartialReturned:
+                                            <span class="badge bg-yellow-active">مرتجع جزئي</span>
+                                            break;
+                                        case PostexS.Models.Enums.OrderStatus.Returned:
+                                            <span class="badge bg-yellow">مرتجع كامل</span>
+                                            break;
+                                        case PostexS.Models.Enums.OrderStatus.PartialDelivered:
+                                            <span class="badge bg-blue-active">تم التوصيل جزئي</span>
+                                            break;
+                                        case PostexS.Models.Enums.OrderStatus.Assigned:
+                                            <span class="badge bg-green">جارى التوصيل</span>
+                                            break;
+                                        case PostexS.Models.Enums.OrderStatus.Delivered:
+                                            <span class="badge bg-blue-active">تم التوصيل</span>
+                                            break;
+                                        case PostexS.Models.Enums.OrderStatus.Rejected:
+                                            <span class="badge bg-yellow">مرفوض</span>
+                                            break;
+                                        case PostexS.Models.Enums.OrderStatus.Waiting:
+                                            <span class="badge bg-orange">مؤجل</span>
+                                            break;
+                                        case PostexS.Models.Enums.OrderStatus.Completed:
+                                            <span class="badge bg-light-blue">تم تسويته</span>
+                                            break;
+                                        case PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender:
+                                            <span class="badge bg-yellow">مرتجع وشحن على الراسل</span>
+                                            break;
+                                        case PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost:
+                                            <span class="badge bg-yellow">مرتجع ودفع شحن</span>
+                                            break;
+                                        case PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price:
+                                            <span class="badge bg-blue-active">تم التوصيل مع تعديل السعر</span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-gray">حالة غير معروفة</span>
+                                            break;
+                                    }
+
+                                    switch (item.OrderCompleted)
+                                    {
+                                        case OrderCompleted.OK:
+                                            <span class="badge g-light-blue">تم تسويتة</span>
+                                            break;
+                                        case OrderCompleted.NOK:
+                                            <span class="badge bg-gray">لم يتم تسويتة</span>
+                                            break;
+                                    }
+
+                                    if (item.CompletedOn.HasValue)
+                                    {
+                                        var OrderOn = TimeZoneInfo.ConvertTimeFromUtc(item.CompletedOn.Value, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
+                                        <br />
+                                        <span>@OrderOn.ToString("dd/MM/yyyy HH:mm")</span>
+                                    }
+                                }
+                            </td>
+                            <td class="order-code-column">@item.Code</td>
+                            <td class="sender-name-column">@item.Client.Name</td>
+                            <td class="recipient-data-column">
+                                <div>
+                                    <strong>@item.ClientName</strong><br />
+                                    <span class="phone-number">@item.ClientPhone</span><br />
+                                    <span style="max-width:50px;">@item.AddressCity  - @item.Address</span>
+                                </div>
+                            </td>
+                            <td class="paid-column @(item.ArrivedCost != item.TotalCost ? "text-danger" : "")">
+                                @item.ArrivedCost
+                            </td>
+                            <td class="sender-percentage-column">@item.ClientCost</td>
+                            <td class="delegate-notes-column">
+                                <div class="delegate-container">
+                                    <div class="delegate-info">
+                                        @if (item.DeliveryId != null)
+                                        {
+                                            <span class="phone-number">@item.Delivery.Name</span>
+                                            <br />
+                                            <span class="phone-number">@item.Delivery.PhoneNumber</span>
+                                        }
+                                    </div>
+                                    <div class="delegate-notes">
+                                        @if (item.DeliveryId != null && item.OrderNotes.Any())
+                                        {
+                                            var latestNote = item.OrderNotes.OrderBy(x => x.Id).Last().Content;
+                                            if (!string.IsNullOrWhiteSpace(latestNote))
+                                            {
+                                                <hr class="full-width-hr" />
+                                                @latestNote
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="notes-column">@item.Notes</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <!-- Summary Table -->
+            <table class="table text-center table-bordered">
+                <tr>
+                    <td style="width:50%;text-align:left">
+                        المبلغ المستحق للراسل :
+                    </td>
+                    <td style="width:50%;text-align:right;color:green">
+                        @Model.Sum(x => x.ClientCost) جنية
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

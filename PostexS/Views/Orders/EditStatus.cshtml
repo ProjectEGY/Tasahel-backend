@@ -1,0 +1,362 @@
+﻿@model PostexS.Models.Domain.Order
+@using PostexS.Models.Enums;
+@{
+    ViewBag.Title = "تعديل حالة الطلب ";
+    var branchs = ViewBag.Branchs as List<PostexS.Models.Domain.Branch>;
+    string backgroundColor = "";
+    switch (Model.Status)
+    {
+        case OrderStatus.Waiting:
+            backgroundColor = "#ffff006e";
+            break;
+        case OrderStatus.Rejected:
+            backgroundColor = "red";
+            break;
+        case OrderStatus.PartialDelivered:
+            backgroundColor = "skyblue";
+            break;
+        case OrderStatus.Delivered:
+            backgroundColor = "#d8f8e994";
+            break;
+        case OrderStatus.Returned:
+            backgroundColor = "#ed6464a8";
+            break;
+        case OrderStatus.PartialReturned:
+            backgroundColor = "#ef777757";
+            break;
+        default:
+            backgroundColor = "";
+            break;
+    }
+}
+
+<h1 class="text-center mb-30">@ViewBag.Title</h1>
+@Html.ValidationSummary(false, "", new { @class = "text-danger" })
+@if (User.IsInRole("Admin") || !(Model.Status == OrderStatus.Completed || Model.Finished == true || Model.IsDeleted ||
+       Model.OrderCompleted == OrderCompleted.OK))
+
+{
+    @using (Html.BeginForm("EditStatus", "Orders", FormMethod.Post, new { enctype = "multipart/form-data" }))
+    {
+        @Html.HiddenFor(d => d.CreateOn)
+        @Html.HiddenFor(d => d.DeletedOn)
+        @Html.HiddenFor(d => d.Id)
+        @Html.HiddenFor(d => d.IsDeleted)
+        @Html.HiddenFor(d => d.OrderOperationHistoryId)
+        @Html.HiddenFor(d => d.IsModified)
+        @Html.HiddenFor(d => d.ModifiedOn)
+        @Html.HiddenFor(x => x.BranchId)
+        @Html.HiddenFor(x => x.ClientId)
+        @Html.HiddenFor(x => x.DeliveryId)
+        @Html.HiddenFor(x => x.CompletedId)
+        @Html.HiddenFor(x => x.WalletId)
+        @Html.HiddenFor(x => x.OrderCompleted)
+        @Html.HiddenFor(d => d.Code)
+        @Html.HiddenFor(d => d.Notes)
+        @Html.HiddenFor(d => d.TotalCost)
+        @* @Html.HiddenFor(d => d.Status) *@
+        @Html.HiddenFor(d => d.Pending)
+        @Html.HiddenFor(d => d.TransferredConfirmed)
+        @Html.HiddenFor(d => d.ArrivedCost)
+        @Html.HiddenFor(d => d.DeliveryCost)
+        @Html.HiddenFor(d => d.ClientCost)
+        @Html.HiddenFor(d => d.ReturnedCost)
+        @Html.HiddenFor(d => d.BarcodeImage)
+        @Html.HiddenFor(d => d.Finished)
+        @Html.HiddenFor(d => d.CompletedOn)
+        @Html.HiddenFor(d => d.LastUpdated)
+        @Html.AntiForgeryToken()
+        <div class="row" style="margin:10px;">
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required">اسم المرسل إليه:</label>
+                    <div class="col-sm-7">
+                        <input asp-for="ClientName" readonly type="text" required id="FaceBook" class="form-control valid" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required">العنوان:</label>
+                    <div class="col-sm-7">
+                        <input asp-for="Address" readonly type="text" required id="Twitter" class="form-control valid" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required">رقم هاتف المرسل إليه:</label>
+                    <div class="col-sm-7">
+                        <input asp-for="ClientPhone" readonly type="text" required id="Instgram" class="form-control valid" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="AddressCity" class="col-sm-5 control-label required">عنوان المحافظة للمرسل إليه:</label>
+                    <div class="col-sm-7">
+                        <input asp-for="AddressCity" readonly type="text" required id="WhatsApp" class="form-control valid" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required">عنوان المرسل إليه:</label>
+                    <div class="col-sm-7">
+                        <input asp-for="Address" readonly type="text" required id="WhatsApp" class="form-control valid" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameAr" class="col-sm-5 control-label required">سعر الطلب: </label>
+                    <div class="col-sm-7">
+                        <input asp-for="Cost" readonly type="number" id="Cost" required class="form-control valid" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameAr" class="col-sm-5 control-label required">خدمة التوصيل: </label>
+                    <div class="col-sm-7">
+                        <input asp-for="DeliveryFees" readonly type="number" id="DeliveryFees" required class="form-control valid" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameAr" class="col-sm-5 control-label required">ملاحظات الطلب : </label>
+                    <div class="col-sm-7">
+                        @Html.DisplayTextFor(x => x.Notes)
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameAr" class="col-sm-5 control-label required">حالة الطلب الان : </label>
+                    <div class="col-sm-7">
+                        @if (Model.IsDeleted == true)
+                        {
+                            <span class="badge bg-red">محذوف</span>
+                        }
+                        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Placed)
+                        {
+                            <span class="badge bg-gray">جديد</span>
+                        }
+                        else if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
+                        {
+                            <span class="badge bg-yellow-active">مرتجع جزئي</span>
+                        }
+                        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned)
+                        {
+                            <span class="badge bg-yellow">مرتجع كامل</span>
+                        }
+                        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
+                        {
+                            <span class="badge bg-yellow">مرتجع وشحن على الراسل</span>
+                        }
+                        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
+                        {
+                            <span class="badge bg-yellow">مرتجع ودفع شحن </span>
+                        }
+                        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
+                        {
+                            <span class="badge bg-blue-active">تم التوصيل مع تعديل السعر</span>
+                        }
+                        else if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+                        {
+                            <span class="badge bg-blue-active">تم التوصيل جزئي</span>
+                        }
+                        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Assigned)
+                        {
+                            <span class="badge bg-green">جارى التوصيل</span>
+                        }
+                        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Delivered)
+                        {
+                            <span class="badge bg-blue-active">تم التوصيل</span>
+                        }
+                        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Rejected)
+                        {
+                            <span class="badge bg-yellow">مرفوض</span>
+                        }
+                        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Waiting)
+                        {
+                            <span class="badge bg-orange">مؤجل</span>
+                        }
+
+                        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Completed)
+                        {
+                            <span class="badge bg-light-blue">تم تسويته</span>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameAr" class="col-sm-5 control-label required"></label>
+                    <div class="col-sm-7">
+                    </div>
+                </div>
+            </div>
+            <hr />
+            
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameAr" class="col-sm-12 control-label required"> <p style="color:darkred">عند تغيير حالة الطلب الي جديد ,إذا كان الطلب لدى مندوب ,سيتم اسقاط الطلب من عليه</p> حالة الطلب : </label>
+                    <select asp-for="Status" style="background-color:@(backgroundColor); padding: 8px; border-radius: 5px; border: 1px solid #ccc;width: -webkit-fill-available;">
+                        <option value="@OrderStatus.Placed">جديد</option>
+                        <option value="@OrderStatus.Waiting">مؤجل</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameAr" class="col-sm-5 control-label required">إضافة ملاحظات للمندوب : </label>
+                    <div class="col-sm-7">
+                        @Html.TextArea("NewNotes", htmlAttributes: new { @class = "form-control", rows = 7 })
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="row" style="margin:10px;">
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="NameEn" class="col-sm-5 control-label required"></label>
+                    <div class="col-sm-7">
+                        <button style="text-align:center !important" type="submit" class="btn btn-success">تعديل</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+    }
+}
+else
+{
+    <div class="row" style="margin:10px;">
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">اسم المرسل إليه:</label>
+                <div class="col-sm-7">
+                    <input asp-for="ClientName" readonly type="text" required id="FaceBook" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">العنوان:</label>
+                <div class="col-sm-7">
+                    <input asp-for="Address" readonly type="text" required id="Twitter" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">رقم هاتف المرسل إليه:</label>
+                <div class="col-sm-7">
+                    <input asp-for="ClientPhone" readonly type="text" required id="Instgram" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="AddressCity" class="col-sm-5 control-label required">عنوان المحافظة للمرسل إليه:</label>
+                <div class="col-sm-7">
+                    <input asp-for="AddressCity" readonly type="text" required id="WhatsApp" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-5 control-label required">عنوان المرسل إليه:</label>
+                <div class="col-sm-7">
+                    <input asp-for="Address" readonly type="text" required id="WhatsApp" class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameAr" class="col-sm-5 control-label required">سعر الطلب: </label>
+                <div class="col-sm-7">
+                    <input asp-for="Cost" readonly type="number" id="Cost" required class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameAr" class="col-sm-5 control-label required">خدمة التوصيل: </label>
+                <div class="col-sm-7">
+                    <input asp-for="DeliveryFees" readonly type="number" id="DeliveryFees" required class="form-control valid" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameAr" class="col-sm-5 control-label required">ملاحظات الطلب : </label>
+                <div class="col-sm-7">
+                    @Html.TextAreaFor(x => x.Notes, htmlAttributes: new { @class = "form-control", rows = 7, @readonly = "readonly" })
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label for="NameAr" class="col-sm-5 control-label required">حالة الطلب الان : </label>
+                <div class="col-sm-7">
+                    @if (Model.IsDeleted == true)
+                    {
+                        <span class="badge bg-red">محذوف</span>
+                    }
+                    else if (Model.Status == PostexS.Models.Enums.OrderStatus.Placed)
+                    {
+                        <span class="badge bg-gray">جديد</span>
+                    }
+                    else if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
+                    {
+                        <span class="badge bg-yellow-active">مرتجع جزئي</span>
+                    }
+                    else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned)
+                    {
+                        <span class="badge bg-yellow">مرتجع كامل</span>
+                    }
+                    else if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+                    {
+                        <span class="badge bg-blue-active">تم التوصيل جزئي</span>
+                    }
+                    else if (Model.Status == PostexS.Models.Enums.OrderStatus.Assigned)
+                    {
+                        <span class="badge bg-green">جارى التوصيل</span>
+                    }
+                    else if (Model.Status == PostexS.Models.Enums.OrderStatus.Delivered)
+                    {
+                        <span class="badge bg-blue-active">تم التوصيل</span>
+                    }
+                    else if (Model.Status == PostexS.Models.Enums.OrderStatus.Rejected)
+                    {
+                        <span class="badge bg-yellow">مرفوض</span>
+                    }
+                    else if (Model.Status == PostexS.Models.Enums.OrderStatus.Waiting)
+                    {
+                        <span class="badge bg-orange">مؤجل</span>
+                    }
+                    else if (Model.Status == PostexS.Models.Enums.OrderStatus.Completed)
+                    {
+                        <span class="badge bg-light-blue">تم تسويته</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+}
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+}

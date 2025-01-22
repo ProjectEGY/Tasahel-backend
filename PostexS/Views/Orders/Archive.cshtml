@@ -1,0 +1,230 @@
+﻿@model PostexS.Helper.PagedList<PostexS.Models.Domain.Wallet>
+@using PostexS.Models.ViewModels;
+@using PostexS.Helper
+@using PostexS.Models.Enums;
+@using PostexS.Models.Domain;
+
+@{
+    ViewData["Title"] = "ارشيف التسويات";
+    var Users = ViewBag.Users as List<PostexS.Models.Domain.ApplicationUser>;
+
+    var paginationVM = new PaginationVM()
+            {
+                PageIndex = Model.PageIndex,
+                TotalPages = Model.TotalPages,
+                PreviousPage = Model.PreviousPage,
+                NextPage = Model.NextPage,
+                GetItemsUrl = "/Orders/GetItemsArchive",
+                GetPaginationUrl = "/Orders/GetPaginationArchive",
+                ItemsCount = Model.ItemsCount,
+                StartIndex = Model.StartIndex,
+                EndIndex = Model.EndIndex
+            };
+    var sreach = ViewBag.searchStr;
+    DateTime FilterTime = new DateTime(); if (ViewBag.FilterTime != null)
+        FilterTime = ViewBag.FilterTime;
+    DateTime FilterTimeTo = new DateTime(); if (ViewBag.FilterTimeTo != null)
+        FilterTimeTo = ViewBag.FilterTimeTo;
+}
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> ارشيف التسويات</h3>
+    </div>
+
+    @if (!User.IsInRole("Accountant"))
+    {
+        <div class="form-group">
+            <label for="AccountantId"> اختيار المحاسب</label>
+            <select name="AccountantId" id="AccountantId" class="select form-control">
+                @if (@ViewBag.AccountantId == "0")
+                {
+                    <option value="0" selected>الجميع</option>
+                }
+                else
+                {
+                    <option value="0">الجميع</option>
+                }
+
+                @foreach (var user in Users)
+                {
+                    if (@ViewBag.AccountantId == @user.Id)
+                    {
+                        <option selected value="@user.Id">@user.Name</option>
+                    }
+                    else
+                    {
+                        <option value="@user.Id">@user.Name</option>
+                    }
+                }
+            </select>
+        </div>
+    }
+    <label for="StoreId" class="text-center">أختر المده </label>
+
+
+    <div class="row">
+
+        <div class="col-lg-2 text-center">
+        </div>
+        <div class="col-lg-3">
+            <input name="FilterTime" id="FilterTime" value="@FilterTime.Date" type="date" class="form-control" />
+        </div>
+        <div class="col-lg-2 text-center">
+            <label style="vertical-align:central" class="text-center">إلــى</label>
+        </div>
+        <div class="col-lg-3">
+            <input name="FilterTimeTo" id="FilterTimeTo" value="@FilterTimeTo.Date" type="date" class="form-control" />
+        </div>
+        <div class="col-lg-2 text-center">
+        </div>
+        <div class="col-lg-5 text-center">
+        </div>
+
+        <div class="col-lg-2">
+            @*<button type="submit" class="btn btn-primary form-control">بحــث</button>*@
+            <a onclick="ReloadPagination(@Model.PageIndex)" class="btn btn-primary form-control">بحــث</a>
+        </div>
+    </div>
+    @*}*@
+    <div class="panel-body">
+        <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
+            <div class="panel panel-success">
+                @if (TempData["CountryErrors"] != null)
+                {
+                    var Errors = TempData["CountryErrors"] as List<string>;
+                    <div class="alert alert-danger text-center p-5 m-5">
+                        <ul style="list-style:none;">
+                            @foreach (var error in Errors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-3">
+                <table>
+                    <tr>
+                        <td>
+                            <span>عرض </span>
+                        </td>
+                        <td>
+                            <select class="form-control" onchange="ReloadPagination(@Model.PageIndex)" id="entires">
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50" selected="selected">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </td>
+                        <td>
+                            <span> من المدخلات</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-sm-7">
+                <div class="input-group mt-5">
+                    <input class="form-control left-border-none" onchange="ReloadPagination(@Model.PageIndex)" style="display: block;" type="text" id="inpSearch" placeholder="اكتب للبحث" value="@sreach">
+                    <span class="input-group-addon transparent" onclick="ReloadPagination(@Model.PageIndex)">
+                        <i class='fa fa-search' aria-hidden='true'></i>
+                    </span>
+                    @*<a href="@Url.Action("ExportToExecl","Orders")" class="btn btn-warning">Export to excel</a>*@
+
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive text-center">
+            <table id="tableOrders" cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th style="text-align:center">رقم العملية</th>
+                        <th style="text-align:center">التفاصيل</th>
+
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <th style="text-align:center">الراسل</th>
+                            <th style="text-align:center">مبلغ العمليه</th>
+                            <th style="text-align:center">المبلغ المستحق للراسل</th>
+                        }
+                        <th style="text-align:center">التاريخ</th>
+                        <th style="text-align:center">المسئول عن التسويه</th>
+                        <th style="text-align:center">التحكم</th>
+                    </tr>
+                </thead>
+                <tbody id="tbBody" style="text-align:center">
+                    <partial name="_TableListArchive" model="@Model.ToList()" />
+                </tbody>
+            </table>
+            <div id="dvPagination">
+                <partial name="_Pagination3" model="@paginationVM" />
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function Delete(url) {
+        swal({
+            title: "هل متأكد؟",
+            text: "عند مسح هذا الطلب سوف يتم نقله إلى الطلبات المحذوفة",
+            icon: "warning",
+            dangerMode: true
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "Delete",
+                    url: url,
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setInterval('location.reload()', 2500);
+                        }
+                        else {
+                            toastr.error(data.message);
+                        }
+                    }
+                })
+            }
+        })
+    }
+    function Resotre(url) {
+        swal({
+            title: "هل متأكد؟",
+            text: "هل تريد استراجع هذا الطلب مرة أخرى",
+            icon: "success"
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "Delete",
+                    url: url,
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setInterval('location.reload()', 2500);
+                        }
+                        else {
+                            toastr.error(data.message);
+                        }
+                    }
+                })
+            }
+        })
+    }
+</script>
+<script>
+    document.ready(function () {
+        $("#tableOrders").DataTable({
+            paging: false,
+            ordering: false,
+            info: false,
+            searching: false
+        });
+    });
+</script>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

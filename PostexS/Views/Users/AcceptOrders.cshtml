@@ -1,0 +1,185 @@
+﻿@using System
+@using System.Globalization@{
+    ViewBag.Title = " الطلبات المعلقة للراسل ";
+    var orders = ViewBag.Orders as List<PostexS.Models.Domain.Order>;
+    Func<DateTime, int, string> ConvertToEgyptTime = (DateTime utcDateTime, int hoursToAdd) =>
+        {
+            var egyptTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+            var egyptTime = TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, egyptTimeZone);
+            return egyptTime.ToString("MM/dd/yyyy h:mm:ss tt", CultureInfo.InvariantCulture);
+        };
+}
+
+<h1 class="text-center mb-30">@ViewBag.Title</h1>
+@Html.ValidationSummary(false, "", new { @class = "text-danger" })
+@using (Html.BeginForm("AcceptOrders", "Users", FormMethod.Post, new { enctype = "multipart/form-data" }))
+{
+    @Html.AntiForgeryToken()
+    <input name="UserId" type="hidden" id="UserId" value="@ViewBag.UserId" />
+    <div class="row" style="margin:10px;">
+        <div class="col-lg-12 mb-10">
+            <div class="form-group">
+                <label for="NameAr" class="col-sm-2 control-label required">اختار الطلبات: </label>
+                <div class="col-sm-10">
+                    <select name="Orders" id="Orders" class="select2 form-control" multiple>
+                        @foreach (var order in orders)
+                        {
+                            <option value="@order.Id">@(order.Code) - @order.TotalCost جنية</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row" style="margin:10px;">
+        <div class="col-lg-12 mb-10">
+            <div class="form-group">
+                <label for="NameEn" class="col-sm-2 control-label required"></label>
+                <div class="col-sm-10">
+                    <button style="text-align:center !important" type="submit" class="btn btn-success">قبول الطلبات</button>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+}
+@using (Html.BeginForm("PrintSelectedOrders", "Orders", FormMethod.Post, new { enctype = "multipart/form-data" }))
+{
+    @Html.AntiForgeryToken()
+
+    <button class="btn btn-primary" style="margin:15px;" type="submit" id="printSelectedOrders">طباعة الطلبات المحددة</button>
+}
+<div class="row">
+    <div class="col-md-12">
+        <div class="box box-info">
+
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> @ViewBag.Title </h3>
+                </div>
+                <div class="panel-body">
+                    <table class="table text-center table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="text-align:center">رقم الطلب</th>
+                                <th style="text-align:center">تاريخ انشاء الطلب</th>
+                                <th style="text-align:center">اسم الراسل</th>
+                                <th style="text-align:center ">رقم الراسل</th>
+                                <th style="text-align:center">اسم المرسل إلية</th>
+                                <th style="text-align:center ">رقم المرسل الية</th>
+                                <th style="text-align:center ">الملاحظات</th>
+                                <th style="text-align:center ">العنوان</th>
+                                <th style="text-align:center ">الاجمالي</th>
+                            </tr>
+                        </thead>
+                        <tbody style="text-align:center">
+                            @for (int i = 0; i < orders.Count; i++)
+                            {
+                                <tr>
+
+                                    <td>
+                                        @*   <!-- Trigger the modal with a button -->
+                                    <button type="button" class="btn btn-info btn-lg" data-toggle="modal" data-target="#@Model[i].Id">انهاء </button>
+                                    *@
+                                        @(orders[i].Code)
+                                    </td>
+                                    <td>
+                                        @ConvertToEgyptTime(orders[i].CreateOn, 2)
+                                    </td>
+                                    <td>
+
+                                        @orders[i].Client.Name
+                                    </td>
+                                    <td>
+                                        @orders[i].Client.PhoneNumber
+                                    </td>
+                                    <td>
+
+                                        @orders[i].ClientName
+                                    </td>
+
+                                    <td>
+                                        @orders[i].ClientPhone
+                                    </td>
+
+                                    <td style="width:150px">
+                                        @* @if (orders[i].OrderNotes.Count > 0)
+                                    {
+                                    @orders[i].OrderNotes.OrderBy(x => x.Id).Last().Content
+                                    }*@
+                                        @if (orders[i].Notes != "")
+                                        {
+                                            @orders[i].Notes
+                                        }
+                                        else
+                                        {
+                                            <span>--</span>
+                                        }
+                                    </td>
+                                    <td style="width:150px">
+                                        @orders[i].AddressCity - @orders[i].Address
+                                    </td>
+                                    <td style="color:green">
+                                        @orders[i].TotalCost جنية
+                                    </td>
+
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+            <a href="/Users/Index?q=c" class="btn btn-default no-print">العودة</a>
+        </div>
+    </div>
+</div>
+<script>
+    document.getElementById("printSelectedOrders").addEventListener("click", function (event) {
+        event.preventDefault(); // منع الإرسال الافتراضي للنموذج
+
+        var selectedOrders = [];
+        var driver = "";
+        var orders = document.getElementById("Orders").selectedOptions;
+
+        for (var i = 0; i < orders.length; i++) {
+            selectedOrders.push(parseInt(orders[i].value)); // إضافة ID الطلبات
+        }
+
+        if (selectedOrders.length === 0) {
+            alert("من فضلك اختر طلبات للطباعة.");
+            return;
+        }
+
+        // إرسال البيانات عبر AJAX
+        var data = {
+            Orders: selectedOrders,
+            Driver: driver
+        };
+
+        // إرسال الطلب عبر AJAX
+        fetch('/Orders/PrintSelectedOrders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: JSON.stringify(data) // إرسال البيانات في صيغة JSON
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.redirectUrl) {
+                    window.open(data.redirectUrl, '_blank'); // _blank لفتح في تبويب جديد
+                } else {
+                    alert("حدث خطأ أثناء إرسال الطلب.");
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert("حدث خطأ أثناء إرسال الطلب.");
+            });
+    });
+</script>

@@ -1,0 +1,6 @@
+﻿@media print {
+    /* Ensure table cells break correctly */
+    td, th {
+        word-break: break-all;
+    }
+}

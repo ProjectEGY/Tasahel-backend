@@ -1,0 +1,73 @@
+﻿@model List<PostexS.Models.Domain.Wallet>
+@using PostexS.Models.Enums;
+@{
+    Layout = null;
+    var i = ViewBag.PageStartRowNum;
+}
+
+@foreach (var item in Model)
+{
+    <tr>
+        <td>@item.Id</td>
+        <td>
+            @switch (item.TransactionType)
+            {
+
+                case PostexS.Models.Enums.TransactionType.AddedByAdmin:
+                    <span class="badge bg-green">تم تسديده </span>
+                    break;
+                case PostexS.Models.Enums.TransactionType.RemovedByAdmin:
+                    <span class="badge bg-yellow">تم خصمه</span>
+                    break;
+                case PostexS.Models.Enums.TransactionType.OrderFinished:
+                    <span class="badge bg-red-gradient">مديونية من تقفيلة</span>
+                    break;
+                case PostexS.Models.Enums.TransactionType.OrderComplete:
+                    <span class="badge bg-light-blue-active">تسوية طلب</span>
+                    break;
+                case PostexS.Models.Enums.TransactionType.ReAddToWallet:
+                    <span class="badge bg-light-yellow-active">حل مشكلة تقفيله</span>
+                    break;
+            }
+        </td>
+        @if (User.IsInRole("Admin"))
+        {
+
+
+            <td>
+                @if (item.ActualUser != null)
+                {
+                    <span>@item.ActualUser.Name </span>
+                }
+                else
+                {
+                    <span>-</span>
+                }
+            </td>
+            <td>
+                <span>@item.Amount جنيه</span>
+            </td>
+            <td>
+                <span>@item.Orders.ToList().Sum(x => x.ClientCost) جنيه</span>
+            </td>
+        }
+
+        <td>
+            @{
+                var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(item.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Sudan Standard Time"));
+            }
+            @CreatedOn.ToString("dd MMMM yyyy")<br />
+            @CreatedOn.ToString("hh:mm tt")
+        </td>
+        <td>
+            @if (item.Complete_UserId != null)
+            {
+                <span>@item.Complete_User.Name</span>
+            }
+        </td>
+        <td>
+            <a class="btn btn-success" target="_blank" href="/Orders/WalletOrders?walletId=@item.Id">طلبات التسوية</a>
+            <a href="@Url.Action("ExportToExeclWallet","Orders",new{userWallet=item.Id})" class="btn btn-warning">Export to Excel</a>
+        </td>
+    </tr>
+}

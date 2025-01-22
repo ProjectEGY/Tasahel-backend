@@ -1,0 +1,84 @@
+﻿@model List<PostexS.Models.Domain.Wallet>
+@using PostexS.Models.Enums;
+@{
+    ViewBag.Title = "التسويات";
+}
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-money"></i> @ViewBag.Title</h3>
+    </div>
+    <div class="panel-body">
+        <div class="table-responsive text-center">
+            <table id="table" cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th style="text-align:center">رقم العملية</th>
+                        <th style="text-align:center">التفاصيل</th>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <th style="text-align:center">مبلغ العمليه</th>
+                        }
+                        <th style="text-align:center">التاريخ</th>
+                        <th style="text-align:center">التحكم</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Where(x => x.TransactionType == TransactionType.OrderComplete))
+                    {
+                        <tr>
+                            <td>@item.Id</td>
+                            <td>
+                                @switch (item.TransactionType)
+                                {
+
+                                    case PostexS.Models.Enums.TransactionType.AddedByAdmin:
+                                        <span class="badge bg-green">تم تسديده </span>
+                                        break;
+                                    case PostexS.Models.Enums.TransactionType.RemovedByAdmin:
+                                        <span class="badge bg-yellow">تم خصمه</span>
+                                        break;
+                                    case PostexS.Models.Enums.TransactionType.OrderFinished:
+                                        <span class="badge bg-red-gradient">مديونية من تقفيلة</span>
+                                        break;
+                                    case PostexS.Models.Enums.TransactionType.OrderComplete:
+                                        <span class="badge bg-light-blue-active">تسوية طلبات</span>
+                                        break;
+                                    case PostexS.Models.Enums.TransactionType.OrderReturnedComplete:
+                                        <span class="badge bg-red">تسوية طلبات مرتجع</span>
+                                        break;
+                                    case PostexS.Models.Enums.TransactionType.ReAddToWallet:
+                                        <span class="badge bg-light-yellow-active">حل مشكلة تقفيله</span>
+                                        break;
+                                }
+                            </td>
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <td>
+                                    <span>@item.Amount جنيه</span>
+                                </td>
+                            }
+
+                            <td>
+                                @{
+                                    var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(item.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Sudan Standard Time"));
+                                }
+                                @CreatedOn.ToString("dd MMMM yyyy")<br />
+                                @CreatedOn.ToString("hh:mm tt")
+                            </td>
+                            <td>
+
+                                <a class="btn btn-success" href="/Orders/WalletOrders?walletId=@item.Id">طلبات التسوية</a>
+                                <a href="@Url.Action("ExportToExeclWallet","Orders",new{userWallet=item.Id})" class="btn btn-warning">Export to Excel</a>
+                                @if (!User.IsInRole("Client"))
+                                {
+                                    <a class="btn btn-info" href="/Orders/PrintReceipt?walletId=@item.Id">طباعه إيصال الاستلام</a>
+                                }
+
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,175 @@
+﻿@model PostexS.Models.Domain.Order
+@using PostexS.Models.Enums;
+@{
+    ViewBag.Title = "تفاصيل الطلب رقم " + Model.Code;
+    var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(Model.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
+    Layout = null;
+}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<div class="container mt-5" dir="rtl" lang="ar">
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white">
+            <h4>تفاصيل الطلب رقم @Model.Code</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>كود الطلب:</strong> @Model.Code
+                </div>
+                <div class="col-md-6">
+                    <strong>ملاحظات:</strong> @Model.Notes
+                </div>
+                <div class="col-md-6">
+                    <strong>المدينة:</strong> @Model.AddressCity
+                </div>
+                <div class="col-md-6">
+                    <strong>العنوان:</strong> @Model.Address
+                </div>
+                <div class="col-md-6">
+                    <strong>اسم العميل:</strong> @Model.ClientName
+                </div>
+                <div class="col-md-6">
+                    <strong>هاتف العميل:</strong> @Model.ClientPhone
+                </div>
+                <div class="col-md-6">
+                    <strong>التكلفة:</strong> @Model.Cost.ToString("F2") جنيه
+                </div>
+                <div class="col-md-6">
+                    <strong>رسوم التوصيل:</strong> @Model.DeliveryFees.ToString("F2") جنيه
+                </div>
+                <div class="col-md-6">
+                    <strong>التكلفة الإجمالية:</strong> @Model.TotalCost.ToString("F2") جنيه
+                </div>
+                <div class="col-md-6">
+                    <strong>في الانتظار:</strong>
+                    @if (Model.Pending)
+                    {
+                        <span class="badge bg-warning">نعم</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success">لا</span>
+                    }
+                </div>
+                <div class="col-md-6">
+                    <strong>تم تقفيل الطلب :</strong>
+                    @if (Model.Finished)
+                    {
+                        <span class="badge bg-warning">نعم</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success">لا</span>
+                    }
+                </div>
+                <div class="col-md-6">
+                    <strong>تم تقفيل المرتجع :</strong>
+                    @if (Model.OrderCompleted == OrderCompleted.OK)
+                    {
+                        <span class="badge bg-warning">نعم</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success">لا</span>
+                    }
+                </div>
+                <div class="col-md-6">
+                    <strong>تم تسوية الطلب :</strong>
+                    @if (Model.Finished)
+                    {
+                        <span class="badge bg-warning">نعم</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success">لا</span>
+                    }
+                </div>
+                <div class="col-md-6">
+                    <strong>تم تسوية المرتجع :</strong>
+                    @if (Model.ReturnedOrderCompleted == OrderCompleted.OK)
+                    {
+                        <span class="badge bg-warning">نعم</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success">لا</span>
+                    }
+                </div>
+                <div class="col-md-6">
+                    <strong>تم التأكيد على التحويل:</strong>
+                    @if (Model.TransferredConfirmed)
+                    {
+                        <span class="badge bg-success">نعم</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-danger">لا</span>
+                    }
+                </div>
+                <div class="col-md-6">
+                    <strong>التكلفة عند الوصول:</strong> @Model.ArrivedCost.ToString("F2") جنيه
+                </div>
+                <div class="col-md-6">
+                    <strong>تكلفة التوصيل:</strong> @Model.DeliveryCost.ToString("F2") جنيه
+                </div>
+                <div class="col-md-6">
+                    <strong>صورة المرتجع:</strong>
+                    @if (Model.Returned_Image != null)
+                    {
+                        <img src="@Model.Returned_Image" alt="Returned Image" class="img-fluid rounded" style="max-width: 150px;" />
+                    }
+                    else
+                    {
+                        <span>لا توجد صورة</span>
+                    }
+                </div>
+                <div class="col-md-6">
+                    <strong>تكلفة العميل:</strong> @Model.ClientCost.ToString("F2") جنيه
+                </div>
+                <div class="col-md-6">
+                    <strong>تكلفة المرتجع:</strong> @Model.ReturnedCost?.ToString("F2")
+                </div>
+                <div class="col-md-6">
+                    <strong>صورة الباركود:</strong>
+                    @if (Model.BarcodeImage != null)
+                    {
+                        <img src="data:image/png;base64,@(Convert.ToBase64String(Model.BarcodeImage))" alt="Barcode" class="img-fluid rounded" style="max-width: 150px;" />
+                    }
+                    else
+                    {
+                        <span>لا يوجد باركود</span>
+                    }
+                </div>
+                <div class="col-md-6">
+                    <strong>الحالة:</strong> @Model.Status
+                </div>
+                <div class="col-md-6">
+                    <strong>اسم العميل (من البيانات):</strong> @Model.Client.Name
+                </div>
+                <div class="col-md-6">
+                    <strong>فرع العميل:</strong> @Model.Client.Branch.Name
+                </div>
+                <div class="col-md-6">
+                    <strong>التسليم:</strong> @Model.Delivery?.Name
+                </div>
+                <div class="col-md-6">
+                    <strong>الفرع الحالي:</strong> @Model.Branch.Name
+                </div>
+                @if (Model.PreviousBranchId != null)
+                {
+                    <div class="col-md-6">
+                        <strong>الفرع السابق:</strong> @Model.PreviousBranch.Name
+                    </div>
+                }
+                else
+                {
+
+                    <div class="col-md-6">
+                        <strong>الفرع السابق:</strong> لا يوجد
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

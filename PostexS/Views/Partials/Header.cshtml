@@ -1,0 +1,124 @@
+﻿@model PostexS.Models.ViewModels.HeaderVM
+<header class="main-header">
+    <!-- Logo -->
+    <a href="@Url.Action("Index", "Home")" class="logo">
+        <!-- mini logo for sidebar mini 50x50 pixels -->
+        <span class="logo-mini"><b>Tasahel</b></span>
+        <!-- logo for regular state and mobile devices -->
+        <span class="logo-lg"><b>Tasahel Express</b></span>
+    </a>
+    <!-- Header Navbar: style can be found in header.less -->
+    <nav class="navbar navbar-static-top" role="navigation">
+        <!-- Sidebar toggle button-->
+        <a href="#" class="sidebar-toggle" data-toggle="offcanvas">
+            <span class="sr-only">Toggle navigation</span>
+        </a>
+        <div class="navbar-custom-menu">
+            <ul class="nav navbar-nav">
+                  <li class="dropdown notifications-menu">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <i class="fa fa-bell"></i>
+                            <span class="label label-warning" style="display:@(Model.NotificationsNumber <= 0 ? "none" : "")" id="outside-notifications-number">@Model.NotificationsNumber</span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            @if (Model.NotificationsNumber > 0)
+                            {
+                                <li class="header text-center" style="color:brown">
+                                    لديك <span id="inside-notifications-number">@Model.NotificationsNumber</span> اشعار جديد
+                                    @using (Html.BeginForm("MarkAllNotificationAsSeen", "Notification", FormMethod.Post))
+                                    {
+                                        foreach (var notification in Model.Notifications.Where(x => !x.IsSeen))
+                                        {
+                                            <input type="hidden" name="ids" value="@notification.Id" />
+                                            @* <input type="hidden" name="ReturnUrl" value="@Request.Url.AbsoluteUri" /> *@
+                            @using Microsoft.AspNetCore.Http.Extensions
+                                            <input type="hidden" name="ReturnUrl" value="@Context.Request.GetDisplayUrl()" />
+                                        }
+                                        <button type="submit" class="fa fa-dot-circle-o text-green form-control">حدد كمقروء</button>
+                                    }
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="header text-center" style="color:blue">
+                                    ليس لديك اشعارات جديدة
+                                </li>
+                            }
+                            @if (Model.Notifications != null && Model.Notifications.Count > 0)
+                            {
+                                <li>
+                                    <ul class="menu" id="notification-list">
+                                        @foreach (var notification in Model.Notifications)
+                                        {
+                                            <li id="not_@notification.Id" style="@(!notification.IsSeen ? "background-color:#f3f3f3;border-bottom: 1px solid #e4e4e4;" : "")">
+                                                    <a onclick="MarkNotificationAsSeen('@notification.Id')" href="@Url.Action("ShowNotification", "Notification", new { id = notification.Id })" style="white-space: initial;">
+                                                        <i class="fa fa-dot-circle-o text-@(notification.IsSeen ? "green" : "yellow")"></i>
+                                                        <span>@notification.Title</span>
+                                                    </a>
+                                            </li>
+                                        }
+                                    </ul>
+                                </li>
+                                <li class="footer"><a href="@Url.Action("All","Notification")">عرض الجميع</a></li>
+                            }
+                            else
+                            {
+                                <li class="footer"><a href="#">ليس هناك بيانات متاحه</a></li>
+                            }
+                        </ul>
+                    </li>
+                <!-- User Account: style can be found in dropdown.less -->
+                <li class="dropdown user user-menu">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                        @if (Model.UserImage != null)
+                        {
+                            <img src="~/Content/Images/Users/@Model.UserImage" class="user-image" alt="@Model.Name" />
+                        }
+                        else
+                        {
+                            <img src="~/Content/assets/imgs/avatar.png" class="user-image" alt="@Model.Name" />
+                        }
+                        <span class="hidden-xs">@Model.Name</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <!-- User image -->
+                        <li class="user-header">
+                            @if (Model.UserImage != null)
+                            {
+                                <img src="~/Content/Images/Users/@Model.UserImage" class="img-circle" alt="@Model.Name" />
+                            }
+                            else
+                            {
+                                <img src="~/Content/assets/imgs/avatar.png" class="img-circle" alt="@Model.Name" />
+                            }
+                            <p>
+                                @Model.Name
+                                @*<small>@LastOnline</small>*@
+                            </p>
+                        </li>
+                        <!-- Menu Footer-->
+                        <li class="user-footer">
+                            <div class="pull-right">
+                                <a href="@Url.Action("ChangePassword", "Users",new {UserId = "1" })" class="btn btn-default btn-flat">تغيير كلمه السر</a>
+                            </div>
+                            <div class="pull-left">
+                                @using (Html.BeginForm("Logout", "Home", FormMethod.Post))
+                                {
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" href="#" class="btn btn-default btn-flat">تسجيل الخروج</button>
+                                }
+                            </div>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</header>
+
+<script>
+    function MarkNotificationAsSeen(notificationId) {
+        // Implement AJAX request to mark the notification as seen
+        $.post('@Url.Action("MarkNotificationAsSeen", "Notification")', { id: notificationId });
+    }
+</script>

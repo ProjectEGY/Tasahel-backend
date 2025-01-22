@@ -1,0 +1,98 @@
+﻿@{
+    Layout = null;
+    var branchs = ViewBag.Branchs as List<PostexS.Models.Domain.Branch>;
+
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Form-v10 by Colorlib</title>
+    <!-- Mobile Specific Metas -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <!-- Font-->
+    <link rel="stylesheet" type="text/css" href="~/Login/css/montserrat-font.css">
+    <link rel="stylesheet" type="text/css" href="fonts/material-design-iconic-font/css/material-design-iconic-font.min.css">
+    <!-- Main Style Css -->
+    <link rel="stylesheet" href="~/Login/css/style.css" />
+</head>
+<body class="form-v10">
+    <div class="page-content">
+        <div class="form-v10-content">
+            <form class="form-detail" asp-action="Login" asp-controller="LoginRecipt" enctype="multipart/form-data" method="post" id="myform">
+                <div class="form-left">
+                    <h2>اسم الفرع</h2>
+                    <div class="form-row">
+                        <select name="BranchId" id="BranchId">
+                            @foreach (var branch in branchs)
+                            {
+                                <option value="@branch.Id">@branch.Name - @branch.Address</option>
+                            }
+                        </select>
+                        <span class="select-btn">
+                            <i class="zmdi zmdi-chevron-down"></i>
+                        </span>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-row form-row-1">
+                            <input type="text" name="Name" id="Name" class="input-text" placeholder="Name" required>
+                        </div>
+                        <div class="form-row form-row-2">
+                            <input type="text" name="Email" id="Email" class="input-text" placeholder="Email" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <input type="text" name="WhatsappPhone" class="WhatsappPhone" id="company" placeholder="Whatsapp Phone" required>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-row form-row-3">
+                            <input type="text" name="Phone" class="Phone" id="Phone" placeholder=" Phone" required>
+                        </div>
+                        <div class="form-row form-row-3">
+                            <input type="text" name="Address" class="Address" id="Address" placeholder=" Address" required>
+                        </div>
+
+                    </div>
+                <div class="form-row-last" style="background-color:aquamarine">
+                    <input type="submit" name="register" class="register" value="Register Badge">
+                </div>
+                </div>
+                    @*
+                <div class="form-right">
+                        <h2>Media Details</h2>
+                    <div class="form-row">
+                    <h4>صورة وجه البطاقة</h4>
+                    <input name="IdentityFrontPhoto" type="file" id="IdentityFrontPhoto" class="street" placeholder="Additional Information" required />
+
+                    </div>
+                    <div class="form-row">
+                    <h4>صورة ظهر البطاقة</h4>
+                    <input name="IdentityBackPhoto" type="file" id="IdentityBackPhoto" class="additional" placeholder="Additional Information" required />
+
+                    </div>
+                    <div class="form-row">
+                    <h4>صورة رخصة القيادة</h4>
+                    <input name="RidingLecencePhoto" type="file" id="RidingLecencePhoto" class="additional" placeholder="Additional Information" required />
+
+                    </div>
+                    <div class="form-row">
+                    <h4>صورة رخصة المركبة</h4>
+                    <input name="ViecleLecencePhoto" type="file" id="ViecleLecencePhoto" class="ViecleLecencePhoto" placeholder="Additional Information" required />
+
+                    </div>
+                    <div class="form-row">
+                    <h4>صورة الفيش الجنائي</h4>
+                    <input name="FishPhotoPhoto" type="file" id="FishPhotoPhoto" class="FishPhotoPhoto" placeholder="Additional Information" required />
+
+                    </div>
+                </div>
+                    *@
+            </form>
+        </div>
+    </div>
+</body><!-- This templates was made by Colorlib (https://colorlib.com) -->
+</html>
+
+

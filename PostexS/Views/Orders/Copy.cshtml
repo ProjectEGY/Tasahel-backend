@@ -1,0 +1,68 @@
+﻿@model PostexS.Models.Domain.Order
+
+@{
+    Layout = null;
+}
+<!-- ClientSide Validation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.1/jquery.validate.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.11/jquery.validate.unobtrusive.min.js"></script>
+
+<div class="modal-content">
+    <div class="modal-body">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="panel">
+            <div class="panel-body">
+                <div class="form-group row">
+                    <label>رقم الشحنة @(": " + (Model.Code).ToString())</label>
+                </div>
+                <div class="form-group row">
+                    <label>اسم العميل @(": " + Model.ClientName)</label>
+                </div>
+                <div class="form-group row">
+                    <label>رقم هاتف العميل @(": " + Model.ClientPhone)</label>
+                </div>
+                <div class="form-group row">
+                    <label>العنوان @(": " + Model.Address)</label>
+                </div>
+                @if (Model.DeliveryId != null)
+                {
+                    <div class="form-group row">
+                        <label>المندوب @(": " + Model.Delivery.Name)</label>
+                        <label>@(": " + Model.Delivery.PhoneNumber)</label>
+                    </div>
+                }
+                <div class="form-group row">
+                    <label>الفرع @(": " + Model.Branch.Name)</label>
+                </div>
+                <div class="form-group row">
+                    <label>الاجمالي @(": " + Model.TotalCost + " جنية")</label>
+                </div>
+                <div class="form-group row">
+                    <label>التاجر @(": " + Model.Client.Name)</label>
+                </div>
+                <div class="form-group row">
+                    <label>تليفون التاجر @(": " + Model.Client.PhoneNumber)</label>
+                </div>
+                <div class="form-group row">
+                    <label>ملاحظات @(": " + Model.Notes)</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-info" data-dismiss="modal">اغلاق</button>
+    </div>
+</div>
+
+
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

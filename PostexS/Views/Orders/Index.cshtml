@@ -1,0 +1,658 @@
+﻿@model PostexS.Helper.PagedList<PostexS.Models.Domain.Order>
+@using PostexS.Models.ViewModels;
+@using PostexS.Helper
+@{
+    ViewData["Title"] = "الطلبات";
+    var users = ViewBag.Drivers as List<PostexS.Models.Domain.ApplicationUser>;
+    var branchs = ViewBag.Branchs as List<PostexS.Models.Domain.Branch>;
+    long temp = 1;
+    if (ViewBag.branch == -1)
+    {
+        temp = 0;
+    }
+    var paginationVM = new PaginationVM()
+            {
+                PageIndex = Model.PageIndex,
+                TotalPages = Model.TotalPages,
+                PreviousPage = Model.PreviousPage,
+                NextPage = Model.NextPage,
+                GetItemsUrl = "/Orders/GetItems",
+                GetPaginationUrl = "/Orders/GetPagination",
+                ItemsCount = Model.ItemsCount,
+                StartIndex = Model.StartIndex,
+                EndIndex = Model.EndIndex
+            };
+}
+<style>
+    #inpSearch {
+        display: none;
+    }
+</style>
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> الطلبات</h3>
+    </div>
+    <div class="panel-body">
+        <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
+            <div class="panel panel-success">
+                @if (TempData["CountryErrors"] != null)
+                {
+                    var Errors = TempData["CountryErrors"] as List<string>;
+                    <div class="alert alert-danger text-center p-5 m-5">
+                        <ul style="list-style:none;">
+                            @foreach (var error in Errors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                @if (!User.IsInRole("Driver"))
+                {
+                    <div class="panel-heading collapsed" role="tab" id="headingOne" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                        <h4 class="panel-title">
+                            <a class="pointer"><i class="fa fa-fw fa-plus"></i> إضافة طلب جديد</a>
+                        </h4>
+                    </div>
+                    <div id="collapseOne" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+                        <div class="panel-body">
+                            @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+                            {
+                                <div class="row" style="margin:10px;">
+                                    <div class="col-lg-4">
+                                        <!-- Button trigger modal -->
+                                        <button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#myModal">
+                                            أضافة راسل
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                            <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                            <h4 class="modal-title" id="myModalLabel">إضافة راسل</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+                                            @using (Html.BeginForm("CreateClient", "Users", FormMethod.Post))
+                                            {
+                                                @Html.AntiForgeryToken()
+                                                <div class="row" style="margin:10px;">
+                                                    <div class="col-lg-12 mb-10">
+                                                        <div class="form-group">
+                                                            <label for="NameEn" class="col-sm-5 control-label required">اسم الفرع:</label>
+                                                            <div class="col-sm-7">
+                                                                <select name="BranchId" id="BranchId" class="select2 form-control">
+                                                                    @foreach (var branch in branchs)
+                                                                    {
+                                                                        <option value="@branch.Id">@branch.Name - @branch.Address</option>
+                                                                    }
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-lg-12 mb-10">
+                                                        <div class="form-group">
+                                                            <label for="NameAr" class="col-sm-5 control-label required">الاسم: </label>
+                                                            <div class="col-sm-7">
+                                                                <input name="Name" type="text" id="Name" required class="form-control valid" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-lg-12 mb-10">
+                                                        <div class="form-group">
+                                                            <label for="NameEn" class="col-sm-5 control-label required">رقم الوتساب:</label>
+                                                            <div class="col-sm-7">
+                                                                <input name="WhatsappPhone" type="text" required id="WhatsappPhone" class="form-control valid" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-lg-12 mb-10">
+                                                        <div class="form-group">
+                                                            <label for="NameEn" class="col-sm-5 control-label required">رقم الهاتف:</label>
+                                                            <div class="col-sm-7">
+                                                                <input name="Phone" type="text" required id="Phone" class="form-control valid" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-lg-12 mb-10">
+                                                        <div class="form-group">
+                                                            <label for="NameEn" class="col-sm-5 control-label required">العنوان:</label>
+                                                            <div class="col-sm-7">
+                                                                <input name="Address" type="text" required id="Address" class="form-control valid" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button type="submit" class="btn btn-success">إضافة</button>
+                                            }
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                            @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+                            @using (Html.BeginForm("Create", "Orders", FormMethod.Post))
+                            {
+                                @Html.AntiForgeryToken()
+                                <div class="row" style="margin:10px;">
+                                    @if (User.IsInRole("Client"))
+                                    {
+                                        <input value="@ViewBag.ClientId" name="ClientId" id="ClientId" hidden type="hidden" />
+                                    }
+                                    else
+                                    {
+                                        <div class="col-lg-6 mb-10">
+                                            <div class="form-group">
+                                                <label for="NameEn" class="col-sm-5 control-label required">اسم الراسل:</label>
+                                                <div class="col-sm-7">
+                                                    <select name="ClientId" id="ClientId" class="select2 form-control" onchange="fetchClientNotes(this.value)">
+                                                        @foreach (var user in users)
+                                                        {
+                                                            <option value="@user.Id">@user.Name - @user.PhoneNumber</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    <div class="col-lg-6 mb-10">
+                                        <div class="form-group">
+                                            <label for="NameAr" class="col-sm-5 control-label required">اسم المرسل إليه: </label>
+                                            <div class="col-sm-7">
+                                                <input name="ClientName" type="text" id="ClientName" required class="form-control valid" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 mb-10">
+                                        <div class="form-group">
+                                            <label for="NameAr" class="col-sm-5 control-label required">رقم هاتف المرسل إليه: </label>
+                                            <div class="col-sm-7">
+                                                <input name="ClientPhone" type="text" id="ClientPhone" required class="form-control valid" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 mb-10">
+                                        <div class="form-group">
+                                            <label for="AddressCity" class="col-sm-5 control-label required"> عنوان المحافظة للمرسل إليه: </label>
+                                            <div class="col-sm-7">
+                                                <input name="AddressCity" type="text" id="AddressCity" required class="form-control valid" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 mb-10">
+                                        <div class="form-group">
+                                            <label for="Address" class="col-sm-5 control-label required"> عنوان المرسل إليه: </label>
+                                            <div class="col-sm-7">
+                                                <input name="Address" type="text" id="Address" required class="form-control valid" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-lg-6 mb-10">
+                                        <div class="form-group">
+                                            <label for="NameAr" class="col-sm-5 control-label required">سعر الطلب: </label>
+                                            <div class="col-sm-7">
+                                                <input name="Cost" type="number" id="Cost" required class="form-control valid" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 mb-10">
+                                        <div class="form-group">
+                                            <label for="NameAr" class="col-sm-5 control-label required">خدمة التوصيل: </label>
+                                            <div class="col-sm-7">
+                                                <input name="DeliveryFees" type="number" id="DeliveryFees" required class="form-control valid" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 mb-10">
+                                        <div class="form-group">
+                                            <label for="NameAr" class="col-sm-5 control-label required">ملاحظات الطلب : </label>
+                                            <div class="col-sm-7">
+                                                @Html.TextArea("Notes", htmlAttributes: new { @class = "form-control", rows = 7, id = "Notes" })
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                                <button type="submit" class="btn btn-success">إضافة</button>
+                            }
+
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        <input hidden type="hidden" id="BId" value="@ViewBag.BranchId" />
+        <input hidden type="hidden" id="Q" value="@ViewBag.q" />
+        @if (!User.IsInRole("Driver") && !User.IsInRole("Client") && !User.IsInRole("HighAdmin") && !User.IsInRole("Accountant"))
+        {
+            <div class="row">
+                @using (Html.BeginForm("index", "Orders", FormMethod.Get))
+                {
+                    <div class="form-group">
+                        <label for="StoreId">برجاء اختيار الفرع</label>
+                        <select name="BranchId" id="BranchId" class="select2 form-control">
+
+                            if (@temp == 0)
+                            {
+                            <option selected="selected" value="-1">جميع الفروع</option>
+                            }
+                            @foreach (var branch in branchs)
+                            {
+                                if (@ViewBag.BranchId == branch.Id)
+                                {
+                                    <option selected="selected" value="@branch.Id">@branch.Name - @branch.Address</option>
+                                }
+                                else
+                                {
+                                    <option value="@branch.Id">@branch.Name - @branch.Address</option>
+                                }
+                            }
+                            @*           @foreach (var branch in branchs)
+                    {
+                    <option value="@branch.Id">@branch.Name - @branch.Address</option>
+                    }*@
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-info">اختيار</button>
+                }
+
+            </div>
+        }
+        <div class="row text-center text-success" id="TotalPrice">
+            @*@Html.RenderAction("_TotalPrice", "Orders")*@
+        </div>
+        <div class="row" style="margin-top:10px">
+
+            <div class="col-lg-4 mb-10">
+                <a href="@Url.Action("Index", new {q = "All", BranchId = @ViewBag.BranchId})" class="btn btn-default form-control">الجميع</a>
+            </div>
+            <div class="col-lg-4 mb-10">
+                <a href="@Url.Action("Index", new {q = "pen", BranchId = @ViewBag.BranchId})" class="btn btn-warning form-control">الطلبات المعلقه</a>
+            </div>
+            <div class="col-lg-4 mb-10">
+                <a href="@Url.Action("Index", new {q = "returned", BranchId = @ViewBag.BranchId})" class="btn btn-default form-control" style="background-color: red;color:white">المرتجعات</a>
+            </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+            <div class="col-lg-3 mb-10">
+                <a href="@Url.Action("Index", new {q = "placed", BranchId = @ViewBag.BranchId})" class="btn btn-info form-control">طلبات جديده</a>
+            </div>
+            <div class="col-lg-3 mb-10">
+                <a href="@Url.Action("Index", new {q = "ass", BranchId = @ViewBag.BranchId})" class="btn btn-success form-control">طلبات جارية</a>
+            </div>
+            <div class="col-lg-3 mb-10">
+                <a href="@Url.Action("Index", new {q = "fin", BranchId = @ViewBag.BranchId})" class="btn btn-primary form-control">طلبات وصلت</a>
+            </div>
+            <div class="col-lg-3 mb-10">
+                <a href="@Url.Action("Index", new {q = "wai", BranchId = @ViewBag.BranchId})" class="btn btn-danger form-control">طلبات مؤجله</a>
+            </div>
+            <div class="col-lg-3 mb-10">
+                <a href="@Url.Action("Index", new {q = "com", BranchId = @ViewBag.BranchId})" class="btn btn-info form-control">تم تسويتها </a>
+            </div>
+            @*     <div class="col-lg-3 mb-10">
+            <a href="@Url.Action("Index", new {q = "fsh", BranchId = @ViewBag.BranchId})" class="btn btn-success form-control">تم تقفلها</a>
+            </div>*@
+            <div class="col-lg-3 mb-10">
+                <a href="@Url.Action("Index", new {q = "rej", BranchId = @ViewBag.BranchId})" class="btn btn-primary form-control">طلبات مرفوضة</a>
+            </div>
+            <div class="col-lg-3 mb-10">
+                <a href="@Url.Action("Index", new {q = "trans", BranchId = @ViewBag.BranchId})" class="btn btn-primary form-control">طلبات محولة</a>
+            </div>
+            @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+            {
+                <div class="col-lg-3 mb-10 ">
+                    <a href="@Url.Action("Index", new {q = "deleted", BranchId = @ViewBag.BranchId})" class="btn btn-danger form-control">طلبات محذوفة</a>
+                </div>
+            }
+
+            <div>
+                @if (User.IsInRole("Client"))
+                {
+                    <a asp-action="createOrders" asp-controller="Users" asp-route-id="@ViewBag.ClientId" class="btn btn-warning">إضافة طلبات</a>
+                }
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-3">
+                <table>
+                    <tr>
+                        <td>
+                            <span>عرض </span>
+                        </td>
+                        <td>
+                            <select class="form-control" onchange="ReloadPagination(@Model.PageIndex)" id="entires">
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50" selected="selected">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </td>
+                        <td>
+                            <span> من المدخلات</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            @*  <div class="col-sm-2">
+            <input class="form-control left-border-none" style="display: block;" type="text" id="barcodeScanner" placeholder="Barcode Scanner" />
+
+            </div> *@
+            <div class="col-sm-7">
+                <div class="input-group mt-5">
+                    <input class="form-control left-border-none" onchange="ReloadPagination(@Model.PageIndex)" style="display: block;" type="text" id="inpSearch" placeholder="البحث بكود الطلب او رقم الهاتف" value="">
+                    <span class="input-group-addon transparent" onclick="ReloadPagination(@Model.PageIndex)">
+                        <i class='fa fa-search' aria-hidden='true'></i>
+                    </span>                               @*<a href="@Url.Action("ExportToExecl","Orders")" class="btn btn-warning">Export to excel</a>*@
+
+                </div>
+            </div>
+        </div>
+
+        <form asp-action="Switch" asp-controller="Orders" method="get">
+            <table id="tableOrders" class="table table-striped table-bordered table-hover" style=" overflow-x: scroll; display: block;">
+                <thead>
+                    <tr>
+                        <th style="text-align:center">الحالة</th>
+                        <th style="text-align:center">اخر حالة قبل التسوية</th>
+                        <th style="text-align:center">كود الطلب/ تاريخ الإنشاء</th>
+                        @*                    <th style="text-align:center"> باركود</th>
+                        *@
+                        <th style="text-align:center"> الفرع الاساسي</th>
+                        <th style="text-align:center"> الفرع الحالي</th>
+                        <th style="text-align:center ">المبلغ</th>
+                        <th style="text-align:center">خدمة التوصيل</th>
+                        <th style="text-align:center ">العنوان</th>
+                        @*                    <th style="text-align:center ">الفرع الجديد</th>
+                        *@
+                        <th style="text-align:center "> الراسل</th>
+                        <th style="text-align:center ">المرسل اليه</th>
+                        <th style="text-align:center "> المندوب</th>
+                        <th style="text-align:center ">الملاحظات</th>
+                        <th style="text-align:center ">ملاحظات المندوب</th>
+                        <th style="text-align:center ">التحكم</th>
+                        @* @if (!User.IsInRole("Client"))
+                        { *@
+                        <th style="text-align:center ">تحديد</th>
+                        @* } *@
+                    </tr>
+                </thead>
+                <tbody id="tbBody" style="text-align:center">
+
+                    <input hidden type="text" id="del" value="0" name="delete" />
+                    @if (!User.IsInRole("Client"))
+                    {
+                        @if (@ViewBag.q != "pen")
+                        {
+                            @if (User.IsInRole("Admin") @* || User.IsInRole("TrustAdmin")  *@&& ViewBag.q != "deleted")
+                            {
+                                <span>تحديد الحذف</span>
+                                <input class="check-box no-print" id="check" onclick="myFunction()" type="checkbox" />
+                            }
+                            <div class="row">
+                                <div class="col-lg-4 col-12">
+                                    <button class="btn btn-danger" id="delete" style="display:none; margin: 10px;padding:10px; width: 100%;" type="submit"> حذف الطلبات المحدده</button>
+                                    <button class="btn btn-success" id="switch" style="display:block; margin: 10px;padding:10px; width: 100%;" type="submit">الطلبات المحدده Excell Sheet</button>
+                                </div>
+                                <div class="col-lg-4 col-12">
+                                    <a id="printSelectedBtn" style="background-color: darkcyan; margin: 10px;padding:10px; width: 100%;" class="btn btn-primary">
+                                        طباعة الطلبات المحدده
+                                    </a>
+                                </div>
+                                <div class="col-lg-4 col-12">
+                                    <a id="printBarCodeSelectedBtn" style="background-color: darkgray; margin: 10px;padding:10px; width: 100%;" class="btn btn-primary">
+                                        طباعة باركود الطلبات المحدده
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+                            {
+                                <input hidden type="text" id="new" value="1" name="newOrders" />
+                                <span>تحديد الرفض</span>
+                                <input class="check-box no-print" id="check2" onclick="myFunction2()" type="checkbox" />
+                                <div class="row">
+                                    <div class="col-lg-4 col-12">
+                                        <button class="btn btn-danger" id="reject" style="display:none; margin: 10px;padding:10px; width: 100%;" type="submit"> رفض الطلبات المحدده</button>
+                                        <button class="btn btn-success" id="accept" style="display:block; margin: 10px;padding:10px; width: 100%;" type="submit"> قبول الطلبات المحدده</button>
+                                    </div>
+                                    <div class="col-lg-4 col-12">
+                                        <a id="printSelectedBtn" style="background-color: darkcyan; margin: 10px;padding:10px; width: 100%;" class="btn btn-primary">
+                                            طباعة الطلبات المحدده
+                                        </a>
+                                    </div>
+                                    <div class="col-lg-4 col-12">
+                                        <a id="printBarCodeSelectedBtn" style="background-color: darkgray; margin: 10px;padding:10px; width: 100%;" class="btn btn-primary">
+                                            طباعة باركود الطلبات المحدده
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    }
+                    else
+                    {
+                        @if (@ViewBag.q != "pen")
+                        {
+                            <div class="row">
+                                <div class="col-lg-4 col-12">
+                                    <a id="printSelectedBtn" style="background-color: darkcyan; margin: 10px;padding:10px; width: 100%;" class="btn btn-primary">
+                                        طباعة الطلبات المحدده
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    }
+                    <hr />
+                    <partial name="_TableList" model="@Model.ToList()" />
+                </tbody>
+
+            </table>
+            <div id="dvPagination">
+                <partial name="_Pagination" model="@paginationVM" />
+            </div>
+        </form>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    function Delete(url) {
+        swal({
+            title: "هل متأكد؟",
+            text: "عند مسح هذا الطلب سوف يتم نقله إلى الطلبات المحذوفة",
+            icon: "warning",
+            dangerMode: true
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "Delete",
+                    url: url,
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            location.reload();
+    @*                            setInterval('location.reload()', 2500);
+                                *@                        }
+                        else {
+                            toastr.error(data.message);
+                        }
+                    }
+                })
+            }
+        })
+    }
+    function Resotre(url) {
+        swal({
+            title: "هل متأكد؟",
+            text: "هل تريد استراجع هذا الطلب مرة أخرى",
+            icon: "success"
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "Delete",
+                    url: url,
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            location.reload();
+    @*                            setInterval('location.reload()', 2500);
+                                *@                        }
+                        else {
+                            toastr.error(data.message);
+                        }
+                    }
+                })
+            }
+        })
+    }
+</script>
+<script>
+    document.ready(function () {
+        $("#tableOrders").DataTable({
+            paging: false,
+            ordering: false,
+            info: false,
+            searching: false
+        });
+    });
+</script>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+<script>
+    document.getElementById("barcodeScanner").addEventListener("change", function () {
+        fetch("/Barcode/ScanBarcode?data=" + encodeURIComponent(this.value))
+            .then(response => response.text())
+            .then(url => {
+                // Navigate to new page with URL string
+                //window.location.href = url;
+                window.open(url, '_blank');
+            })
+            .catch(error => console.error(error));
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const printSelectedBtn = document.getElementById('printSelectedBtn');
+
+        printSelectedBtn.addEventListener('click', function () {
+            const selectedOrderIds = [];
+
+            // Find all checkboxes that are checked
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(function (checkbox) {
+                if (checkbox.checked) {
+                    selectedOrderIds.push(parseInt(checkbox.value));
+                }
+            });
+
+            // Call the server-side method
+            if (selectedOrderIds.length > 0) {
+                const driver = ""; // You can pass a driver name here if needed
+                fetch('/Orders/PrintSelectedOrders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        Orders: selectedOrderIds,
+                        Driver: driver
+                    })
+                })
+                    .then(response => {
+                        console.log('Response status:', response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Response data:', data);
+                        if (data.redirectUrl) {
+                            //window.location.href = data.redirectUrl; // Navigate to the redirect URL
+                            window.open(data.redirectUrl, '_blank'); // Open the redirect URL in a new tab
+                        } else {
+                            console.error('Redirect URL not found in response');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            } else {
+                alert('Please select at least one order to print.');
+            }
+        });
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const printSelectedBtn = document.getElementById('printBarCodeSelectedBtn');
+
+        printSelectedBtn.addEventListener('click', function () {
+            const selectedOrderIds = [];
+
+            // Find all checkboxes that are checked
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(function (checkbox) {
+                if (checkbox.checked) {
+                    selectedOrderIds.push(parseInt(checkbox.value));
+                }
+            });
+
+            // Call the server-side method
+            if (selectedOrderIds.length > 0) {
+                const driver = ""; // You can pass a driver name here if needed
+                fetch('/Orders/PrintBarcodeSelectedOrders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        Orders: selectedOrderIds,
+                        Driver: driver
+                    })
+                })
+                    .then(response => {
+                        console.log('Response status:', response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Response data:', data);
+                        if (data.redirectUrl) {
+                            //window.location.href = data.redirectUrl; // Navigate to the redirect URL
+                            window.open(data.redirectUrl, '_blank'); // Open the redirect URL in a new tab
+                        } else {
+                            console.error('Redirect URL not found in response');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            } else {
+                alert('من فضلك قم بإختيار طلب واحد علي الاقل.');
+            }
+        });
+    });
+</script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript">
+    function fetchClientNotes(clientId) {
+        $.ajax({
+            url: '@Url.Action("ClientNotes", "Orders")',
+            type: 'GET',
+            data: { id: clientId },
+            success: function (data) {
+                $('#Notes').val(data);
+            },
+            error: function () {
+                alert('Error retrieving client notes.');
+            }
+        });
+    }
+</script>

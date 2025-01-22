@@ -1,0 +1,379 @@
+﻿@model IEnumerable<PostexS.Models.Domain.Order>
+@using PostexS.Models.Enums;
+@using System
+@using System.Globalization
+@{
+    ViewData["Title"] = "تقفيل المرتجعات ";
+    Func<DateTime, int, string> ConvertToEgyptTime = (DateTime utcDateTime, int hoursToAdd) =>
+        {
+            var egyptTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+            var egyptTime = TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, egyptTimeZone);
+            return egyptTime.ToString("MM/dd/yyyy h:mm:ss tt", CultureInfo.InvariantCulture);
+        };
+}
+<link href="~/css/OrdersColors.css" rel="stylesheet" />
+<style>
+    /* تأكد من أن الصورة تتناسب مع حجم المودال */
+    .modal-body img {
+        max-width: 100%; /* يضمن أن الصورة لا تتجاوز عرض المودال */
+        height: auto; /* يحافظ على نسب العرض والارتفاع */
+    }
+</style>
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> تقفيل المرتجعات المجانيه</h3>
+    </div>
+    <div style="margin: 5px; padding: 10px; background-color: aliceblue; border: 1px solid red; border-radius: 5px;">
+        <h4 style="color: red;">تنبيه:-</h4>
+        <p style="color: darkred; margin-bottom: 5px;">
+            يرجى العلم أن عند تقفيل الطلب المرتجع ، يتم بذلك تأكيد استلام المرتجع.
+        </p>
+        <p style="color: darkred;">
+            الرجاء إدخال القيمة <kbd>0</kbd> أو <kbd>1-</kbd> فقط. <kbd>0</kbd> يعني استلام الجزء المرتجع و <kbd>1-</kbd> يعني تجنب المرتجع.
+        </p>
+        <div class="status-colors">
+            <div class="status-item">
+                <span class="status-color" style="background-color: #ed6464a8;"></span> <span>مرتجع كامل</span>
+            </div>
+            <div class="status-item">
+                <span class="status-color" style="background-color: #ef777757;"></span> <span>مرتجع جزئي</span>
+            </div>
+            <div class="status-item">
+                <span class="status-color" style="background-color: #ed6464a8;"></span> <span>مرتجع وشحن على الراسل</span>
+            </div>
+            <div class="status-item">
+                <span class="status-color" style="background-color: #ef777757;"></span> <span>مرتجع ودفع شحن</span>
+            </div>
+
+        </div>
+    </div>
+    @* <a asp-action="FinshedPaidReturnedOrders" style="margin-right: 15px !important;" class="btn btn-danger" asp-controller="users" asp-route-id="@ViewBag.UserId">
+    الذهاب الى صفحة المرتجعات مدفوعة الشحن  <i class="fas fa-arrow-left"></i>
+    </a> *@
+    <div class="panel-body">
+        <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
+            <div class="panel panel-success">
+                @if (TempData["CountryErrors"] != null)
+                {
+                    var Errors = TempData["CountryErrors"] as List<string>;
+                    <div class="alert alert-danger text-center p-5 m-5">
+                        <ul style="list-style:none;">
+                            @foreach (var error in Errors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+            </div>
+        </div>
+        @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+        @using (Html.BeginForm("FinshedOrders", "Users", FormMethod.Post))
+        {
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Returned" id="Returned" value="" />
+            <div class="table-responsive">
+                <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th style="text-align:center">الحالة</th>
+                            <th style="text-align:center">رقم الطلب</th>
+                            <th style="text-align:center">ملاحظات</th>
+                            <th style="text-align:center ">مبلغ المرتجع</th>
+                            <th style="text-align:center">استلام المرتجع</th>
+                            <th style="text-align:center "> الراسل</th>
+                            <th style="text-align:center ">المرسل اليه</th>
+                            <th style="text-align:center ">المندوب</th>
+                            <th style="text-align:center ">العنوان</th>
+                            <th style="text-align:center ">ملاحظات المندوب</th>
+                        </tr>
+                    </thead>
+                    <tbody style="text-align:center">
+                        @foreach (var item in Model)
+                        {
+
+                            string backgroundColor = "";
+                            @switch (item.Status)
+                            {
+                                case OrderStatus.Waiting:
+                                    backgroundColor = "#ffff006e";
+                                    break;
+                                case OrderStatus.Rejected:
+                                    backgroundColor = "red";
+                                    break;
+                                case OrderStatus.PartialDelivered:
+                                    backgroundColor = "skyblue";
+                                    break;
+                                case OrderStatus.Delivered:
+                                    backgroundColor = "#d8f8e994";
+                                    break;
+                                case OrderStatus.Returned:
+                                    backgroundColor = "#ed6464a8";
+                                    break;
+                                case OrderStatus.PartialReturned:
+                                    backgroundColor = "#ef777757";
+                                    break;
+                                default:
+                                    backgroundColor = "";
+                                    break;
+                            }
+
+                            <tr style="background-color:@(backgroundColor)">
+                                <td>
+                                    <select asp-for="@item.Status" id="orderStatus[]" name="orderStatus[]" style="background-color:@(backgroundColor)">
+                                        @if (item.Status == OrderStatus.Returned)
+                                        {
+                                            <option value="@OrderStatus.Returned" class="badge bg-blue-active">مرتجع كامل</option>
+                                        }
+                                        else if (item.Status == OrderStatus.PartialReturned)
+                                        {
+                                            <option value="@OrderStatus.PartialReturned" class="badge bg-blue-active">مرتجع جزئي</option>
+                                        }
+                                        else if (item.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender)
+                                        {
+                                            <option value="@OrderStatus.Returned_And_DeliveryCost_On_Sender" class="badge bg-blue-active">مرتجع وشحن على الراسل</option>
+                                        }
+                                        else if (item.Status == OrderStatus.Returned_And_Paid_DeliveryCost)
+                                        {
+                                            <option value="@OrderStatus.Returned_And_Paid_DeliveryCost" class="badge bg-blue-active">مرتجع ودفع شحن</option>
+                                        }
+                                    </select>
+                                    @if (item.Returned_Image != null)
+                                    {
+                                        <button type="button" class="btn btn-danger mt-5" style="border-radius: 20px;" data-toggle="modal" data-target="#imageModal-@item.Id">
+                                            صورة المرتجع <i class="fas fa-image"></i>
+                                        </button>
+
+                                        <!-- Modal -->
+                                        <div class="modal fade" id="imageModal-@item.Id" tabindex="-1" role="dialog" aria-labelledby="imageModalLabel@item.Id" aria-hidden="true">
+                                            <div class="modal-dialog" role="document">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="imageModalLabel-@item.Id">صورة الطلب المرتجع : @item.Code</h5>
+                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                            <span aria-hidden="true">&times;</span>
+                                                        </button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <img src="~/Images/OrderReturns/@item.Returned_Image" class="img-fluid" alt="صورة الطلب المرتجع" />
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">غلق</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+
+                                </td>
+                                <td>
+                                    <span class="badge" style="font-size:15px;">@(item.Code)</span><br />
+                                    @ConvertToEgyptTime(item.CreateOn, 2)
+                                </td>
+                                <td style="width:150px">
+                                    @item.Notes
+                                </td>
+                                <td>
+                                    @if (item.Status == OrderStatus.Returned_And_Paid_DeliveryCost || item.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender)
+                                    {
+                                        <input class="form-control" readonly required type="number" name="ArrivedCost[]" id="ArrivedCost[]" value="@item.Cost" />
+                                    }
+                                    else
+                                    {
+                                        <input class="form-control" required type="number" name="ArrivedCost[]" id="ArrivedCost[]" value="@item.ReturnedCost" />
+                                    }
+                                </td>
+                                <td>
+                                    <input type="hidden" name="OrderId[]" id="OrderId[]" value="@item.Id" />
+                                    @* @if (@OrderStatus.Waiting == @item.Status)
+                            {
+                            <input class="form-control " readonly onkeyup="GetCost()" required type="number" name="DeliveryCost[]" id="DeliveryCost[]" value="0" />
+                            }
+                            else{*@
+                                    <input class="form-control" onkeyup="GetCost()" onchange="validateDeliveryCost(this)" required type="number" name="DeliveryCost[]" id="DeliveryCost[]" value="0" />
+                                </td>
+                                <td>@item.Client.Name</td>
+                                <td>@item.ClientName</td>
+                                <td>
+                                    @if (item.DeliveryId != null)
+                                    {
+                                        @item.Delivery.Name
+                                        @item.Delivery.PhoneNumber
+                                    }
+                                </td>
+                                <td style="width:150px">
+                                    @item.AddressCity -  @item.Address
+                                </td>
+                                <td style="width:150px">
+                                    @* <input type="text" id="OrderNotes[]" name="OrderNotes[]" value="@note.Content" /> *@
+                                    @if (item.OrderNotes.Count > 0)
+                                    {
+                                        var note = @item.OrderNotes.OrderBy(x => x.Id).Last();
+                                        <textarea type="text" id="OrderNotes[]" name="OrderNotes[]">@note.Content</textarea>
+                                    }
+                                    else
+                                    {
+                                        @* <input type="text" id="OrderNotes[]" name="OrderNotes[]" value="." /> *@
+                                        <textarea type="text" id="OrderNotes[]" name="OrderNotes[]"></textarea>
+                                    }
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+                </table>
+                <table class="table table-striped table-bordered table-hover">
+                    <tr hidden>
+                        <td style="width:50%;text-align:left">
+                            ارباح المندوب :
+                        </td>
+                        <td id="cost" style="width:50%;text-align:right;color:green">
+                        </td>
+
+                    </tr>
+                    <tr hidden>
+                        <td style="width:50%;text-align:left">
+                            المبلغ المطلوب دفعه من المندوب :
+                        </td>
+                        <td id="recive" style="width:50%;text-align:right;color:red">
+                        </td>
+
+                    </tr>
+                </table>
+                @* <p>يجب مراجعة نسبة المندوب في كل طلب جيداً قبل تقفيل الطلبات</p> *@
+                @* <p class="text-warning">عند تقفيل الطلبات سيتم تقفيل الطلبات فقط عندما يكون نسبة المندوب اكبر من او يساوي 0 جنية</p> *@
+                <input type="submit" class="btn btn-danger" onclick="return confirmAndSetReturned(true)" value="تقفيل المرتجعات" />
+                @* <input type="submit" class="btn btn-primary" onclick="return confirmAndSetReturned(false)" value="تقفيل الطلبات" /> *@
+            </div>
+        }
+    </div>
+</div>
+<script>
+    function Delete(url) {
+        swal({
+            title: "هل متأكد؟",
+            text: "عند مسح هذا الطلب سوف يتم نقله إلى الطلبات المحذوفة",
+            icon: "warning",
+            dangerMode: true
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "Delete",
+                    url: url,
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setInterval('location.reload()', 2500);
+                        }
+                        else {
+                            toastr.error(data.message);
+                        }
+                    }
+                })
+            }
+        })
+    }
+    function Resotre(url) {
+        swal({
+            title: "هل متأكد؟",
+            text: "هل تريد استراجع هذا الطلب مرة أخرى",
+            icon: "success"
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "Delete",
+                    url: url,
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setInterval('location.reload()', 2500);
+                        }
+                        else {
+                            toastr.error(data.message);
+                        }
+                    }
+                })
+            }
+        })
+    }
+</script>
+<script>
+    function confirmAndSetReturned(returnedValue) {
+        var confirmationMessage = returnedValue ? 'هل تريد تقفيل المرتجعات؟' : 'هل تريد تقفيل الطلبات؟';
+        if (confirm(confirmationMessage)) {
+            document.getElementById('Returned').value = returnedValue.toString(); // Set the value to true or false
+            return true; // Submit the form
+        } else {
+            return false; // Don't submit the form
+        }
+    }
+</script>
+
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script type="text/javascript">
+        let cost = document.getElementsByName('DeliveryCost[]');
+        let arrived = document.getElementsByName('ArrivedCost[]');
+        let writ = document.getElementById("cost");
+        let writr = document.getElementById("recive");
+
+        let statusElements = document.getElementsByName('orderStatus[]');
+        let Status = [];
+
+        statusElements.forEach(function (selectElement) {
+            let selectedOption = selectElement.options[selectElement.selectedIndex];
+            Status.push(selectedOption.value);
+        });
+
+        $(document).ready(function () {
+
+            GetCost();
+
+        });
+        function GetCost() {
+            let num = 0;
+            let recive = 0;
+
+            // تحقق من وجود orderStatus[x] قبل الوصول إلى قيمته
+            for (var x = 0; x < arrived.length; x++) {
+                if (parseInt(arrived[x].value) && Status[x] != "PartialReturned" && Status[x] != "Returned") {
+                    recive += parseInt(arrived[x].value);
+                }
+            }
+
+            for (var x = 0; x < cost.length; x++) {
+                // تحقق من وجود orderStatus[x] قبل الوصول إلى قيمته
+                if (parseInt(cost[x].value) && parseInt(cost[x].value) > 0 && Status[x] != "PartialReturned") {
+                    num += parseInt(cost[x].value);
+                }
+            }
+
+            writ.innerHTML = "";
+            writr.innerHTML = "";
+            writ.innerHTML = num + " " + "جنية";
+            writr.innerHTML = (recive - num) + " " + "جنية";
+        }
+
+        function validateDeliveryCost(input) {
+            console.log("Function called"); // Add this line to check if the function is being called
+            var value = input.value;
+            var previousValue = input.dataset.previousValue || ""; // Get the previous value from the dataset attribute
+
+            if (value !== "0" && value !== "-1") {
+                // Show alert
+                alert("الرجاء إدخال القيمة 0 أو -1 فقط . \n 0 يعني استلام الجزء المرتجع و -1 يعني تجنب المرتجع.");
+
+                // Revert the input value to the previous value
+                input.value = previousValue;
+                GetCost();
+            } else {
+                // Update the previous value to the current value
+                input.dataset.previousValue = value;
+            }
+        }
+
+    </script>
+
+}

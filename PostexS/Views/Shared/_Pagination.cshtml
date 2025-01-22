@@ -1,0 +1,137 @@
+﻿@model PostexS.Models.ViewModels.PaginationVM
+@{
+    var prevDisabled = !Model.PreviousPage ? "disabled" : "";
+    var nextDisabled = !Model.NextPage ? "disabled" : "";
+    var tbl_footer_msg = "عرض " + Model.StartIndex + " الى " + Model.EndIndex + " من " + Model.ItemsCount + " مدخلات ";
+    var index = 1;
+    var end = 10;
+    if(Model.PageIndex >5)
+    {
+        index = Model.PageIndex - 5;
+        end = Model.PageIndex + 5;
+    }
+
+}
+<div class="row">
+    <div class="col-sm-4 mt-15">
+        <p>
+            @tbl_footer_msg
+        </p>
+    </div>
+    <div class="col-sm-8" style="text-align:left">
+        <a class="btn btn-default btnpagination @prevDisabled"
+           onclick="ReloadPagination(@(Model.PageIndex - 1))">السابق</a>
+        @for (var i = index; i <= end; i++)
+        {
+            if (Model.PageIndex == i)
+            {
+                <a class="btn btn-info btnpagination"
+                   onclick="ReloadPagination(@i)">@i</a>
+            }
+            else
+            {
+                <a class="btn btn-default btnpagination"
+                   onclick="ReloadPagination(@i)">@i</a>
+            }
+
+        }
+        <a class="btn btn-default btnpagination @nextDisabled"
+           onclick="ReloadPagination(@(Model.PageIndex + 1))">التالي</a>
+    </div>
+</div>
+
+
+
+@* @if (!User.IsInRole("Driver") && !User.IsInRole("Client") && !User.IsInRole("HighAdmin")&& !User.IsInRole("Accountant"))
+
+{ *@
+    
+<script type="text/javascript">
+    function ReloadPagination(pageNum) {
+        var inpSearchVal = document.getElementById("inpSearch").value;
+        var BranchId = document.getElementById("BId").value;
+        var q = document.getElementById("Q").value;
+        var pageSize = 50;
+        if ($("#entires") != null || $("#entires") != undefined) {
+            pageSize = $("#entires").val();
+        }
+        $.ajax({
+            url: "@Model.GetItemsUrl",
+            type: "GET",
+            data: { searchStr: inpSearchVal, q, BranchId, pageNumber: pageNum, pageSize: pageSize },
+            success: function (results) {
+                $("#tbBody").empty();
+                $("#tbBody").html(results);
+                $.ajax({
+                    url: "@Model.GetPaginationUrl",
+                    type: "GET",
+                    data: { searchStr: inpSearchVal, q, BranchId, pageNumber: pageNum, pageSize: pageSize },
+                    success: function (results) {
+                        $("#dvPagination").empty();
+                        $("#dvPagination").html(results);
+                         $.ajax({
+                    url: "/Orders/_TotalPrice",
+                    type: "GET",
+                    data: { searchStr: inpSearchVal, q, BranchId },
+                    success: function (res) {
+                        $("#TotalPrice").empty();
+                        $("#TotalPrice").html(res);
+                    }
+                });
+                    }
+                });
+            }
+        });
+    }
+</script>
+    
+@* }
+else
+{
+    
+    
+    
+    
+<script type="text/javascript">
+    function ReloadPagination(pageNum) {
+        var inpSearchVal = document.getElementById("inpSearch").value;
+        var BranchId = -1;
+        var q = "all";
+        var pageSize = 50;
+        if ($("#entires") != null || $("#entires") != undefined) {
+            pageSize = $("#entires").val();
+        }
+        $.ajax({
+            url: "@Model.GetItemsUrl",
+            type: "GET",
+            data: { searchStr: inpSearchVal, q, BranchId, pageNumber: pageNum, pageSize: pageSize },
+            success: function (results) {
+                $("#tbBody").empty();
+                $("#tbBody").html(results);
+                $.ajax({
+                    url: "@Model.GetPaginationUrl",
+                    type: "GET",
+                    data: { searchStr: inpSearchVal, q, BranchId, pageNumber: pageNum, pageSize: pageSize },
+                    success: function (results) {
+                        $("#dvPagination").empty();
+                        $("#dvPagination").html(results);
+                         $.ajax({
+                    url: "/Orders/_TotalPrice",
+                    type: "GET",
+                    data: { searchStr: inpSearchVal, q, BranchId },
+                    success: function (res) {
+                        $("#TotalPrice").empty();
+                        $("#TotalPrice").html(res);
+                    }
+                });
+                    }
+                });
+            }
+        });
+    }
+</script>
+    
+    
+    
+} *@
+

@@ -1,0 +1,133 @@
+﻿@{
+    ViewBag.Title = "ارسال اشعارات الى المستخدمين";
+}
+}
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-send"></i> @ViewBag.Title</h3>
+    </div>
+    <div class="panel-body">
+        @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+        @if (TempData["SentSuccess"] != null)
+        {
+            <div class="panel-body alert alert-success text-center">
+                تم ارسال الاشعار بنجاح
+            </div>
+        }
+        @if (TempData["SentError"] != null)
+        {
+            <div class="panel-body alert alert-danger text-center">
+                برجاء التأكد من صحه المدخلات
+            </div>
+        }
+        <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
+            <div class="panel panel-success">
+                <div class="panel-heading collapsed" role="tab" id="headingOne" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                    <h4 class="panel-title">
+                        <a><i class="fa fa-send"></i> إرسال اشعار إلى المندوبين</a>
+                    </h4>
+
+                </div>
+                <div class="panel-body">
+                    <span class="text-danger">*</span> برجاء عدم غلق الصفحه عند ارسال الاشعار حيث انه من الممكن ان يستغرق الارسال بعض الدقائق لارساله الى جميع المستخدمين.
+                </div>
+
+                <div id="collapseOne" class="panel-collapse" role="tabpanel" aria-labelledby="headingOne">
+                    <div class="panel-body">
+                        @using (Html.BeginForm("Create", "Notification", FormMethod.Post, new { enctype = "multipart/form-data" }))
+                        {
+                            <input name="IsDriver" value="false" hidden />
+                            <div class="row" style="margin:10px">
+                                <div class="col-lg-12" style="margin-bottom:10px">
+                                    <div class="form-group">
+                                        <label for="Users" class="col-sm-3 control-label">اختيار المرسل اليهم: </label>
+                                        <div class="col-sm-9">
+                                            <select asp-items="@ViewBag.Driver" name="Users" id="Users" class="select2 form-control" multiple >
+                                            </select>
+                                        
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-12">
+                                    <div class="form-group">
+                                        <label for="Title" class="col-sm-3 control-label required">عنوان الاشعار: </label>
+                                        <div class="col-sm-9">
+                                            <input name="Title" type="text" id="Title" required class="form-control valid" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" style="margin:10px">
+                                <div class="col-lg-12">
+                                    <div class="form-group">
+                                        <label for="Body" class="col-sm-3 control-label required">محتوى الاشعار:</label>
+                                        <div class="col-sm-9">
+                                            <textarea name="Body" required id="Body" class="form-control valid" rows="7"> 
+                                       </textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success">إرسال</button>
+                        }
+                    </div>
+                </div>
+            </div>
+            @*-----------------------------*@
+                        <div class="panel panel-success">
+                <div class="panel-heading collapsed" role="tab" id="headingOne" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                    <h4 class="panel-title">
+                        <a><i class="fa fa-send"></i> إرسال اشعار إلى الراسلين</a>
+                    </h4>
+
+                </div>
+                <div class="panel-body">
+                    <span class="text-danger">*</span> برجاء عدم غلق الصفحه عند ارسال الاشعار حيث انه من الممكن ان يستغرق الارسال بعض الدقائق لارساله الى جميع المستخدمين.
+                </div>
+
+                <div id="collapseOne" class="panel-collapse" role="tabpanel" aria-labelledby="headingOne">
+                    <div class="panel-body">
+                        @using (Html.BeginForm("Create", "Notification", FormMethod.Post, new { enctype = "multipart/form-data" }))
+                        {
+                            <input name="IsDriver" value="false" hidden />
+                            <div class="row" style="margin:10px">
+                                <div class="col-lg-12" style="margin-bottom:10px">
+                                    <div class="form-group">
+                                        <label for="Users" class="col-sm-3 control-label">اختيار المرسل اليهم: </label>
+                                        <div class="col-sm-9">
+                                            <select asp-items="@ViewBag.Clients" name="Users" id="Users" class="select2 form-control" multiple >
+                                            </select>
+                                        
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-12">
+                                    <div class="form-group">
+                                        <label for="Title" class="col-sm-3 control-label required">عنوان الاشعار: </label>
+                                        <div class="col-sm-9">
+                                            <input name="Title" type="text" id="Title" required class="form-control valid" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" style="margin:10px">
+                                <div class="col-lg-12">
+                                    <div class="form-group">
+                                        <label for="Body" class="col-sm-3 control-label required">محتوى الاشعار:</label>
+                                        <div class="col-sm-9">
+                                            <textarea name="Body" required id="Body" class="form-control valid" rows="7"> 
+                                       </textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success">إرسال</button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+

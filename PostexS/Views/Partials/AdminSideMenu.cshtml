@@ -1,0 +1,186 @@
+﻿@model PostexS.Models.ViewModels.SideMenuVM
+<aside class="main-sidebar">
+    <!-- sidebar: style can be found in sidebar.less -->
+    <section class="sidebar">
+        <!-- Sidebar user panel -->
+        <div class="user-panel">
+            <div class="pull-right image">
+                @if (Model.UserImage != null)
+                {
+                    <img src="~/Content/Images/Users/@Model.UserImage" style="height:45px" class="img-circle" alt="@Model.Name" />
+                }
+                else
+                {
+                    <img src="~/Content/assets/imgs/avatar.png" style="height:45px" class="img-circle" alt="@Model.Name" />
+                }
+            </div>
+            <div class="pull-left info">
+                <p>@Model.Name</p>
+                <a href="#"><i class="fa fa-circle text-success"></i> متواجد</a>
+            </div>
+        </div>
+        <!-- sidebar menu: : style can be found in sidebar.less -->
+        <ul class="sidebar-menu">
+            <li class="treeview  @(Context.Request.Path.ToString().ToLower().Contains("home") ? "active" : "")">
+                <a href="@Url.Action("Index", "Home")">
+                    <i class="fa fa-book"></i>
+                    @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+                    {
+                        <span>
+                            الحسابات
+                        </span>
+                    }
+                    else
+                    {
+                        <span>
+                            الرئيسية
+                        </span>
+                    }
+
+                </a>
+            </li>
+            @if (User.IsInRole("Admin") || User.IsInRole("HighAdmin")@* || User.IsInRole("Accountant") *@ || User.IsInRole("TrustAdmin"))
+            {
+                <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("branchs") ? "active" : "")">
+                    <a href="@Url.Action("Index", "Branchs")">
+                        <i class="fa fa-home"></i> <span>الفروع</span>
+                    </a>
+                </li>
+            }
+            @if (!User.IsInRole("Accountant"))
+            {
+                <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("users/index?q=d") ? "active" : "")">
+                    <a href="@Url.Action("Index", "Users", new {q = "d"})">
+                        <i class="fa fa-motorcycle"></i> <span>المناديب</span>
+                    </a>
+                </li>
+            }
+            @* <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("video") ? "active" : "")">
+            <a href="@Url.Action("Index", "Users")">
+            <i class="fas fa-users"></i> <span>إدارة المستخدمين</span>
+            </a>
+            </li>*@
+            @if (User.IsInRole("HighAdmin") || User.IsInRole("Accountant") || User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+            {
+                <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("users/index?q=c") ? "active" : "")">
+                    <a href="@Url.Action("Index", "Users", new {q = "c"})">
+                        <i class="fas fa-user"></i> <span>الراسلين</span>
+                    </a>
+                </li>
+                @if (!User.IsInRole("Accountant"))
+                {
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("orders/index") ? "active" : "")">
+                        <a href="@Url.Action("Index", "Orders")">
+                            <i class="fas fa-shopping-basket"></i> <span>الطلبات</span>
+                        </a>
+                    </li>
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("orders/فracking") ? "active" : "")">
+                        <a href="@Url.Action("Tracking", "Orders")">
+                            <i class="fa fa-shipping-fast" aria-hidden="true"></i>
+                            <span>تتبع الطلبات</span>
+                        </a>
+                    </li>
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("orders/index") ? "active" : "")">
+                        <a href="@Url.Action("PrintAllNew", "Orders")">
+                            <i class="fas fa-print"></i> <span>طباعه الطلبات</span>
+                        </a>
+                    </li>
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("orders/printallnewbarcode") ? "active" : "")">
+                        <a href="@Url.Action("PrintAllNewBarCode", "Orders")">
+                            <i class="fas fa-barcode"></i> <span>طباعه باركود الطلبات</span>
+                        </a>
+                    </li>
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("orders/complete") ? "active" : "")">
+                        <a href="@Url.Action("AllReturnedComplete", "Orders", new {q = "a"})">
+                            <i class="fa fa-home"></i> <span>مخزن المرتجعات</span>
+                        </a>
+                    </li>
+                }
+            }
+            @* <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("video") ? "active" : "")">
+            <a href="@Url.Action("Index", "Users",new {q="o" })">
+            <i class="fas fa-tag"></i> <span>الزائرين</span>
+            </a>
+            </li>*@
+            @if (!User.IsInRole("Admin") && !User.IsInRole("TrustAdmin") && !User.IsInRole("TrustAdmin"))
+            {
+                @if (!User.IsInRole("Accountant"))
+                {
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("notification") ? "active" : "")">
+                        <a href="@Url.Action("Wallet", "Users")">
+                            <i class="fa fa-coins"></i> <span>محظفتي</span>
+                        </a>
+                    </li>
+                }
+            }
+            @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin") || User.IsInRole("HighAdmin") || User.IsInRole("Accountant"))
+            {
+                @if (!User.IsInRole("HighAdmin"))
+                {
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("orders/complete") ? "active" : "")">
+                        <a href="@Url.Action("Complete", "Orders", new {q = "a"})">
+                            <i class="fa fa-save"></i> <span>التسوية</span>
+                        </a>
+                    </li>
+                }
+                <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("orders/complete") ? "active" : "")">
+                    <a href="@Url.Action("ReturnedComplete", "Orders", new {q = "a"})">
+                        <i class="fa fa-save"></i> <span>تسوية المرتجعات</span>
+                    </a>
+                </li>
+                @if (!User.IsInRole("HighAdmin"))
+                {
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("orders/complete") ? "active" : "")">
+                        <a href="@Url.Action("Archive", "Orders", new {q = "a"})">
+                            <i class="fa fa-archive"></i> <span>ارشيف التسوية</span>
+                        </a>
+                    </li>
+                }
+                <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("orders/complete") ? "active" : "")">
+                    <a href="@Url.Action("ArchiveReturned", "Orders", new {q = "a"})">
+                        <i class="fa fa-archive"></i> <span>ارشيف تسوية المرتجعات</span>
+                    </a>
+                </li>
+                @if (!User.IsInRole("Accountant") && !User.IsInRole("HighAdmin"))
+                {
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("notification") ? "active" : "")">
+                        <a href="@Url.Action("Index", "Notification", new {q = "a"})">
+                            <i class="fa fa-bullhorn"></i> <span>الاشعارات</span>
+                        </a>
+                    </li>
+
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("users/index") ? "active" : "")">
+                        <a href="@Url.Action("Index", "Users")">
+                            <i class="fa fa-user-circle"></i> <span>جميع مستخدمي النظام</span>
+                        </a>
+                    </li>
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("users/index?q=a") ? "active" : "")">
+                        <a href="@Url.Action("Index", "Users", new {q = "a"})">
+                            <i class="fa fa-user-circle"></i> <span>مسؤول النظام</span>
+                        </a>
+                    </li>
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("contactus") ? "active" : "")">
+                        <a href="@Url.Action("Index", "ContactUs")">
+                            <i class="fas fa-database"></i> <span>التواصل</span>
+                        </a>
+                    </li>
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("termsandcondition") ? "active" : "")">
+                        <a href="@Url.Action("Index", "TermsAndCondition")">
+                            <i class="fas fa-pen"></i> <span>الشروط و الأحكام</span>
+                        </a>
+                    </li>
+                }
+            }
+            @if (User.IsInRole("Admin"))
+            {
+                <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("adminwallet") ? "active" : "")">
+                    <a href="@Url.Action("AdminWallet", "Users")">
+                        <i class="fa fa-coins"></i> <span>محظفة الادمن</span>
+                    </a>
+                </li>
+            }
+
+        </ul>
+    </section>
+    <!-- /.sidebar -->
+</aside>

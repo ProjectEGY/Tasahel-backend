@@ -1,0 +1,126 @@
+﻿@using PostexS.Models.Enums;
+@using System.Globalization
+@model List<PostexS.Models.Domain.Order>
+@{
+    ViewBag.Title = "طباعه طلبات جديده ";
+}
+<div class="row">
+    <div class="col-md-12">
+        <div class="box box-info">
+            <div class="box-header with-border">
+                <h3 class="box-title no-print">@ViewBag.Title</h3>
+                <div class="box-tools pull-right">
+                    <button class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                </div>
+                <h4 style="margin: 10px; text-align: center;" class="no-print">
+                    <br />
+                    <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
+                    <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
+                </h4>
+            </div><!-- /.box-header -->
+
+            <div class="panel panel-primary" style="font-size:14px; max-width: 100%; overflow: auto;">
+                <div class="panel-heading">
+                    @if (Model.FirstOrDefault() != null)
+                    {
+                        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> طباعة شحنات مندوب: @Model.FirstOrDefault().Delivery.Name  </h3>
+                    }
+                </div>
+                <div class="panel-body">
+                    <table class="table text-center table-bordered" style="table-layout: fixed; word-wrap: break-word;font-size:10px;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:center;width: 10%;">رقم الطلب</th>
+                                <th style="text-align:center; width: 15%;">تاريخ انشاء الطلب</th>
+                                <th style="text-align:center; width: 17%;"> الراسل</th>
+                                <th style="text-align:center; width: 17%;"> المرسل إلية</th>
+                                <th style="text-align:center; width: 17%;">الملاحظات</th>
+                                <th style="text-align:center; width: 17%;">العنوان</th>
+                                <th style="text-align:center; width: 10%;">الاجمالي</th>
+                                <th class="no-print" style="text-align:center; width: 4%;">تحديد</th>
+                            </tr>
+                        </thead>
+                        <tbody style="text-align:center">
+                            <form asp-action="ExportToExecl" asp-controller="Orders">
+                                <button type="submit" class="btn-btn-success no-print">طباعة المحدد شيت إكسيل</button>
+                                <br />
+                                <label class="no-print" style="position:center">
+                                    <input type="checkbox" onClick="toggle(this)" title="حدد جميع الطلبات المعروضة" /> حدد جميع الطلبات المعروضة
+                                </label>
+                                @for (int i = 0; i < Model.Count; i++)
+                                {
+                                <tr>
+                                        @{
+                                            var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(Model[i].CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
+                                        }
+                                    <td>
+                                        <kbd style="font-size:11px;">@(Model[i].Code)</kbd>
+                                            @* <hr style="margin: 5px 0;" /> *@
+
+                                    </td>
+                                    <td>
+                                            @{
+                                                var arabicCulture = new CultureInfo("ar-EG");
+                                                var formattedDate = CreatedOn.ToString("dd MMMM yyyy", arabicCulture);
+                                                var formattedTime = CreatedOn.ToString("hh:mm tt", arabicCulture);
+                                            }
+                                        <div style="border: 1px solid black; padding: 5px; display: inline-block; font-size:11px;">
+                                                @formattedDate @formattedTime
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                            @Model[i].Client.Name <br />@Model[i].Client.PhoneNumber
+                                    </td>
+                                    <td>
+                                            @Model[i].ClientName <br /> @Model[i].ClientPhone
+                                    </td>
+                                    <td>
+                                            @if (Model[i].Notes != "")
+                                            {
+                                                @Model[i].Notes
+                                            }
+                                            else
+                                            {
+                                            <span>--</span>
+                                            }
+                                    </td>
+                                    <td>
+                                            @Model[i].AddressCity - @Model[i].Address
+                                    </td>
+                                    <td style="color:green">
+                                            @Model[i].TotalCost جنية
+                                    </td>
+                                    <td class="no-print">
+                                        <input class="check-box" type="checkbox" name="OrdersId[]" value="@Model[i].Id">
+                                    </td>
+                                </tr>
+                                }
+                            </form>
+                        </tbody>
+                    </table>
+                    <table class="table text-center table-bordered">
+                        <tr>
+                            <td style="width:50%;text-align:left">
+                                المبلغ المستحق للتحصيل :
+                            </td>
+                            <td style="width:50%;text-align:right;color:green">
+                                @Model.Sum(x => x.TotalCost) جنية
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
+        </div>
+    </div>
+</div>
+<script>
+    function toggle(source) {
+        checkboxes = document.getElementsByName('OrdersId[]');
+        for (var i = 0, n = checkboxes.length; i < n; i++) {
+            checkboxes[i].checked = source.checked;
+        }
+    }
+</script>
