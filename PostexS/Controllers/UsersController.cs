@@ -1689,6 +1689,26 @@ namespace PostexS.Controllers
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
 
         }
+        public ActionResult createUsers()
+        {
+            ViewBag.Branchs = _branch.Get(x => !x.IsDeleted).ToList();
+            UsersVM productsVM = new UsersVM();
+            return View(productsVM);
+        }
+        public FileContentResult DownloadUsersFile()
+        {
+            //var sDocument = System.IO.Path.GetFullPath("OrdersDetails.xlsx");
+            string webRootPath = _webHostEnvironment.WebRootPath;
+            string contentRootPath = _webHostEnvironment.ContentRootPath;
+            string path = "";
+            path = Path.Combine(webRootPath, "UsersDetails.xlsx");
+
+
+            byte[] fileBytes = System.IO.File.ReadAllBytes(path);
+            string fileName = "UsersDetails.xlsx";
+            return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+
+        }
         [HttpPost]
         public async Task<ActionResult> createOrders(OrdersVM model)
         {
@@ -1839,14 +1859,114 @@ namespace PostexS.Controllers
             }
             return BadRequest(" يجب ادخال ملف اكسيل , من فضلك حاول لاحقاً");
         }
-        public IActionResult ExportToExecl(int spec)
+
+
+        [HttpPost]
+        public async Task<ActionResult> createUsers(UsersVM model)
+        {
+            var branch = _branch.Get(x => x.Id == model.BranchId).First();
+            if (model.UserType != UserType.Client && model.UserType != UserType.Driver)
+            {
+                return BadRequest(" من فضلك حاول لاحقاً");
+            }
+
+            if (branch != null)
+            {
+
+                if (model.file != null)
+                {
+                    string extension = System.IO.Path.GetExtension(model.file.FileName);
+                    if (extension == ".xls" || extension == ".xlsx")
+                    {   /////Upload The Excel File (Products`s Data)
+                        var filename = System.IO.Path.GetFullPath("~/Files/UsersExcel/") + model.file.FileName;
+
+                        string webRootPath = _webHostEnvironment.WebRootPath;
+                        string contentRootPath = _webHostEnvironment.ContentRootPath;
+                        string path = "";
+                        path = Path.Combine(webRootPath, "Users.xlsx");
+
+                        using (var stream = System.IO.File.Create(path))
+                        {
+                            await model.file.CopyToAsync(stream);
+                        }
+
+                        //
+                        ////read the products data and split it in a list
+                        ////
+                        var file = $"{Directory.GetCurrentDirectory()}{@"\wwwroot\"}" + "\\" + "Users.xlsx";
+                        List<ApplicationUser> users = new List<ApplicationUser>();
+                        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+                        using (var steram = System.IO.File.Open(file, FileMode.Open, FileAccess.Read))
+                        {
+                            using (var reader = ExcelReaderFactory.CreateReader(steram))
+                            {
+                                //declare a variable to skip reading the first row in the excel sheet
+                                int x = 0;
+                                while (reader.Read())
+                                {
+                                    //new user 
+
+                                    if (x >= 1)
+                                    {
+                                        try
+                                        {
+
+                                            users.Add(new ApplicationUser()
+                                            {
+                                                BranchId = model.BranchId,
+                                                Name = reader.GetValue(0).ToString(),
+                                                PhoneNumber = reader.GetValue(1).ToString(),
+                                                WhatsappPhone = reader.GetValue(2).ToString(),
+                                                Email = reader.GetValue(3).ToString(),
+                                                Address = reader.GetValue(4).ToString(),
+                                                UserType = model.UserType,
+                                                SecurityStamp = Guid.NewGuid().ToString(),
+                                                IsPending = true
+                                            });
+
+                                        }
+                                        catch
+                                        {
+                                            return BadRequest("يوجد خطا في بيانات الطلبات , من فضلك حاول لاحقاً");
+                                        }
+                                        if (!await _user.Add(users[x - 1]))
+                                        {
+                                            return BadRequest("من فضلك حاول لاحقاً");
+                                        }
+                                        if (model.UserType == UserType.Client)
+                                        {
+                                            await _userManger.AddToRoleAsync(users[x - 1], "Client");
+                                        }
+                                        else if (model.UserType == UserType.Driver)
+                                        {
+                                            await _userManger.AddToRoleAsync(users[x - 1], "Driver");
+                                        }
+                                    }
+                                    x++;
+                                }
+                            }
+                        }
+                        if (model.UserType == UserType.Client)
+                            return RedirectToAction(nameof(Index), new { q = "c", BranchId = model.BranchId });
+                        else return RedirectToAction(nameof(Index), new { q = "d", BranchId = model.BranchId });
+                    }
+
+                    return BadRequest(" صيغة الملف غير صحيحه , من فضلك حاول لاحقاً");
+
+                }
+                return BadRequest(" يجب ادخال ملف اكسيل , من فضلك حاول لاحقاً");
+            }
+            return BadRequest(" يجب اختيار الفرع , من فضلك حاول لاحقاً");
+        }
+
+        public IActionResult ExportToExecl(int spec, long BranchId = -1)
         {
             var drivers = new List<ApplicationUser>();
             if (spec == 0)
-                drivers = _user.Get(x => !x.IsDeleted && x.UserType == UserType.Client).ToList();
+                drivers = _user.Get(x => !x.IsDeleted && x.UserType == UserType.Client && (BranchId == -1 || BranchId == x.BranchId)).ToList();
 
             else if (spec == 1)
-                drivers = _user.Get(x => !x.IsDeleted && x.UserType == UserType.Driver).ToList();
+                drivers = _user.Get(x => !x.IsDeleted && x.UserType == UserType.Driver && (BranchId == -1 || BranchId == x.BranchId)).ToList();
 
             var dt = ExcelExport.DriversExport(drivers);
             using (XLWorkbook wb = new XLWorkbook())

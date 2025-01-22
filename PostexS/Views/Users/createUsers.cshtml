@@ -1,0 +1,68 @@
+﻿@model PostexS.Models.ViewModels.UsersVM
+@{
+    ViewBag.Title = "اضافه أكثر من مستخدم";
+    var branchs = ViewBag.Branchs as List<PostexS.Models.Domain.Branch>;
+}
+<div>
+    @using (Html.BeginForm("DownloadUsersFile", "Users", FormMethod.Get))
+    {
+        <label>تحميل ملف إكسيل الخاص بإضافة المستخدمين</label>
+        <input type="submit" id="downloadButton" value="Download" class="btn btn-info" />
+    }
+</div>
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-plus"></i> @ViewBag.Title</h3>
+    </div>
+
+    <div class="panel-body">
+        <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
+            <div class="panel panel-success">
+                <div id="collapseOne" class="panel-collapse" role="tabpanel" aria-labelledby="headingOne">
+                    <div class="panel-body">
+                        <div id="model-errors" style="display:none;">
+                            <ul class="text-danger" id="ul-errors"></ul>
+                            <hr />
+                        </div>
+                        <form asp-action="createUsers" asp-controller="Users" method="post" enctype="multipart/form-data">
+                            <div class="col-lg-6 mb-10">
+                                <div class="form-group">
+                                    <label for="NameEn" class="col-sm-5 control-label required">اسم الفرع:</label>
+                                    <div class="col-sm-7">
+                                        <select name="BranchId" id="BranchId" class="select2 form-control">
+                                            @foreach (var branch in branchs)
+                                            {
+                                                <option value="@branch.Id">@branch.Name - @branch.Address</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 mb-10">
+                                <div class="form-group">
+                                    <label for="NameAr" class="col-sm-5 control-label required">نوع المستخدم: </label>
+                                    <div class="col-sm-7">
+                                        <select name="UserType" id="UserType" class="form-control">
+                                            <option value="0">راسل</option>
+                                            <option value="1">مندوب</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="form-group">
+                                    <label for="" class="col-sm-5 control-label">إدخال ملف الإكسل الخاص بالمستخدمين </label>
+                                    <div class="col-sm-7">
+                                        <input name="file" id="file" required type="file" class="form-control valid" />
+                                        @Html.ValidationMessageFor(d => d.file, "", new { @class = "text-danger" })
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success" id="add-product-btn">اضافه  <i class="fa fa-spinner fa-spin" id="loader" style="display:none;"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -316,6 +316,8 @@
                                 }
                             </div>
                         </div>
+
+
                     }
                 </div>
             </div>
@@ -326,6 +328,7 @@
                     <a class="btn btn-info mb-5 mr-5" href="@Url.Action("PendingIndex","Users")">طلبات الاشتراك</a>
                 }
                 <a class="btn btn-danger mb-5 mr-5" href="@Url.Action("Index", "Users", new { q = ViewBag.q, deleted = true,BranchId=ViewBag.branch })"> المحذوفين</a>
+                <a class="btn btn-warning mb-5 mr-5" asp-action="createUsers" asp-controller="Users" class="btn btn-warning">إضافة اكثر من مستخدم</a>
             }
             else
             {
@@ -364,7 +367,7 @@
                 }
 
             }
-            <a href="@Url.Action("ExportToExecl","Users",new {spec=x})" class="btn btn-warning mb-5 mr-5">Export to excel</a>
+            <a href="@Url.Action("ExportToExecl","Users",new {spec=x,BranchId=ViewBag.branch})" class="btn btn-warning mb-5 mr-5">Export to excel</a>
 
         </div>
         <div class="table-responsive">

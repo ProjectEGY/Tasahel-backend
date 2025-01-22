@@ -15,19 +15,21 @@ namespace PostexS.Helper
             public static DataTable DriversExport(List<ApplicationUser> order)
             {
                 DataTable dt = new DataTable("Report");
-                dt.Columns.AddRange(new DataColumn[7] { new DataColumn("                       ID                    "),
+                dt.Columns.AddRange(new DataColumn[8] { /*new DataColumn("                       ID                    "),*/
                                             new DataColumn("         الاسم          "),
                                             new DataColumn("         رقم الهاتف          "),
+                                            new DataColumn("         رقم واتساب           "),
                                             new DataColumn("               البريد الالكتروني             "),
-                                             new DataColumn("         الحالة         "),
+                                            new DataColumn("               العنوان              "),
+                                             new DataColumn("         نوع المستخدم         "),
                                               new DataColumn("         الرصيد        "),
-                                               new DataColumn("         Branch       ")});
+                                               new DataColumn("         الفرع       ")});
                 foreach (var item in order)
                 {
 
 
-                    dt.Rows.Add((item.Id), item.Name,
-                         item.PhoneNumber, item.Email, item.UserType, item.Wallet, item.Branch);
+                    dt.Rows.Add(/*(item.Id),*/ item.Name,
+                         item.PhoneNumber, item.WhatsappPhone, item.Email, item.Address, item.UserType, item.Wallet, item.Branch);
 
                     //    dt.Rows.Add((item.Code), item.Name + " " + item.UserName,
                     //         item.PhoneNumber, item.Email, item.UserType, item.Wallet,item.Branch );

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using PostexS.Models.Enums;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -11,6 +12,13 @@ namespace PostexS.Models.ViewModels
     {
         public string ClientId { get; set; }
         [Required(ErrorMessage = "ملف المنتجات مطلوب")]
+        public IFormFile file { get; set; }
+    }
+    public class UsersVM
+    {
+        public long BranchId { get; set; }
+        public UserType UserType { get; set; }
+        [Required(ErrorMessage = "ملف المستخدمين الجداد مطلوب")]
         public IFormFile file { get; set; }
     }
 }
