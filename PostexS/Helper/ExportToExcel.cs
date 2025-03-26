@@ -39,10 +39,10 @@ namespace PostexS.Helper
             public static DataTable OrderExport(List<Order> order)
             {
                 DataTable dt = new DataTable("Report");
-                dt.Columns.AddRange(new DataColumn[14] {
+                dt.Columns.AddRange(new DataColumn[15] {
                         new DataColumn("الحاله"),new DataColumn("التسويه"), new DataColumn("رقم الطلب"), new DataColumn("التاريخ"),
                         new DataColumn("الراسل"), new DataColumn("رقم تليفون الراسل"),
-                    new DataColumn("المرسل إليه"), new DataColumn("رقم تليفون المرسل إليه"), new DataColumn("العنوان"),
+                    new DataColumn("كود العميل"), new DataColumn("المرسل إليه"), new DataColumn("رقم تليفون المرسل إليه"), new DataColumn("العنوان"),
                         new DataColumn("المطلوب دفعه"), new DataColumn("تم دفعه"), new DataColumn("المندوب"),
                         new DataColumn("الملاحظات"), new DataColumn("ملاحظات المندوب")
       });
@@ -113,7 +113,7 @@ namespace PostexS.Helper
                     }
                     // Format the date and time
                     string formattedDateTime = CreatedOn.ToString("dd MMM, yyyy - hh:mm tt");
-                    dt.Rows.Add(status, Complete, item.Code, formattedDateTime, item.Client.Name, item.Client.PhoneNumber, item.ClientName, item.ClientPhone,
+                    dt.Rows.Add(status, Complete, item.Code, formattedDateTime, item.Client.Name, item.Client.PhoneNumber, item.ClientCode, item.ClientName, item.ClientPhone,
                        item.AddressCity + " - " + item.Address, item.TotalCost, item.ArrivedCost, DeliveryName, item.Notes, DriverNotes);
                 }
                 return dt;

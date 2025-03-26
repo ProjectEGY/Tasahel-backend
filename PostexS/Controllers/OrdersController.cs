@@ -1361,13 +1361,23 @@ namespace PostexS.Controllers
                                                    && !x.Pending && !x.IsDeleted));
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin")]
-        public IActionResult PrintClientOrders(string Id, string? message)
+        public IActionResult PrintClientOrders(string Id, string? message, int page = 1, int pageSize = 10)
         {
             ViewBag.Id = Id;
             ViewBag.message = message;
-            return View(_orderService.GetList(x =>
+
+            var query = _orderService.GetList(x =>
                 x.DeliveryId == Id && x.Status == OrderStatus.Assigned && !x.IsDeleted &&
-                x.OrderCompleted == OrderCompleted.NOK && !x.Finished));
+                x.OrderCompleted == OrderCompleted.NOK && !x.Finished);
+
+            var totalCount = query.Count();
+            var pagedOrders = query.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalCount = totalCount;
+
+            return View(pagedOrders);
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin")]
         public IActionResult PrintExcelClientOrders(string Id)
@@ -2683,14 +2693,15 @@ namespace PostexS.Controllers
                     headerRow.Cell(1).Value = "حالة الطلب";
                     headerRow.Cell(2).Value = "رقم الطلب";
                     headerRow.Cell(3).Value = "الراسل";
-                    headerRow.Cell(4).Value = "اسم المرسل إليه";
-                    headerRow.Cell(5).Value = "تليفون المرسل إليه";
-                    headerRow.Cell(6).Value = "العنوان";
-                    headerRow.Cell(7).Value = "تم تسديده";
-                    headerRow.Cell(8).Value = "نسبة الراسل";
-                    headerRow.Cell(9).Value = "المندوب";
-                    headerRow.Cell(10).Value = "ملاحظات المندوب";
-                    headerRow.Cell(11).Value = "الملاحظات";
+                    headerRow.Cell(4).Value = "كود العميل";
+                    headerRow.Cell(5).Value = "اسم المرسل إليه";
+                    headerRow.Cell(6).Value = "تليفون المرسل إليه";
+                    headerRow.Cell(7).Value = "العنوان";
+                    headerRow.Cell(8).Value = "تم تسديده";
+                    headerRow.Cell(9).Value = "نسبة الراسل";
+                    headerRow.Cell(10).Value = "المندوب";
+                    headerRow.Cell(11).Value = "ملاحظات المندوب";
+                    headerRow.Cell(12).Value = "الملاحظات";
 
                     foreach (var item in wallets)
                     {
@@ -2757,14 +2768,15 @@ namespace PostexS.Controllers
                         worksheet.Cell(row, 1).Value = statusBadge;
                         worksheet.Cell(row, 2).Value = item.Code;
                         worksheet.Cell(row, 3).Value = item.Client.Name;
-                        worksheet.Cell(row, 4).Value = item.ClientName;
-                        worksheet.Cell(row, 5).Value = item.ClientPhone;
-                        worksheet.Cell(row, 6).Value = item.AddressCity + '-' + item.Address;
-                        worksheet.Cell(row, 7).Value = item.ArrivedCost;
-                        worksheet.Cell(row, 8).Value = item.ClientCost;
-                        worksheet.Cell(row, 9).Value = item.Delivery.Name;
-                        worksheet.Cell(row, 10).Value = lastOrderNoteContent;
-                        worksheet.Cell(row, 11).Value = item.Notes;
+                        worksheet.Cell(row, 4).Value = item.ClientCode;
+                        worksheet.Cell(row, 5).Value = item.ClientName;
+                        worksheet.Cell(row, 6).Value = item.ClientPhone;
+                        worksheet.Cell(row, 7).Value = item.AddressCity + '-' + item.Address;
+                        worksheet.Cell(row, 8).Value = item.ArrivedCost;
+                        worksheet.Cell(row, 9).Value = item.ClientCost;
+                        worksheet.Cell(row, 10).Value = item.Delivery.Name;
+                        worksheet.Cell(row, 11).Value = lastOrderNoteContent;
+                        worksheet.Cell(row, 12).Value = item.Notes;
 
                         row++;
                     }
@@ -2799,16 +2811,17 @@ namespace PostexS.Controllers
                     headerRow.Cell(1).Value = "حالة الطلب";
                     headerRow.Cell(2).Value = "رقم الطلب";
                     headerRow.Cell(3).Value = "الراسل";
-                    headerRow.Cell(4).Value = "اسم المرسل إليه";
-                    headerRow.Cell(5).Value = "تليفون المرسل إليه";
-                    headerRow.Cell(6).Value = "العنوان";
-                    headerRow.Cell(7).Value = "تم تسديده";
-                    headerRow.Cell(8).Value = "نسبة الراسل";
-                    headerRow.Cell(9).Value = "المندوب";
-                    headerRow.Cell(10).Value = "ملاحظات المندوب";
-                    headerRow.Cell(11).Value = "عمولة المندوب";
-                    headerRow.Cell(12).Value = "صافي الربح";
-                    headerRow.Cell(13).Value = "الملاحظات";
+                    headerRow.Cell(4).Value = "كود العميل";
+                    headerRow.Cell(5).Value = "اسم المرسل إليه";
+                    headerRow.Cell(6).Value = "تليفون المرسل إليه";
+                    headerRow.Cell(7).Value = "العنوان";
+                    headerRow.Cell(8).Value = "تم تسديده";
+                    headerRow.Cell(9).Value = "نسبة الراسل";
+                    headerRow.Cell(10).Value = "المندوب";
+                    headerRow.Cell(11).Value = "ملاحظات المندوب";
+                    headerRow.Cell(12).Value = "عمولة المندوب";
+                    headerRow.Cell(13).Value = "صافي الربح";
+                    headerRow.Cell(14).Value = "الملاحظات";
 
                     foreach (var item in wallets)
                     {
@@ -2875,16 +2888,17 @@ namespace PostexS.Controllers
                         worksheet.Cell(row, 1).Value = statusBadge;
                         worksheet.Cell(row, 2).Value = item.Code;
                         worksheet.Cell(row, 3).Value = item.Client.Name;
-                        worksheet.Cell(row, 4).Value = item.ClientName;
-                        worksheet.Cell(row, 5).Value = item.ClientPhone;
-                        worksheet.Cell(row, 6).Value = item.AddressCity + '-' + item.Address;
-                        worksheet.Cell(row, 7).Value = item.ArrivedCost;
-                        worksheet.Cell(row, 8).Value = item.ClientCost;
-                        worksheet.Cell(row, 9).Value = item.Delivery.Name;
-                        worksheet.Cell(row, 10).Value = lastOrderNoteContent;
-                        worksheet.Cell(row, 11).Value = item.DeliveryCost;
-                        worksheet.Cell(row, 12).Value = item.DeliveryFees - item.DeliveryCost;
-                        worksheet.Cell(row, 13).Value = item.Notes;
+                        worksheet.Cell(row, 4).Value = item.ClientCode;
+                        worksheet.Cell(row, 5).Value = item.ClientName;
+                        worksheet.Cell(row, 6).Value = item.ClientPhone;
+                        worksheet.Cell(row, 7).Value = item.AddressCity + '-' + item.Address;
+                        worksheet.Cell(row, 8).Value = item.ArrivedCost;
+                        worksheet.Cell(row, 9).Value = item.ClientCost;
+                        worksheet.Cell(row, 10).Value = item.Delivery.Name;
+                        worksheet.Cell(row, 11).Value = lastOrderNoteContent;
+                        worksheet.Cell(row, 12).Value = item.DeliveryCost;
+                        worksheet.Cell(row, 13).Value = item.DeliveryFees - item.DeliveryCost;
+                        worksheet.Cell(row, 14).Value = item.Notes;
 
                         row++;
                     }
@@ -3003,6 +3017,7 @@ namespace PostexS.Controllers
                             Notes = order.Notes,
                             AddressCity = order.AddressCity,
                             Address = order.Address,
+                            ClientCode = order.ClientCode,
                             ClientName = order.ClientName,
                             ClientPhone = order.ClientPhone,
                             Cost = order.Cost,
@@ -3255,6 +3270,9 @@ namespace PostexS.Controllers
                                        : f.ClientPhone.ToLower().Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
+                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                    || (string.IsNullOrEmpty(searchStr)
+                                       ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1
                                       ? true
@@ -3274,6 +3292,9 @@ namespace PostexS.Controllers
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.ClientPhone.ToLower().Contains(searchStr))
+                                    || (string.IsNullOrEmpty(searchStr)
+                                       ? true
+                                       : f.ClientCode.ToLower().Contains(searchStr))
                                    || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
@@ -3286,6 +3307,9 @@ namespace PostexS.Controllers
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.ClientPhone.ToLower().Contains(searchStr))
+                                    || (string.IsNullOrEmpty(searchStr)
+                                       ? true
+                                       : f.ClientCode.ToLower().Contains(searchStr))
                                    || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
@@ -3301,6 +3325,9 @@ namespace PostexS.Controllers
                                        : f.ClientPhone.ToLower().Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
+                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                    || (string.IsNullOrEmpty(searchStr)
+                                       ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
                                   && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
@@ -3312,6 +3339,9 @@ namespace PostexS.Controllers
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.ClientPhone.ToLower().Contains(searchStr))
+                                    || (string.IsNullOrEmpty(searchStr)
+                                       ? true
+                                       : f.ClientCode.ToLower().Contains(searchStr))
                                    || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
@@ -3327,6 +3357,9 @@ namespace PostexS.Controllers
                                        : f.ClientPhone.ToLower().Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
+                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                    || (string.IsNullOrEmpty(searchStr)
+                                       ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
                                   && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
@@ -3338,6 +3371,9 @@ namespace PostexS.Controllers
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.ClientPhone.ToLower().Contains(searchStr))
+                                    || (string.IsNullOrEmpty(searchStr)
+                                       ? true
+                                       : f.ClientCode.ToLower().Contains(searchStr))
                                    || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
@@ -3351,6 +3387,9 @@ namespace PostexS.Controllers
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.ClientPhone.ToLower().Contains(searchStr))
+                                    || (string.IsNullOrEmpty(searchStr)
+                                       ? true
+                                       : f.ClientCode.ToLower().Contains(searchStr))
                                   || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
@@ -3364,6 +3403,9 @@ namespace PostexS.Controllers
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.ClientPhone.ToLower().Contains(searchStr))
+                                    || (string.IsNullOrEmpty(searchStr)
+                                       ? true
+                                       : f.ClientCode.ToLower().Contains(searchStr))
                                   || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
@@ -3377,6 +3419,9 @@ namespace PostexS.Controllers
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.ClientPhone.ToLower().Contains(searchStr))
+                                    || (string.IsNullOrEmpty(searchStr)
+                                       ? true
+                                       : f.ClientCode.ToLower().Contains(searchStr))
                                    || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
@@ -3390,6 +3435,9 @@ namespace PostexS.Controllers
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.ClientPhone.ToLower().Contains(searchStr))
+                                    || (string.IsNullOrEmpty(searchStr)
+                                       ? true
+                                       : f.ClientCode.ToLower().Contains(searchStr))
                                    || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
@@ -3402,6 +3450,9 @@ namespace PostexS.Controllers
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.ClientPhone.ToLower().Contains(searchStr))
+                                    || (string.IsNullOrEmpty(searchStr)
+                                       ? true
+                                       : f.ClientCode.ToLower().Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))

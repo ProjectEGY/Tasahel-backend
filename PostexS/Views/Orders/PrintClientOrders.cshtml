@@ -11,6 +11,10 @@
         var egyptTime = TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, egyptTimeZone);
         return egyptTime.ToString("MM/dd/yyyy h:mm:ss tt", CultureInfo.InvariantCulture);
     };
+    var currentPage = ViewBag.CurrentPage;
+    var pageSize = ViewBag.PageSize;
+    var totalCount = ViewBag.TotalCount;
+    var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
 }
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <div class="row">
@@ -107,6 +111,22 @@
                             </td>
                         </tr>
                     </table>
+                    <!-- Page Size Selection -->
+                    <div class="no-print" style="margin: 10px 0;">
+                        <form method="get" action="@Url.Action("PrintClientOrders")">
+                            <input type="hidden" name="Id" value="@userID" />
+                            <div class="form-inline">
+                                <label for="pageSize">عدد العناصر في الصفحة:</label>
+                                <select name="pageSize" id="pageSize" class="form-control" onchange="this.form.submit()" style="margin: 0 10px;">
+                                    <option value="10" selected="@(pageSize == 10)">10</option>
+                                    <option value="25" selected="@(pageSize == 25)">25</option>
+                                    <option value="50" selected="@(pageSize == 50)">50</option>
+                                    <option value="100" selected="@(pageSize == 100)">100</option>
+                                </select>
+                                <input type="hidden" name="page" value="1" />
+                            </div>
+                        </form>
+                    </div>
                     <table class="table text-center table-bordered">
                         <thead>
                             <tr>
@@ -259,7 +279,34 @@
                             *@
                         </tbody>
                     </table>
+                    <div class="text-center no-print">
+                        <ul class="pagination">
+                            @if (currentPage > 1)
+                            {
+                                <li><a href="@Url.Action("PrintClientOrders", new { Id = userID, page = 1, pageSize = pageSize })">الأولى</a></li>
+                                <li><a href="@Url.Action("PrintClientOrders", new { Id = userID, page = currentPage - 1, pageSize = pageSize })">السابقة</a></li>
+                            }
 
+                            @if (currentPage > 1)
+                            {
+                                <li><a href="@Url.Action("PrintClientOrders", new { Id = userID, page = currentPage - 1, pageSize = pageSize })">@(currentPage - 1)</a></li>
+                            }
+
+                            <li class="active"><a href="#">@currentPage</a></li>
+
+                            @if (currentPage < totalPages)
+                            {
+                                <li><a href="@Url.Action("PrintClientOrders", new { Id = userID, page = currentPage + 1, pageSize = pageSize })">@(currentPage + 1)</a></li>
+                            }
+
+                            @if (currentPage < totalPages)
+                            {
+                                <li><a href="@Url.Action("PrintClientOrders", new { Id = userID, page = currentPage + 1, pageSize = pageSize })">التالية</a></li>
+                                <li><a href="@Url.Action("PrintClientOrders", new { Id = userID, page = totalPages, pageSize = pageSize })">الأخيرة</a></li>
+                            }
+                        </ul>
+                        <div>الصفحة @currentPage من @totalPages</div>
+                    </div>
                     <table class="table text-center table-bordered">
                         <tr>
                             <td style="width:50%;text-align:left">
@@ -291,24 +338,24 @@
     @if (ViewBag.Message != null)
     {
         <text>
-                // عرض الرسالة باستخدام toastr
-                toastr.success('@ViewBag.Message', '', {
-                    "closeButton": true,
-                    "debug": false,
-                    "newestOnTop": false,
-                    "progressBar": true,
-                    "positionClass": "toast-top-center",
-                    "preventDuplicates": false,
-                    "onclick": null,
-                    "showDuration": "300",
-                    "hideDuration": "1000",
-                    "timeOut": "5000",
-                    "extendedTimeOut": "1000",
-                    "showEasing": "swing",
-                    "hideEasing": "linear",
-                    "showMethod": "fadeIn",
-                    "hideMethod": "fadeOut"
-                });
+                    // عرض الرسالة باستخدام toastr
+                    toastr.success('@ViewBag.Message', '', {
+                        "closeButton": true,
+                        "debug": false,
+                        "newestOnTop": false,
+                        "progressBar": true,
+                        "positionClass": "toast-top-center",
+                        "preventDuplicates": false,
+                        "onclick": null,
+                        "showDuration": "300",
+                        "hideDuration": "1000",
+                        "timeOut": "5000",
+                        "extendedTimeOut": "1000",
+                        "showEasing": "swing",
+                        "hideEasing": "linear",
+                        "showMethod": "fadeIn",
+                        "hideMethod": "fadeOut"
+                    });
         </text>
     }
             $('.save-notes').on('click', function () {

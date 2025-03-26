@@ -201,7 +201,7 @@
             <select asp-for="Orders" id="Orders" class="form-control select2" multiple="multiple">
                 @foreach (var order in orders)
                 {
-                    <option value="@order.Id">@(order.Code) - @order.TotalCost جنية</option>
+                    <option value="@order.Id">@(order.Code) @* - @order.TotalCost جنية *@</option>
                 }
             </select>
         </div>

@@ -18,6 +18,7 @@ namespace PostexS.Models.Dtos
         public double OrderCostWithoutDeliveryCost { get; set; }
         public string SenderName { get; set; }
         public string SenderNumber { get; set; }
+        public string ReciverCode { get; set; }
         public string ReciverName { get; set; }
         public string ReciverNumber { get; set; }
         public OrderStatus Status { get; set; }
@@ -31,6 +32,7 @@ namespace PostexS.Models.Dtos
             this.Cost = order.TotalCost;
             this.OrderCostWithoutDeliveryCost = order.Cost;
             this.ReciverName = order.ClientName;
+            this.ReciverCode = order.ClientCode;
             this.ReciverNumber = order.ClientPhone;
             this.Status = order.Status;
             this.Address = order.Address;

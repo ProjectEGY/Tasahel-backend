@@ -13,6 +13,7 @@ namespace PostexS.Models.Domain
         public string Notes { get; set; }
         public string AddressCity { get; set; }
         public string Address { get; set; }
+        public string ClientCode { get; set; }
         public string ClientName { get; set; }
         public string ClientPhone { get; set; }
         public double Cost { get; set; }
