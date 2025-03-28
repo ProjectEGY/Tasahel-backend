@@ -34,6 +34,7 @@ using System.Web;
 using PostexS.Models.ViewModels;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 
 namespace PostexS.Controllers
 {
@@ -1361,24 +1362,39 @@ namespace PostexS.Controllers
                                                    && !x.Pending && !x.IsDeleted));
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin")]
-        public IActionResult PrintClientOrders(string Id, string? message, int page = 1, int pageSize = 10)
+        public IActionResult PrintClientOrders(string Id, string? message, string? searchCode, int page = 1, int pageSize = 100)
         {
             ViewBag.Id = Id;
             ViewBag.message = message;
 
-            var query = _orderService.GetList(x =>
-                x.DeliveryId == Id && x.Status == OrderStatus.Assigned && !x.IsDeleted &&
-                x.OrderCompleted == OrderCompleted.NOK && !x.Finished);
+            var baseQuery = _orders.GetAllAsIQueryable()
+                .Include(x => x.Client)
+                .Include(x => x.Delivery)
+                .Where(x => x.DeliveryId == Id
+                           && x.Status == OrderStatus.Assigned
+                           && !x.IsDeleted
+                           && x.OrderCompleted == OrderCompleted.NOK
+                           && !x.Finished
+                           && (string.IsNullOrEmpty(searchCode) || EF.Functions.Like(x.Code, $"%{searchCode}%")));
 
-            var totalCount = query.Count();
-            var pagedOrders = query.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            // حساب العدد الكلي دون تحميل البيانات
+            var totalCount = baseQuery.Count();
+
+            // جلب فقط بيانات الصفحة المطلوبة
+            var pagedOrders = baseQuery
+                .OrderBy(x => x.CreateOn)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
 
             ViewBag.CurrentPage = page;
             ViewBag.PageSize = pageSize;
             ViewBag.TotalCount = totalCount;
+            ViewBag.SearchCode = searchCode;
 
             return View(pagedOrders);
         }
+
         [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin")]
         public IActionResult PrintExcelClientOrders(string Id)
         {

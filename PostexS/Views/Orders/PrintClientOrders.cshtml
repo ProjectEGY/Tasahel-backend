@@ -37,7 +37,26 @@
                     *@
                 </h4>
             </div><!-- /.box-header -->
-
+            <div class="box-body no-print">
+                <form method="get" action="@Url.Action("PrintClientOrders")">
+                    <input type="hidden" name="Id" value="@userID" />
+                    <div class="input-group" style="width: 300px; margin-bottom: 15px;">
+                        <input type="text" name="searchCode" class="form-control" placeholder="ابحث بكود الطلب..." value="@ViewBag.SearchCode">
+                        <span class="input-group-btn">
+                            <button type="submit" class="btn btn-info">
+                                <i class="fa fa-search"></i>
+                            </button>
+                            @if (!string.IsNullOrEmpty(ViewBag.SearchCode))
+                            {
+                                <a href="@Url.Action("PrintClientOrders", new { Id = userID, page = 1, pageSize = ViewBag.PageSize })"
+                                   class="btn btn-danger">
+                                    <i class="fa fa-times"></i>
+                                </a>
+                            }
+                        </span>
+                    </div>
+                </form>
+            </div>
 
 
             <div class="panel panel-primary">
@@ -122,6 +141,8 @@
                                     <option value="25" selected="@(pageSize == 25)">25</option>
                                     <option value="50" selected="@(pageSize == 50)">50</option>
                                     <option value="100" selected="@(pageSize == 100)">100</option>
+                                    <option value="200" selected="@(pageSize == 200)">200</option>
+                                    <option value="500" selected="@(pageSize == 500)">500</option>
                                 </select>
                                 <input type="hidden" name="page" value="1" />
                             </div>
@@ -338,24 +359,24 @@
     @if (ViewBag.Message != null)
     {
         <text>
-                    // عرض الرسالة باستخدام toastr
-                    toastr.success('@ViewBag.Message', '', {
-                        "closeButton": true,
-                        "debug": false,
-                        "newestOnTop": false,
-                        "progressBar": true,
-                        "positionClass": "toast-top-center",
-                        "preventDuplicates": false,
-                        "onclick": null,
-                        "showDuration": "300",
-                        "hideDuration": "1000",
-                        "timeOut": "5000",
-                        "extendedTimeOut": "1000",
-                        "showEasing": "swing",
-                        "hideEasing": "linear",
-                        "showMethod": "fadeIn",
-                        "hideMethod": "fadeOut"
-                    });
+                            // عرض الرسالة باستخدام toastr
+                            toastr.success('@ViewBag.Message', '', {
+                                "closeButton": true,
+                                "debug": false,
+                                "newestOnTop": false,
+                                "progressBar": true,
+                                "positionClass": "toast-top-center",
+                                "preventDuplicates": false,
+                                "onclick": null,
+                                "showDuration": "300",
+                                "hideDuration": "1000",
+                                "timeOut": "5000",
+                                "extendedTimeOut": "1000",
+                                "showEasing": "swing",
+                                "hideEasing": "linear",
+                                "showMethod": "fadeIn",
+                                "hideMethod": "fadeOut"
+                            });
         </text>
     }
             $('.save-notes').on('click', function () {
