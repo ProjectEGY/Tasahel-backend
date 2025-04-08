@@ -1684,7 +1684,7 @@ namespace PostexS.Controllers
             string webRootPath = _webHostEnvironment.WebRootPath;
             string contentRootPath = _webHostEnvironment.ContentRootPath;
             string path = "";
-            path = Path.Combine(webRootPath, "OrdersDetails.xlsx");
+            path = Path.Combine(webRootPath, "NewOrdersDetails.xlsx");
 
 
             byte[] fileBytes = System.IO.File.ReadAllBytes(path);
@@ -1692,6 +1692,7 @@ namespace PostexS.Controllers
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
 
         }
+
         public ActionResult createUsers()
         {
             ViewBag.Branchs = _branch.Get(x => !x.IsDeleted).ToList();
@@ -1787,6 +1788,8 @@ namespace PostexS.Controllers
                                             Status = OrderStatus.Placed,
                                             BranchId = user.BranchId,
                                             Notes = tips,
+                                            ClientCode = reader.GetValue(7).ToString()
+
                                         });
 
                                     }

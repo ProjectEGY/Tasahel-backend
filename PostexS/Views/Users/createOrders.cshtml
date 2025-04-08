@@ -47,3 +47,17 @@
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        Swal.fire({
+            title: 'تم تحديث ملف الإكسيل!',
+            text: 'تم إضافة خانة "كود العميل" في ملف الطلبات. يُرجى تحميل الملف الجديد.',
+            icon: 'info',
+            confirmButtonText: 'موافق',
+            timer: 10000
+        });
+    });
+</script>
