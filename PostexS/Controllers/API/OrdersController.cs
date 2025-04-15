@@ -369,7 +369,11 @@ namespace PostexS.Controllers.API
                 baseResponse.ErrorCode = Errors.SomeThingWentwrong;
             }
             order.OrderOperationHistoryId = history.Id;
-            order.BarcodeImage = getBarcode(order.Id);
+
+            string datetoday = DateTime.Now.ToString("ddMMyyyy");
+            order.Code = "Tas" + datetoday + order.Id.ToString();
+            order.BarcodeImage = getBarcode(order.Code);
+
             if (!await _order.Update(order))
             {
                 baseResponse.ErrorMessage = "Something went wrong, please try again later";
@@ -384,9 +388,9 @@ namespace PostexS.Controllers.API
 
             return Ok(baseResponse);
         }
-        public byte[] getBarcode(long id)
+        public byte[] getBarcode(string Code)
         {
-            id += 1000;
+            //            id += 1000;
             var barcodeWriter = new ZXing.BarcodeWriter
             {
                 Format = BarcodeFormat.CODE_128,
@@ -396,7 +400,7 @@ namespace PostexS.Controllers.API
                     Width = 175
                 }
             };
-            var barcodeBitmap = barcodeWriter.Write(id.ToString());
+            var barcodeBitmap = barcodeWriter.Write(Code);
             var ms = new MemoryStream();
             barcodeBitmap.Save(ms, ImageFormat.Png);
             var barcodeImage = ms.ToArray();
@@ -408,34 +412,34 @@ namespace PostexS.Controllers.API
             if (user.Tracking)
             {
                 if (dto.Longitude.HasValue)
-                user.Longitude = dto.Longitude;
+                    user.Longitude = dto.Longitude;
 
-            if (dto.Latitude.HasValue)
-                user.Latitude = dto.Latitude;
-            var address = await GetAddressFromCoordinatesAsync(dto.Latitude.Value, dto.Longitude.Value);
+                if (dto.Latitude.HasValue)
+                    user.Latitude = dto.Latitude;
+                var address = await GetAddressFromCoordinatesAsync(dto.Latitude.Value, dto.Longitude.Value);
 
-            await _user.Update(user);
+                await _user.Update(user);
 
-            //add to locations list 
-            // Define the Egypt time zone
-            TimeZoneInfo egyptTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+                //add to locations list 
+                // Define the Egypt time zone
+                TimeZoneInfo egyptTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
 
-            // Get the current UTC time
-            DateTime utcNow = DateTime.UtcNow;
+                // Get the current UTC time
+                DateTime utcNow = DateTime.UtcNow;
 
-            // Convert the UTC time to Egypt time
-            DateTime egyptTime = TimeZoneInfo.ConvertTimeFromUtc(utcNow, egyptTimeZone);
+                // Convert the UTC time to Egypt time
+                DateTime egyptTime = TimeZoneInfo.ConvertTimeFromUtc(utcNow, egyptTimeZone);
 
-            Location location = new Location()
-            {
-                DeliveryId = user.Id,
-                Longitude = dto.Longitude,
-                Latitude = dto.Latitude,
-                CreateOn = egyptTime,
-                Address = address,
-            };
-            await _locations.Add(location);
-        }
+                Location location = new Location()
+                {
+                    DeliveryId = user.Id,
+                    Longitude = dto.Longitude,
+                    Latitude = dto.Latitude,
+                    CreateOn = egyptTime,
+                    Address = address,
+                };
+                await _locations.Add(location);
+            }
             return true;
         }
         private async Task<string> GetAddressFromCoordinatesAsync(double latitude, double longitude)

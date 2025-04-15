@@ -157,7 +157,9 @@ namespace PostexS.Controllers
             var ordersWithoutCode = _orderService.GetList(x => x.Code == null && x.Status != OrderStatus.PartialReturned && !x.IsDeleted).ToList();
             foreach (var order in ordersWithoutCode)
             {
-                order.Code = (order.Id + 1000).ToString();
+                string datetoday = DateTime.Now.ToString("ddMMyyyy");
+                order.Code = "Tas" + datetoday + order.Id.ToString();
+                order.BarcodeImage = getBarcode(order.Code);
                 await _orders.Update(order);
                 await _CRUD.Update(order.Id);
             }
@@ -193,7 +195,7 @@ namespace PostexS.Controllers
 
             foreach (var order in ordersWithoutBarCode.OrderByDescending(x => x.CreateOn).ToList())
             {
-                order.BarcodeImage = getBarcode(order.Id);
+                order.BarcodeImage = getBarcode(order.Code);
                 await _orders.Update(order);
                 await _CRUD.Update(order.Id);
             }
@@ -2459,9 +2461,12 @@ namespace PostexS.Controllers
                 }
             }
             model.OrderOperationHistoryId = history.Id;
-            model.BarcodeImage = getBarcode(model.Id);
+
+            string datetoday = DateTime.Now.ToString("ddMMyyyy");
+            model.Code = "Tas" + datetoday + model.Id.ToString();
+            model.BarcodeImage = getBarcode(model.Code);
+
             model.LastUpdated = model.CreateOn;
-            model.Code = (model.Id + 1000).ToString();
             if (!await _orders.Update(model))
             {
                 if (!await _orders.Update(model))
@@ -3240,9 +3245,9 @@ namespace PostexS.Controllers
             return Json(new { success = true, message = "تم حفظ الملاحظات بنجاح", deliveryId = order.DeliveryId });
         }
 
-        public byte[] getBarcode(long id)
+        public byte[] getBarcode(string Code)
         {
-            id += 1000;
+            //            id += 1000;
             var barcodeWriter = new ZXing.BarcodeWriter
             {
                 Format = BarcodeFormat.CODE_128,
@@ -3252,7 +3257,7 @@ namespace PostexS.Controllers
                     Width = 175
                 }
             };
-            var barcodeBitmap = barcodeWriter.Write(id.ToString());
+            var barcodeBitmap = barcodeWriter.Write(Code);
             var ms = new MemoryStream();
             barcodeBitmap.Save(ms, ImageFormat.Png);
             var barcodeImage = ms.ToArray();

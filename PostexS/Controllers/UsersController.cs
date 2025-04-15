@@ -1812,8 +1812,14 @@ namespace PostexS.Controllers
                                         return BadRequest("من فضلك حاول لاحقاً");
                                     }
                                     orders[x - 1].OrderOperationHistoryId = history.Id;
-                                    orders[x - 1].Code = (orders[x - 1].Id + 1000).ToString();
-                                    orders[x - 1].BarcodeImage = getBarcode(orders[x - 1].Id);
+
+
+                                    string datetoday = DateTime.Now.ToString("ddMMyyyy");
+                                    orders[x - 1].Code = "Tas" + datetoday + orders[x - 1].Id.ToString();
+                                    orders[x - 1].BarcodeImage = getBarcode(orders[x - 1].Code);
+
+
+
                                     orders[x - 1].LastUpdated = orders[x - 1].CreateOn;
                                     if (!await _orders.Update(orders[x - 1]))
                                     {
@@ -2041,9 +2047,9 @@ namespace PostexS.Controllers
         }
 
         #endregion
-        private byte[] getBarcode(long id)
+        private byte[] getBarcode(string Code)
         {
-            id += 1000;
+            //            id += 1000;
             var barcodeWriter = new ZXing.BarcodeWriter
             {
                 Format = BarcodeFormat.CODE_128,
@@ -2053,7 +2059,7 @@ namespace PostexS.Controllers
                     Width = 175
                 }
             };
-            var barcodeBitmap = barcodeWriter.Write(id.ToString());
+            var barcodeBitmap = barcodeWriter.Write(Code);
             var ms = new MemoryStream();
             barcodeBitmap.Save(ms, ImageFormat.Png);
             var barcodeImage = ms.ToArray();
