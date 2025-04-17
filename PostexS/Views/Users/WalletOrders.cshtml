@@ -95,7 +95,7 @@
                                 @item.AddressCity -  @item.Address
                             </td>
                             <td>@item.Client.Name</td>
-                            <td>@item.ClientName</td>
+                            <td>@item.ClientName <span class="badge bg-blue-active"> @item.ClientCode</span></td>
                             <td>@item.Notes</td>
                             <td style="width:150px">
                                 @(item.OrderNotes.Count() > 0 ? item.OrderNotes.OrderBy(x => x.Id).Last().Content : "")

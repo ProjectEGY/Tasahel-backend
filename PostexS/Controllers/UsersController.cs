@@ -1814,8 +1814,8 @@ namespace PostexS.Controllers
                                     orders[x - 1].OrderOperationHistoryId = history.Id;
 
 
-                                    string datetoday = DateTime.Now.ToString("ddMMyyyy");
-                                    orders[x - 1].Code = "Tas" + datetoday + orders[x - 1].Id.ToString();
+                                    //string datetoday = DateTime.Now.ToString("ddMMyyyy");
+                                    orders[x - 1].Code = "Tas" + /*datetoday +*/ orders[x - 1].Id.ToString();
                                     orders[x - 1].BarcodeImage = getBarcode(orders[x - 1].Code);
 
 

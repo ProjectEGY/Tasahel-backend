@@ -157,8 +157,8 @@ namespace PostexS.Controllers
             var ordersWithoutCode = _orderService.GetList(x => x.Code == null && x.Status != OrderStatus.PartialReturned && !x.IsDeleted).ToList();
             foreach (var order in ordersWithoutCode)
             {
-                string datetoday = DateTime.Now.ToString("ddMMyyyy");
-                order.Code = "Tas" + datetoday + order.Id.ToString();
+                //string datetoday = DateTime.Now.ToString("ddMMyyyy");
+                order.Code = "Tas" + /*datetoday +*/ order.Id.ToString();
                 order.BarcodeImage = getBarcode(order.Code);
                 await _orders.Update(order);
                 await _CRUD.Update(order.Id);
@@ -1470,6 +1470,7 @@ namespace PostexS.Controllers
         //    return View(_orders.GetAllAsIQueryable(x => x.BarcodeImage == barcode, null, "OrderNotes,Client").FirstOrDefault());
         //}
 
+
         [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin")]
         public IActionResult Print(List<long> orderIds, bool returned = false)
         {
@@ -2462,8 +2463,8 @@ namespace PostexS.Controllers
             }
             model.OrderOperationHistoryId = history.Id;
 
-            string datetoday = DateTime.Now.ToString("ddMMyyyy");
-            model.Code = "Tas" + datetoday + model.Id.ToString();
+            //string datetoday = DateTime.Now.ToString("ddMMyyyy");
+            model.Code = "Tas" + /*datetoday +*/ model.Id.ToString();
             model.BarcodeImage = getBarcode(model.Code);
 
             model.LastUpdated = model.CreateOn;

@@ -370,8 +370,8 @@ namespace PostexS.Controllers.API
             }
             order.OrderOperationHistoryId = history.Id;
 
-            string datetoday = DateTime.Now.ToString("ddMMyyyy");
-            order.Code = "Tas" + datetoday + order.Id.ToString();
+            //string datetoday = DateTime.Now.ToString("ddMMyyyy");
+            order.Code = "Tas" + /*datetoday +*/ order.Id.ToString();
             order.BarcodeImage = getBarcode(order.Code);
 
             if (!await _order.Update(order))
