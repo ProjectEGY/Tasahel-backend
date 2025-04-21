@@ -46,6 +46,11 @@ namespace PostexS.Services
             return _context.Orders.Where(expression).Include(x => x.Branch).Include(x => x.Client).Include(x => x.OrderNotes)
                 .Include(x => x.Delivery).Include(x => x.OrderOperationHistory).ToList();
         }
+        public IQueryable<Order> GetQueryableList(Expression<Func<Order, bool>> expression)
+        {
+            return _context.Orders.Where(expression).Include(x => x.Branch).Include(x => x.Client).Include(x => x.OrderNotes)
+                .Include(x => x.Delivery).Include(x => x.OrderOperationHistory);
+        }
         public long Count(Expression<Func<Order, bool>> expression)
         {
             return _context.Orders.Count(expression);

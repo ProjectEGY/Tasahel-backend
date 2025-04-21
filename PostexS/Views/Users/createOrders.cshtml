@@ -1,63 +1,188 @@
 ﻿@model PostexS.Models.ViewModels.OrdersVM
 @{
-    ViewBag.Title = "اضافه أكثر من طلب";
+    ViewBag.Title = "إضافة أكثر من طلب";
 }
-<div>
-    @using (Html.BeginForm("DownloadFile", "Users", FormMethod.Get))
-    {
-        <label>تحميل ملف إكسيل الخاص بإضافة الطلبات</label>
-        <input type="submit" id="downloadButton" value="Download" class="btn btn-info" />
-    }
-</div>
+
+
 <div class="panel panel-primary">
     <div class="panel-heading">
-        <h3 class="panel-title"><i class="fa fa-fw fa-plus"></i> @ViewBag.Title</h3>
+        <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> @ViewBag.Title</h3>
     </div>
-
     <div class="panel-body">
-        <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
-            <div class="panel panel-success">
-                <div id="collapseOne" class="panel-collapse" role="tabpanel" aria-labelledby="headingOne">
-                    <div class="panel-body">
-                        <p>في حاله ان الراسل لديه ملاحظة اساسيه لكل الطلبات , سيتم اضافتها مع كل طلب .</p>
-                        <hr />
-                        <div id="model-errors" style="display:none;">
-                            <ul class="text-danger" id="ul-errors"></ul>
-                            <hr />
-                        </div>
-                        <form asp-action="createOrders" asp-controller="Users" method="post" enctype="multipart/form-data">
-                            <input asp-for="ClientId" hidden />
-                            <div class="col-lg-6">
-                                <div class="form-group">
-                                    <label for="" class="col-sm-5 control-label">إدخال ملف الإكسل الخاص بالطلبات </label>
-                                    <div class="col-sm-7">
-                                        <input name="file" id="file" required type="file" class="form-control valid" />
-                                        @Html.ValidationMessageFor(d => d.file, "", new { @class = "text-danger" })
-                                    </div>
-                                </div>
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger text-center p-5 m-5">
+                <ul style="list-style:none;">
+                    @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                    {
+                        <li>@Html.Raw(error.ErrorMessage)</li>
+                    }
+                </ul>
+            </div>
+        }
+        <div class="card-body p-5">
+            <!-- قسم ملف الإكسيل -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert alert-info bg-light-info border-info">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle me-3 fs-4"></i>
+                            <div>
+                                <h5 class="alert-heading mb-2">ملاحظة هامة</h5>
+                                <p class="mb-0">يمكنك تحميل ملف الإكسيل الخاص بإضافة الطلبات من الزر أدناه.</p>
                             </div>
-                            <button type="submit" class="btn btn-success" id="add-product-btn">اضافه  <i class="fa fa-spinner fa-spin" id="loader" style="display:none;"></i></button>
-                        </form>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        @using (Html.BeginForm("DownloadFile", "Users", FormMethod.Get))
+                        {
+                            <button type="submit" class="btn btn-info px-4">
+                                <i class="fas fa-file-excel me-2"></i>تحميل ملف نموذج الإكسيل
+                            </button>
+                        }
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- نموذج الإضافة -->
+            <div class="bg-light p-4 rounded-3 mb-4">
+                <h5 class="mb-4 text-dark"><i class="fas fa-file-upload me-2"></i>رفع ملف الطلبات</h5>
+
+                <form asp-action="createOrders" method="post" enctype="multipart/form-data" id="uploadForm">
+                    <input asp-for="ClientId" hidden />
+
+                    <div class="row g-3">
+                        <!-- حقل الملف -->
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">ملف الإكسيل</label>
+                            <div class="input-group">
+                                <input name="file" id="file" type="file" class="form-control" required
+                                       accept=".xls,.xlsx" />
+                                <button class="btn btn-primary" type="button" id="validateBtn">
+                                    <i class="fas fa-check me-1"></i>تحقق
+                                </button>
+                            </div>
+                            <div class="form-text">يجب أن يكون الملف من نوع XLS أو XLSX</div>
+                        </div>
+
+                        <!-- خيار الأكواد -->
+                        <div class="col-md-4">
+                            <div class="form-check form-switch mt-4 pt-2">
+                                <input asp-for="UseUploadedCodes" class="form-check-input"
+                                       id="useUploadedCodes" type="checkbox" role="switch">
+                                <label asp-for="UseUploadedCodes" class="form-check-label fw-bold">
+                                    استخدام الأكواد المرفوعة
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- زر الإرسال -->
+                    <div class="mt-5 text-center">
+                        <button type="submit" class="btn btn-success px-5 py-2" id="submitBtn">
+                            <span id="btnText"><i class="fas fa-save me-2"></i>إضافة الطلبات</span>
+                            <span id="spinner" class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ملاحظة إضافية -->
+            <div class="alert bg-light-warning border-warning mt-4">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-circle me-3 fs-4"></i>
+                    <div>
+                        <p class="mb-0">في حالة أن الراسل لديه ملاحظة أساسية لكل الطلبات، سيتم إضافتها تلقائياً لكل طلب.</p>
+
                     </div>
                 </div>
             </div>
-        </div>
-        <div>
-            @Html.ActionLink("العودة", "Index", "Orders", new { @class = "btn btn-default" })
+            @Html.ActionLink("العودة", "Index", "Orders", null, new { @class = "btn btn-Primary btn-sm" })
         </div>
     </div>
 </div>
+@section Scripts {
+    <!-- المكتبات المطلوبة -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+            $(document).ready(function () {
+                     // عرض تنبيه المعلومات عند التحميل
+                             Swal.fire({
+                title: 'تم تحديث ملف الإكسيل!',
+                        html: '<div class="text-start"><p>تم تحديث ملف نموذج الطلبات ليشمل:</p><ul><li>حقل "كود العميل"</li><li>حقل "كود الطلب"</li><li>تحسينات في تنظيم البيانات</li></ul><p>يُرجى تحميل الملف الجديد قبل الاستخدام</p></div>',
+                    icon: 'info',
+                    confirmButtonText: 'حسناً',
+                        confirmButtonClass: 'btn btn-primary',
+                        buttonsStyling: false,
+                        customClass: {
+                            popup: 'rounded-3'
+                        }
+                    });
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        Swal.fire({
-            title: 'تم تحديث ملف الإكسيل!',
-            text: 'تم إضافة خانة "كود العميل" في ملف الطلبات. يُرجى تحميل الملف الجديد.',
-            icon: 'info',
-            confirmButtonText: 'موافق',
-            timer: 10000
+                    // التحقق من الملف قبل الرفع
+                    $('#validateBtn').click(function() {
+                        const fileInput = $('#file')[0];
+                        if (!fileInput.files.length) {
+                            showError('يرجى اختيار ملف أولاً');
+                            return;
+                        }
+
+                        const file = fileInput.files[0];
+                        const extension = file.name.split('.').pop().toLowerCase();
+
+                        if (extension !== 'xls' && extension !== 'xlsx') {
+                            showError('صيغة الملف غير مدعومة. يرجى اختيار ملف إكسيل (xls أو xlsx)');
+                            return;
+                        }
+
+                        Swal.fire({
+                            title: 'الملف صالح',
+                            text: 'يمكنك متابعة عملية رفع الملف',
+                            icon: 'success',
+                            confirmButtonText: 'حسناً'
+                        });
+                    });
+
+
+                    // إدارة عرض الزر أثناء التحميل
+                    $('#uploadForm').submit(function() {
+                        if ($('#file')[0].files.length) {
+                            $('#submitBtn').prop('disabled', true);
+                            $('#btnText').html('<i class="fas fa-spinner fa-spin me-2"></i>جاري المعالجة');
+                        }
+            });
         });
-    });
-</script>
+    </script>
+
+    <style>
+        /* تخصيصات للنوافذ المنبثقة العربية */
+        .rtl-popup {
+            direction: rtl;
+            text-align: right;
+            font-family: 'Tahoma', Arial, sans-serif;
+        }
+
+        /* تخصيصات إضافية للواجهة */
+        .card {
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+
+        .form-control:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+
+        #submitBtn {
+            transition: all 0.3s ease;
+        }
+
+            #submitBtn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+    </style>
+    }

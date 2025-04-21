@@ -15,23 +15,22 @@
         <label for="StoreId" class="text-center">أختر المده </label>
         <input name="id" id="id" hidden value="@ViewBag.UserId" />
         <input name="type" id="type" hidden value="@ViewBag.typ" />
+        <input name="pageSize" id="pageSize" value="@ViewBag.PageSize" hidden />
         <div class="row">
-
-            <div class="col-lg-2 text-center">
-            </div>
+            <div class="col-lg-2 text-center"></div>
             <div class="col-lg-3">
-                <input name="FilterTime" id="FilterTime" type="date" class="form-control" />
+                <input name="FilterTime" id="FilterTime" type="date" class="form-control"
+                       value="@(ViewBag.FilterTime != null ? ((DateTime)ViewBag.FilterTime).ToString("yyyy-MM-dd") : "")" />
             </div>
             <div class="col-lg-2 text-center">
                 <label style="vertical-align:central" class="text-center">إلــى</label>
             </div>
             <div class="col-lg-3">
-                <input name="FilterTimeTo" id="FilterTimeTo" type="date" class="form-control" />
+                <input name="FilterTimeTo" id="FilterTimeTo" type="date" class="form-control"
+                       value="@(ViewBag.FilterTimeTo != null ? ((DateTime)ViewBag.FilterTimeTo).ToString("yyyy-MM-dd") : "")" />
             </div>
-            <div class="col-lg-2 text-center">
-            </div>
-            <div class="col-lg-5 text-center">
-            </div>
+            <div class="col-lg-2 text-center"></div>
+            <div class="col-lg-5 text-center"></div>
             <div class="col-lg-2">
                 <button type="submit" class="btn btn-primary form-control">بحــث</button>
             </div>
@@ -44,6 +43,11 @@
             <div class="col-lg-2"></div>
             <div class="col-lg-4">
                 <form asp-action="Users" method="get">
+                    <input name="id" id="id" value="@ViewBag.UserId" hidden />
+                    <input name="type" id="type" value="@ViewBag.typ" hidden />
+                    <input name="pageSize" id="pageSize" value="@ViewBag.PageSize" hidden />
+                    <input name="FilterTime" id="FilterTime" type="hidden" value="@(ViewBag.FilterTime != null ? ((DateTime)ViewBag.FilterTime).ToString("yyyy-MM-dd") : "")" />
+                    <input name="FilterTimeTo" id="FilterTimeTo" type="hidden" value="@(ViewBag.FilterTimeTo != null ? ((DateTime)ViewBag.FilterTimeTo).ToString("yyyy-MM-dd") : "")" />
                     <select class="form-control" required name="taswya" id="taswya">
                         <option value="completed">تم تسويتها </option>
                     </select>
@@ -52,9 +56,6 @@
                         <option value="returned">طلبات مرتجع  </option>
                         <option value="refused">طلبات مرفوضة </option>
                     </select>
-                    <input name="id" id="id" value="@ViewBag.UserId" hidden />
-                    <input name="type" id="type" value="@ViewBag.typ" hidden />
-
                     <button class="btn btnbtn-outline-info form-control" type="submit"> بحث </button>
                 </form>
             </div>
@@ -62,6 +63,9 @@
 
             <div class="col-lg-4">
                 <form asp-action="Users" method="get">
+                    <input name="id" id="id" value="@ViewBag.UserId" hidden />
+                    <input name="type" id="type" value="@ViewBag.typ" hidden />
+                    <input name="pageSize" id="pageSize" value="@ViewBag.PageSize" hidden />
                     <select class="form-control" required name="taswya" id="taswya">
                         <option value="uncompleted">لم يتم تسويتها </option>
                     </select>
@@ -79,9 +83,6 @@
                         <option value="mo3l2">طلبات معلقة </option>
                         <option value="all"> الكل </option>
                     </select>
-                    <input name="id" id="id" value="@ViewBag.UserId" hidden />
-                    <input name="type" id="type" value="@ViewBag.typ" hidden />
-
                     <button class="btn btnbtn-outline-info form-control" type="submit"> بحث </button>
                 </form>
             </div>
@@ -112,11 +113,53 @@
                 }
             </div>
         </div>
+
+        <br />
+        <!-- أضف هذا الكود قبل الجدول -->
+        <div class="row" style="margin-bottom: 15px;">
+            <div class="col-md-12">
+                <label>البحث  :</label>
+                <form method="get" action="@Url.Action("Users")">
+                    <input name="id" value="@ViewBag.UserId" hidden />
+                    <input name="type" value="@ViewBag.typ" hidden />
+                    <input name="FilterTime" type="hidden" value="@(ViewBag.FilterTime != null ? ((DateTime)ViewBag.FilterTime).ToString("yyyy-MM-dd") : "")" />
+                    <input name="FilterTimeTo" type="hidden" value="@(ViewBag.FilterTimeTo != null ? ((DateTime)ViewBag.FilterTimeTo).ToString("yyyy-MM-dd") : "")" />
+                    <input name="state" type="hidden" value="@ViewContext.HttpContext.Request.Query["state"]" />
+                    <input name="taswya" type="hidden" value="@ViewContext.HttpContext.Request.Query["taswya"]" />
+                    <input name="pageSize" type="hidden" value="@ViewBag.PageSize" />
+
+                    <div class="input-group">
+                        <input type="text" name="searchTerm" class="form-control" placeholder="ابحث في: رقم الطلب، المرسل إليه، العنوان، المندوب، الملاحظات" value="@ViewContext.HttpContext.Request.Query["searchTerm"]">
+                        <div class="input-group-btn">
+                            <button class="btn btn-default" type="submit">
+                                <i class="glyphicon glyphicon-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <form asp-action="ExportToExecl" asp-controller="Orders">
 
             <div class="table-responsive">
+
+                <div class="form-group">
+                    <label>عناصر الصفحة :</label>
+                    <select id="pageSizeSelect" class="form-control">
+                        @{
+                            var pageSizes = new List<int> { 0, 25, 50, 100, 500, 1000 };
+                            foreach (var size in pageSizes)
+                            {
+                                <option value="@size" selected="@(ViewBag.PageSize == size ? "selected" : null)">
+                                    @(size == 0 ? "عرض الكل" : size.ToString())
+                                </option>
+                            }
+                        }
+                    </select>
+                </div>
                 <br />
-                <table id="table" cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered table-hover">
+                <table id="table22" cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered table-hover">
                     <thead>
                         <tr>
                             <th style="text-align:center">الحالة</th>
@@ -136,7 +179,16 @@
                     </thead>
 
                     <tbody style="text-align:center">
-                        <button class="btn btn-info form-control" type="submit">  طباعة المحدد شيت اكسيل </button>
+                        @* <button class="btn btn-info form-control" type="submit">  طباعة المحدد شيت اكسيل </button> *@
+                        <div style="margin-bottom: 15px;">
+                            <button onclick="prepareExport('selected')" class="btn btn-info" style="margin-left: 10px;">
+                                <i class="fa fa-file-excel-o"></i>  Excel Sheet  تصدير المحدد فقط
+                            </button>
+
+                            @* <button onclick="prepareExport('all')" class="btn btn-success">
+                                <i class="fa fa-file-excel-o"></i> تصدير كل النتائج
+                            </button> *@
+                        </div>
                         <br />
                         <label style="position:center">
                             <input type="checkbox" onClick="toggle(this)" title="حدد جميع الطلبات المعروضة" /> حدد جميع الطلبات المعروضة
@@ -264,6 +316,116 @@
                         }
                     </tbody>
                 </table>
+
+                @if (ViewBag.TotalPages > 1)
+                {
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="dataTables_info" id="sample_1_info">
+                                عرض @((ViewBag.CurrentPage - 1) * ViewBag.PageSize + 1) الي @Math.Min(ViewBag.CurrentPage * ViewBag.PageSize, ViewBag.TotalItems) من @ViewBag.TotalItems عنصر
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="dataTables_paginate paging_bootstrap_full_number">
+                                <ul class="pagination" style="visibility: visible;">
+                                    <!-- Previous Button -->
+                                    @if (ViewBag.CurrentPage > 1)
+                                    {
+                                        <li class="prev">
+                                            <a href="@Url.Action("Users", new {
+                                id = ViewBag.UserId,
+                                type = ViewBag.typ,
+                                FilterTime = ViewBag.FilterTime,
+                                FilterTimeTo = ViewBag.FilterTimeTo,
+                                state = ViewContext.HttpContext.Request.Query["state"],
+                                taswya = ViewContext.HttpContext.Request.Query["taswya"],
+                                page = ViewBag.CurrentPage - 1,
+                                pageSize = ViewBag.PageSize
+                            })" title="Prev"><i class="fa fa-angle-left"></i></a>
+                                        </li>
+                                    }
+
+                                    <!-- First Page -->
+                                    @if (ViewBag.CurrentPage > 3)
+                                    {
+                                        <li>
+                                            <a href="@Url.Action("Users", new {
+                                id = ViewBag.UserId,
+                                type = ViewBag.typ,
+                                FilterTime = ViewBag.FilterTime,
+                                FilterTimeTo = ViewBag.FilterTimeTo,
+                                state = ViewContext.HttpContext.Request.Query["state"],
+                                taswya = ViewContext.HttpContext.Request.Query["taswya"],
+                                page = 1,
+                                pageSize = ViewBag.PageSize
+                            })">1</a>
+                                        </li>
+                                        <li class="disabled"><span>...</span></li>
+                                    }
+
+                                    <!-- Pages Around Current Page -->
+                                    @{
+                                        int startPage = Math.Max(1, ViewBag.CurrentPage - 2);
+                                        int endPage = Math.Min(ViewBag.TotalPages, ViewBag.CurrentPage + 2);
+
+                                        for (int i = startPage; i <= endPage; i++)
+                                        {
+                                            <li class="@(i == ViewBag.CurrentPage ? "active" : "")">
+                                                <a href="@Url.Action("Users", new {
+    id = ViewBag.UserId,
+    type = ViewBag.typ,
+    FilterTime = ViewBag.FilterTime != null ? ((DateTime)ViewBag.FilterTime).ToString("yyyy-MM-dd") : "",
+    FilterTimeTo = ViewBag.FilterTimeTo != null ? ((DateTime)ViewBag.FilterTimeTo).ToString("yyyy-MM-dd") : "",
+    state = ViewContext.HttpContext.Request.Query["state"],
+    taswya = ViewContext.HttpContext.Request.Query["taswya"],
+       searchTerm = ViewContext.HttpContext.Request.Query["searchTerm"], // أضف هذا السطر
+ page = i,
+    pageSize = ViewBag.PageSize
+})">@i</a>
+                                            </li>
+                                        }
+                                    }
+
+                                    <!-- Last Page -->
+                                    @if (ViewBag.CurrentPage < ViewBag.TotalPages - 2)
+                                    {
+                                        <li class="disabled"><span>...</span></li>
+                                        <li>
+                                            <a href="@Url.Action("Users", new {
+                                id = ViewBag.UserId,
+                                type = ViewBag.typ,
+                                FilterTime = ViewBag.FilterTime,
+                                FilterTimeTo = ViewBag.FilterTimeTo,
+                                state = ViewContext.HttpContext.Request.Query["state"],
+                                taswya = ViewContext.HttpContext.Request.Query["taswya"],
+                                page = ViewBag.TotalPages,
+                                pageSize = ViewBag.PageSize
+                            })">@ViewBag.TotalPages</a>
+                                        </li>
+                                    }
+
+                                    <!-- Next Button -->
+                                    @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+                                    {
+                                        <li class="next">
+                                            <a href="@Url.Action("Users", new {
+                                id = ViewBag.UserId,
+                                type = ViewBag.typ,
+                                FilterTime = ViewBag.FilterTime,
+                                FilterTimeTo = ViewBag.FilterTimeTo,
+                                state = ViewContext.HttpContext.Request.Query["state"],
+                                taswya = ViewContext.HttpContext.Request.Query["taswya"],
+                                page = ViewBag.CurrentPage + 1,
+                                pageSize = ViewBag.PageSize
+                            })" title="Next"><i class="fa fa-angle-right"></i></a>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
         </form>
 
         <table class="table table-striped table-bordered table-hover">
@@ -365,4 +527,69 @@
 </script>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function () {
+            $('#pageSizeSelect').change(function () {
+                var pageSize = $(this).val();
+                var filterTime = $('#FilterTime').val();
+                var filterTimeTo = $('#FilterTimeTo').val();
+                var state = '@ViewContext.HttpContext.Request.Query["state"]';
+                var taswya = '@ViewContext.HttpContext.Request.Query["taswya"]';
+                var searchTerm = '@ViewContext.HttpContext.Request.Query["searchTerm"]'; // أضف هذا السطر
+
+                var url = '/Orders/Users/' + '@ViewBag.UserId' +
+                          '?type=' + '@ViewBag.typ' +
+                          '&FilterTime=' + encodeURIComponent(filterTime) +
+                          '&FilterTimeTo=' + encodeURIComponent(filterTimeTo) +
+                          '&state=' + encodeURIComponent(state) +
+                          '&taswya=' + encodeURIComponent(taswya) +
+                          '&searchTerm=' + encodeURIComponent(searchTerm) + // أضف هذا السطر
+                          '&page=1' +
+                          '&pageSize=' + pageSize;
+
+                window.location.href = url;
+            });
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+
+
+        function prepareExport(exportType) {
+            const selectedIds = exportType === 'selected'
+                ? Array.from(document.querySelectorAll('input[name="OrdersId[]"]:checked')).map(x => parseInt(x.value))
+                : Array.from(document.querySelectorAll('input[name="OrdersId[]"]')).map(x => parseInt(x.value));
+
+            if (selectedIds.some(isNaN)) {
+                Swal.fire('خطأ', 'توجد بيانات غير صالحة في الطلبات المحددة', 'error');
+                return;
+            }
+
+            fetch('/Orders/StoreExportIds', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(selectedIds.filter(id => id > 0)) // تأكد من أن جميع الـ IDs صالحة
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (!data.success) throw new Error(data.message);
+                console.log("Exported IDs:", data);
+                window.location.href = `/Orders/ExportToExecl?exportType=${exportType}`;
+            })
+            .catch(error => {
+                console.error('Export Error:', error);
+                Swal.fire('خطأ', `فشل التصدير: ${error.message}`, 'error');
+            });
+        }
+
+
+
+    </script>
 }

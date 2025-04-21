@@ -1672,6 +1672,7 @@ namespace PostexS.Controllers
             ViewBag.walletId = walletId;
             return View(_orderService.GetList(c => c.WalletId == walletId || c.ReturnedWalletId == walletId).ToList());
         }
+        #region createOrders
         public ActionResult createOrders(string id)
         {
             OrdersVM productsVM = new OrdersVM();
@@ -1684,7 +1685,7 @@ namespace PostexS.Controllers
             string webRootPath = _webHostEnvironment.WebRootPath;
             string contentRootPath = _webHostEnvironment.ContentRootPath;
             string path = "";
-            path = Path.Combine(webRootPath, "NewOrdersDetails.xlsx");
+            path = Path.Combine(webRootPath, "ExcelOrdersDetails.xlsx");
 
 
             byte[] fileBytes = System.IO.File.ReadAllBytes(path);
@@ -1740,6 +1741,70 @@ namespace PostexS.Controllers
                     ////
                     var file = $"{Directory.GetCurrentDirectory()}{@"\wwwroot\"}" + "\\" + "Orders.xlsx";
                     List<Order> orders = new List<Order>();
+
+                    // First Pass: Validate all codes if user wants to use uploaded codes
+                    #region ValidationCodes
+                    if (model.UseUploadedCodes)
+                    {
+                        List<string> problematicCodes = new List<string>();
+                        List<string> excelCodes = new List<string>(); // To store codes from the Excel file
+                        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
+                        using (var steram = System.IO.File.Open(file, FileMode.Open, FileAccess.Read))
+                        {
+                            using (var reader = ExcelReaderFactory.CreateReader(steram))
+                            {
+                                int x = 0;
+                                while (reader.Read())
+                                {
+                                    if (x >= 1)
+                                    {
+                                        if (reader.GetValue(8) != null)
+                                        {
+                                            string code = reader.GetValue(8).ToString();
+                                            // Check for duplicate codes within the Excel file
+                                            if (excelCodes.Contains(code))
+                                            {
+                                                problematicCodes.Add($"الكود {code} مكرر في السطر رقم {x + 1}");
+                                            }
+
+
+                                            else
+                                            {
+                                                excelCodes.Add(code);
+                                            }
+
+                                            var existingOrder = _orders.Get(o => o.Code == code).FirstOrDefault();
+                                            if (existingOrder != null)
+                                            {
+                                                problematicCodes.Add($"الكود {code} موجود مسبقاً في النظام");
+                                            }
+                                        }
+                                        else
+                                        {
+                                            string error = " لم يتم إدخال كود الطلب في السطر رقم " + (x + 1).ToString();
+                                            problematicCodes.Add(error);
+                                        }
+                                    }
+                                    x++;
+                                }
+                            }
+                        }
+
+                        if (problematicCodes.Any())
+                        {
+                            foreach (var error in problematicCodes)
+                            {
+                                ModelState.AddModelError("", error);
+                            }
+                            return View(model);
+                        }
+                    }
+                    #endregion
+
+
+
+
                     System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
                     using (var steram = System.IO.File.Open(file, FileMode.Open, FileAccess.Read))
                     {
@@ -1797,6 +1862,15 @@ namespace PostexS.Controllers
                                     {
                                         return BadRequest("يوجد خطا في بيانات الطلبات , من فضلك حاول لاحقاً");
                                     }
+                                    if (model.UseUploadedCodes)
+                                    {
+
+                                        var existingOrder = _orders.Get(o => o.Code == reader.GetValue(8).ToString()).FirstOrDefault();
+                                        if (existingOrder != null)
+                                        {
+                                            goto skip;
+                                        }
+                                    }
                                     if (!await _orders.Add(orders[x - 1]))
                                     {
                                         return BadRequest("من فضلك حاول لاحقاً");
@@ -1812,10 +1886,17 @@ namespace PostexS.Controllers
                                         return BadRequest("من فضلك حاول لاحقاً");
                                     }
                                     orders[x - 1].OrderOperationHistoryId = history.Id;
+                                    if (model.UseUploadedCodes)
+                                    {
+                                        orders[x - 1].Code = reader.GetValue(8).ToString();
+                                        orders[x - 1].UseCustomCode = true;
+                                    }
+                                    else
+                                    {
 
-
-                                    //string datetoday = DateTime.Now.ToString("ddMMyyyy");
-                                    orders[x - 1].Code = "Tas" + /*datetoday +*/ orders[x - 1].Id.ToString();
+                                        //string datetoday = DateTime.Now.ToString("ddMMyyyy");
+                                        orders[x - 1].Code = "Tas" + /*datetoday +*/ orders[x - 1].Id.ToString();
+                                    }
                                     orders[x - 1].BarcodeImage = getBarcode(orders[x - 1].Code);
 
 
@@ -1829,6 +1910,8 @@ namespace PostexS.Controllers
                                     await _CRUD.Update(orders[x - 1].Id);
 
                                 }
+
+                            skip:
                                 x++;
                             }
                         }
@@ -1871,7 +1954,7 @@ namespace PostexS.Controllers
             }
             return BadRequest(" يجب ادخال ملف اكسيل , من فضلك حاول لاحقاً");
         }
-
+        #endregion
 
         [HttpPost]
         public async Task<ActionResult> createUsers(UsersVM model)

@@ -77,6 +77,18 @@ namespace PostexS.Helper
                     {
                         status = "مرتجع كامل";
                     }
+                    else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
+                    {
+                        status = "مرتجع وشحن على الراسل";
+                    }
+                    else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
+                    {
+                        status = " مرتجع ودفع شحن";
+                    }
+                    else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
+                    {
+                        status = "تم التوصيل مع تعديل السعر";
+                    }
                     else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
                     {
                         status = "تم التوصيل جزئي";

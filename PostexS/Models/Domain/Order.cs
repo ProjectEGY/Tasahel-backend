@@ -10,6 +10,7 @@ namespace PostexS.Models.Domain
     public class Order : BaseModel
     {
         public string Code { get; set; }
+        public bool UseCustomCode { get; set; } = false; // هل تم استخدام كود مخصص
         public string Notes { get; set; }
         public string AddressCity { get; set; }
         public string Address { get; set; }

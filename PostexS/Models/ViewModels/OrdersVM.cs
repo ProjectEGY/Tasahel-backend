@@ -13,6 +13,9 @@ namespace PostexS.Models.ViewModels
         public string ClientId { get; set; }
         [Required(ErrorMessage = "ملف المنتجات مطلوب")]
         public IFormFile file { get; set; }
+        [Display(Name = "استخدام الأكواد المرفوعة؟")]
+        public bool UseUploadedCodes { get; set; } = false; // القيمة الافتراضية false
+
     }
     public class UsersVM
     {

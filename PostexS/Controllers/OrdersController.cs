@@ -35,6 +35,8 @@ using PostexS.Models.ViewModels;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
+using System.Threading;
 
 namespace PostexS.Controllers
 {
@@ -615,448 +617,234 @@ namespace PostexS.Controllers
 
             return View();
         }
-        [AllowAnonymous]
-        //[Authorize]
+        //[AllowAnonymous]
+        [Authorize]
         public IActionResult Users(string id, string type, DateTime? FilterTime, DateTime? FilterTimeTo,
-            string state = "", string taswya = "")
+    string state = "", string taswya = "", int page = 1, int pageSize = 100, string searchTerm = "")
         {
-            if (id == "0")
+            int retryCount = 0;
+            while (retryCount < 3) // محاولة 3 مرات
             {
-                id = _userManger.GetUserId(User);
-            }
-            ViewBag.UserId = id;
-            ViewBag.FilterTime = FilterTime;
-            ViewBag.FilterType = FilterTimeTo;
-            ViewBag.typ = type;
-            if (state == "" && taswya == "")
-            {
-                if (type == "c")
+                try
                 {
-                    ViewBag.type = 0;
-                    ViewBag.typ = "c";
-                    return View(_orderService.GetList(x => x.ClientId == id && !x.IsDeleted &&
-                                                           (!FilterTime.HasValue ||
-                                                            DateTime.Compare(FilterTime.Value.ToUniversalTime(),
-                                                                x.CreateOn) <= 0) &&
-                                                           (!FilterTimeTo.HasValue ||
-                                                            DateTime.Compare(FilterTimeTo.Value.ToUniversalTime(),
-                                                                x.CreateOn) >= 0)).OrderByDescending(x => x.CreateOn).ToList());
-                }
+                    if (User.IsInRole("Client"))
+                    {
+                        id = _userManger.GetUserId(User);
+                    }
 
-                ViewBag.typ = "d";
-                ViewBag.type = 1;
-                return View(_orderService.GetList(x => x.DeliveryId == id && !x.IsDeleted &&
-                                                       (!FilterTime.HasValue ||
-                                                        DateTime.Compare(FilterTime.Value.ToUniversalTime(),
-                                                            x.CreateOn) <= 0) &&
-                                                       (!FilterTimeTo.HasValue ||
-                                                        DateTime.Compare(FilterTimeTo.Value.ToUniversalTime(),
-                                                            x.CreateOn) >= 0)
-                ).OrderByDescending(x => x.CreateOn).ToList());
-            }
-            else
-            {
-                if (type == "c")
-
-                {
                     ViewBag.UserId = id;
-                    ViewBag.type = 0;
-                    ViewBag.typ = "c";
-                    if (taswya == "completed")
+                    ViewBag.FilterTime = FilterTime;
+                    ViewBag.FilterTimeTo = FilterTimeTo;
+                    ViewBag.typ = type;
+
+                    IQueryable<Order> query = null;
+
+
+
+                    if (string.IsNullOrWhiteSpace(state) && string.IsNullOrWhiteSpace(taswya))
                     {
-                        if (state == "gdeda")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Placed &&
-                                x.OrderCompleted == OrderCompleted.OK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "garya")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Assigned &&
-                                x.OrderCompleted == OrderCompleted.OK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "wasalet")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted &&
-                                (x.Status == OrderStatus.Delivered || x.Status == OrderStatus.Delivered_With_Edit_Price || x.Status == OrderStatus.PartialDelivered)
-                                &&
-                                x.OrderCompleted == OrderCompleted.OK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "mo2gl")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Waiting &&
-                                x.OrderCompleted == OrderCompleted.OK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "closed")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status != OrderStatus.Completed && x.Finished &&
-                                x.OrderCompleted == OrderCompleted.OK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "returned")
-                        {
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && !x.IsDeleted && x.OrderCompleted == OrderCompleted.OK &&
-                                      (x.Status == OrderStatus.Returned || x.Status == OrderStatus.Returned_And_Paid_DeliveryCost || x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender || x.Status == OrderStatus.PartialReturned)
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-                        if (state == "refused")
-                        {
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && !x.IsDeleted && x.OrderCompleted == OrderCompleted.OK &&
-                                     x.Status == OrderStatus.Rejected
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "deleted")
+                        if (type == "c")
                         {
                             ViewBag.type = 0;
                             ViewBag.typ = "c";
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && x.IsDeleted && x.OrderCompleted == OrderCompleted.OK
-                            ).OrderByDescending(x => x.CreateOn).ToList());
+                            query = _orderService.GetQueryableList(x => x.ClientId == id && !x.IsDeleted &&
+                                   (!FilterTime.HasValue || x.CreateOn >= FilterTime.Value.ToUniversalTime()) &&
+                                   (!FilterTimeTo.HasValue || x.CreateOn <= FilterTimeTo.Value.ToUniversalTime()))
+                                .OrderByDescending(x => x.CreateOn);
                         }
-
-                        if (state == "mo3l2")
+                        else
                         {
-                            ViewBag.type = 0;
-                            ViewBag.typ = "c";
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Placed && x.Pending &&
-                                     x.OrderCompleted == OrderCompleted.OK
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "all")
-                        {
-                            ViewBag.type = 0;
-                            ViewBag.typ = "c";
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && !x.IsDeleted &&
-                                     x.OrderCompleted == OrderCompleted.OK
-                            ).OrderByDescending(x => x.CreateOn).ToList());
+                            ViewBag.typ = "d";
+                            ViewBag.type = 1;
+                            query = _orderService.GetQueryableList(x => x.DeliveryId == id && !x.IsDeleted &&
+                                   (!FilterTime.HasValue || x.CreateOn >= FilterTime.Value.ToUniversalTime()) &&
+                                   (!FilterTimeTo.HasValue || x.CreateOn <= FilterTimeTo.Value.ToUniversalTime()))
+                                .OrderByDescending(x => x.CreateOn);
                         }
                     }
-                    else if (taswya == "uncompleted")
+                    else
                     {
-                        if (state == "gdeda")
+                        if (type == "c")
                         {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Placed &&
-                                x.OrderCompleted == OrderCompleted.NOK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "garya")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Assigned &&
-                                x.OrderCompleted == OrderCompleted.NOK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "wasalet")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Delivered &&
-                                x.OrderCompleted == OrderCompleted.NOK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-                        if (state == "wasaleteditprice")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Delivered_With_Edit_Price &&
-                                x.OrderCompleted == OrderCompleted.NOK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "mo2gl")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Waiting &&
-                                x.OrderCompleted == OrderCompleted.NOK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "closed")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status != OrderStatus.Completed && x.Finished &&
-                                x.OrderCompleted == OrderCompleted.NOK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "refused")
-                        {
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && !x.IsDeleted && x.OrderCompleted == OrderCompleted.NOK &&
-                                     x.Status == OrderStatus.Rejected
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-                        if (state == "returned")
-                        {
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && !x.IsDeleted && x.OrderCompleted == OrderCompleted.NOK &&
-                                      (x.Status == OrderStatus.Returned || x.Status == OrderStatus.Returned_And_Paid_DeliveryCost || x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender || x.Status == OrderStatus.PartialReturned)
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "deleted")
-                        {
+                            ViewBag.UserId = id;
                             ViewBag.type = 0;
                             ViewBag.typ = "c";
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && x.IsDeleted && x.OrderCompleted == OrderCompleted.NOK
-                            ).OrderByDescending(x => x.CreateOn).ToList());
+
+                            if (taswya == "completed")
+                            {
+                                query = ApplyClientStateFilter(id, state, OrderCompleted.OK);
+                            }
+                            else if (taswya == "uncompleted")
+                            {
+                                query = ApplyClientStateFilter(id, state, OrderCompleted.NOK);
+                            }
+                            else if (taswya == "all")
+                            {
+                                query = ApplyClientStateFilter(id, state, null);
+                            }
                         }
-
-                        if (state == "mo3l2")
+                        else
                         {
+                            ViewBag.UserId = id;
                             ViewBag.type = 0;
-                            ViewBag.typ = "c";
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Placed && x.Pending &&
-                                     x.OrderCompleted == OrderCompleted.NOK
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
+                            ViewBag.typ = "d";
 
-
-                        if (state == "all")
-                        {
-                            ViewBag.type = 0;
-                            ViewBag.typ = "c";
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && !x.IsDeleted &&
-                                     x.OrderCompleted == OrderCompleted.NOK
-                            ).OrderByDescending(x => x.CreateOn).ToList());
+                            if (taswya == "completed")
+                            {
+                                query = ApplyDeliveryStateFilter(id, state, OrderCompleted.OK);
+                            }
+                            else if (taswya == "uncompleted")
+                            {
+                                query = ApplyDeliveryStateFilter(id, state, OrderCompleted.NOK);
+                            }
                         }
                     }
 
-
-                    else if (taswya == "all")
+                    if (!string.IsNullOrWhiteSpace(searchTerm))
                     {
-                        if (state == "gdeda")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Placed).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "garya")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Assigned).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "wasalet")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Delivered).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "mo2gl")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Waiting).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "closed")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.ClientId == id && !x.IsDeleted && x.Status != OrderStatus.Completed && x.Finished
-                                ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "refused")
-                        {
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && !x.IsDeleted &&
-                                     x.Status == OrderStatus.Rejected
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "deleted")
-                        {
-                            ViewBag.type = 0;
-                            ViewBag.typ = "c";
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && x.IsDeleted
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "mo3l2")
-                        {
-                            ViewBag.type = 0;
-                            ViewBag.typ = "c";
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && !x.IsDeleted && x.Status == OrderStatus.Placed && x.Pending
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-
-                        if (state == "all")
-                        {
-                            ViewBag.type = 0;
-                            ViewBag.typ = "c";
-                            return View(_orderService.GetList(
-                                x => x.ClientId == id && !x.IsDeleted
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
+                        query = query.Where(x =>
+                            x.Code.Contains(searchTerm) ||
+                            x.ClientName.Contains(searchTerm) ||
+                            x.Address.Contains(searchTerm) ||
+                            (x.Delivery != null && (x.Delivery.Name.Contains(searchTerm) || x.Delivery.PhoneNumber.Contains(searchTerm))) ||
+                            x.Notes.Contains(searchTerm) ||
+                            x.OrderNotes.Any(n => n.Content.Contains(searchTerm))
+                        );
                     }
+                    // Pagination logic
+                    var totalItems = query?.Count() ?? 0;
+                    var totalPages = pageSize > 0 ? (int)Math.Ceiling(totalItems / (double)pageSize) : 1;
+
+                    //_context.Database.SetCommandTimeout(120); // 120 ثانية
+
+                    var pagedItems = query?.AsNoTracking()
+                        .Skip(pageSize > 0 ? (page - 1) * pageSize : 0)
+                        .Take(pageSize > 0 ? pageSize : totalItems)
+                        .ToList() ?? new List<Order>();
+
+                    ViewBag.CurrentPage = page;
+                    ViewBag.PageSize = pageSize;
+                    ViewBag.TotalPages = totalPages;
+                    ViewBag.TotalItems = totalItems;
+
+                    return View(pagedItems);
                 }
-                else
+                catch (SqlException ex) when (ex.Number == 1205) // Deadlock
                 {
-                    ViewBag.UserId = id;
-                    ViewBag.type = 0;
-                    ViewBag.typ = "d";
-                    if (taswya == "completed")
+                    retryCount++;
+                    if (retryCount == 3)
                     {
-                        if (state == "gdeda")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.DeliveryId == id && !x.IsDeleted && x.Status == OrderStatus.Placed &&
-                                x.OrderCompleted == OrderCompleted.OK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "garya")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.DeliveryId == id && !x.IsDeleted && x.Status == OrderStatus.Assigned &&
-                                x.OrderCompleted == OrderCompleted.OK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "wasalet")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.DeliveryId == id && !x.IsDeleted && x.Status == OrderStatus.Delivered &&
-                                x.OrderCompleted == OrderCompleted.OK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "mo2gl")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.DeliveryId == id && !x.IsDeleted && x.Status == OrderStatus.Waiting &&
-                                x.OrderCompleted == OrderCompleted.OK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "closed")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.DeliveryId == id && !x.IsDeleted && x.Status != OrderStatus.Completed && x.Finished &&
-                                x.OrderCompleted == OrderCompleted.OK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "returned")
-                        {
-                            return View(_orderService.GetList(
-                                x => x.DeliveryId == id && !x.IsDeleted && x.OrderCompleted == OrderCompleted.OK &&
-                                     (x.Status == OrderStatus.Returned || x.Status == OrderStatus.PartialReturned)
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-                        if (state == "refused")
-                        {
-                            return View(_orderService.GetList(
-                                x => x.DeliveryId == id && !x.IsDeleted && x.OrderCompleted == OrderCompleted.OK &&
-                                     x.Status == OrderStatus.Rejected
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "deleted")
-                        {
-                            ViewBag.type = 0;
-                            ViewBag.typ = "c";
-                            return View(_orderService.GetList(
-                                x => x.DeliveryId == id && x.IsDeleted && x.OrderCompleted == OrderCompleted.OK
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "mo3l2")
-                        {
-                            ViewBag.type = 0;
-                            ViewBag.typ = "c";
-                            return View(_orderService.GetList(
-                                x => x.DeliveryId == id && !x.IsDeleted && x.Status == OrderStatus.Placed &&
-                                     x.Pending && x.OrderCompleted == OrderCompleted.OK
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
+                        TempData["Error"] = "تعذر إكمال العملية بسبب مشكلة مؤقتة، يرجى المحاولة لاحقاً";
+                        return RedirectToAction("Index");
                     }
-                    else if (taswya == "uncompleted")
-                    {
-                        if (state == "gdeda")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.DeliveryId == id && !x.IsDeleted && x.Status == OrderStatus.Placed &&
-                                x.OrderCompleted == OrderCompleted.NOK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "garya")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.DeliveryId == id && !x.IsDeleted && x.Status == OrderStatus.Assigned &&
-                                x.OrderCompleted == OrderCompleted.NOK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "wasalet")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.DeliveryId == id && !x.IsDeleted && x.Status == OrderStatus.Delivered &&
-                                x.OrderCompleted == OrderCompleted.NOK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "mo2gl")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.DeliveryId == id && !x.IsDeleted && x.Status == OrderStatus.Waiting &&
-                                x.OrderCompleted == OrderCompleted.NOK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "closed")
-                        {
-                            return View(_orderService.GetList(x =>
-                                x.DeliveryId == id && !x.IsDeleted && x.Status != OrderStatus.Completed && x.Finished &&
-                                x.OrderCompleted == OrderCompleted.NOK).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "returned")
-                        {
-                            return View(_orderService.GetList(
-                                x => x.DeliveryId == id && !x.IsDeleted && x.OrderCompleted == OrderCompleted.NOK &&
-                                      (x.Status == OrderStatus.Returned || x.Status == OrderStatus.PartialReturned)
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-                        if (state == "refused")
-                        {
-                            return View(_orderService.GetList(
-                                x => x.DeliveryId == id && !x.IsDeleted && x.OrderCompleted == OrderCompleted.NOK &&
-                                     x.Status == OrderStatus.Rejected
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "deleted")
-                        {
-                            ViewBag.type = 0;
-                            ViewBag.typ = "c";
-                            return View(_orderService.GetList(
-                                x => x.DeliveryId == id && x.IsDeleted && x.OrderCompleted == OrderCompleted.NOK
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-
-                        if (state == "mo3l2")
-                        {
-                            ViewBag.type = 0;
-                            ViewBag.typ = "c";
-                            return View(_orderService.GetList(
-                                x => x.DeliveryId == id && !x.IsDeleted && x.Status == OrderStatus.Placed &&
-                                     x.Pending && x.OrderCompleted == OrderCompleted.NOK
-                            ).OrderByDescending(x => x.CreateOn).ToList());
-                        }
-                    }
+                    Thread.Sleep(100 * retryCount); // انتظر قبل إعادة المحاولة
+                }
+                catch (Exception ex)
+                {
+                    TempData["Error"] = "حدث خطأ غير متوقع";
+                    return RedirectToAction("Index");
                 }
             }
-
-            return View();
+            return RedirectToAction("Index");
         }
+
+        private IQueryable<Order> ApplyClientStateFilter(string id, string state, OrderCompleted? completedStatus)
+        {
+            IQueryable<Order> query = _orderService.GetQueryableList(x => x.ClientId == id);
+
+            if (completedStatus.HasValue)
+            {
+                query = query.Where(x => x.OrderCompleted == completedStatus.Value);
+            }
+
+            switch (state)
+            {
+                case "gdeda":
+                    return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Placed)
+                        .OrderByDescending(x => x.CreateOn);
+                case "garya":
+                    return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Assigned)
+                        .OrderByDescending(x => x.CreateOn);
+                case "wasalet":
+                    return query.Where(x => !x.IsDeleted &&
+                        (x.Status == OrderStatus.Delivered ||
+                         x.Status == OrderStatus.Delivered_With_Edit_Price ||
+                         x.Status == OrderStatus.PartialDelivered))
+                        .OrderByDescending(x => x.CreateOn);
+                case "mo2gl":
+                    return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Waiting)
+                        .OrderByDescending(x => x.CreateOn);
+                case "closed":
+                    return query.Where(x => !x.IsDeleted && x.Status != OrderStatus.Completed && x.Finished)
+                        .OrderByDescending(x => x.CreateOn);
+                case "returned":
+                    return query.Where(x => !x.IsDeleted &&
+                        (x.Status == OrderStatus.Returned ||
+                         x.Status == OrderStatus.Returned_And_Paid_DeliveryCost ||
+                         x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender ||
+                         x.Status == OrderStatus.PartialReturned))
+                        .OrderByDescending(x => x.CreateOn);
+                case "refused":
+                    return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Rejected)
+                        .OrderByDescending(x => x.CreateOn);
+                case "deleted":
+                    return query.Where(x => x.IsDeleted)
+                        .OrderByDescending(x => x.CreateOn);
+                case "mo3l2":
+                    return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Placed && x.Pending)
+                        .OrderByDescending(x => x.CreateOn);
+                case "all":
+                    return query.Where(x => !x.IsDeleted)
+                        .OrderByDescending(x => x.CreateOn);
+                default:
+                    return query.OrderByDescending(x => x.CreateOn);
+            }
+        }
+
+        private IQueryable<Order> ApplyDeliveryStateFilter(string id, string state, OrderCompleted? completedStatus)
+        {
+            IQueryable<Order> query = _orderService.GetQueryableList(x => x.DeliveryId == id);
+
+            if (completedStatus.HasValue)
+            {
+                query = query.Where(x => x.OrderCompleted == completedStatus.Value);
+            }
+
+            switch (state)
+            {
+                case "gdeda":
+                    return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Placed)
+                        .OrderByDescending(x => x.CreateOn);
+                case "garya":
+                    return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Assigned)
+                        .OrderByDescending(x => x.CreateOn);
+                case "wasalet":
+                    return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Delivered)
+                        .OrderByDescending(x => x.CreateOn);
+                case "mo2gl":
+                    return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Waiting)
+                        .OrderByDescending(x => x.CreateOn);
+                case "closed":
+                    return query.Where(x => !x.IsDeleted && x.Status != OrderStatus.Completed && x.Finished)
+                        .OrderByDescending(x => x.CreateOn);
+                case "returned":
+                    return query.Where(x => !x.IsDeleted &&
+                        (x.Status == OrderStatus.Returned || x.Status == OrderStatus.PartialReturned))
+                        .OrderByDescending(x => x.CreateOn);
+                case "refused":
+                    return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Rejected)
+                        .OrderByDescending(x => x.CreateOn);
+                case "deleted":
+                    return query.Where(x => x.IsDeleted)
+                        .OrderByDescending(x => x.CreateOn);
+                case "mo3l2":
+                    return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Placed && x.Pending)
+                        .OrderByDescending(x => x.CreateOn);
+                default:
+                    return query.OrderByDescending(x => x.CreateOn);
+            }
+        }
+
         #region Archive
         [Authorize(Roles = "Admin,TrustAdmin,Accountant")]
         public IActionResult Archive(string? AccountantId, DateTime? FilterTime, DateTime? FilterTimeTo, int pageNumber = 1, int pageSize = 50)
@@ -2308,7 +2096,7 @@ namespace PostexS.Controllers
         #endregion
 
         #region Update Order Status
-        [Authorize(Roles = "Admin,HighAdmin,Accountant")]
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,TrustAdmin")]
         public async Task<IActionResult> EditStatus(long id)
         {
             ViewBag.Branchs = _branch.Get(x => !x.IsDeleted).ToList();
@@ -2321,7 +2109,7 @@ namespace PostexS.Controllers
             ViewBag.Title = "تعديل حالة طلب";
             return View(_orders.Get(x => x.Id == id).First());
         }
-        [Authorize(Roles = "Admin,HighAdmin,Accountant")]
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,TrustAdmin")]
         [HttpPost]
         public async Task<IActionResult> EditStatus(Order model, string NewNotes)
         {
@@ -2680,11 +2468,15 @@ namespace PostexS.Controllers
         public IActionResult ExportToExecl(List<long> OrdersId)
         {
             List<Order> Orders = new List<Order>();
+            bool auth = User.IsInRole("Client");
             if (OrdersId != null)
             {
                 for (var i = 0; i < OrdersId.Count; i++)
                 {
-                    Orders.Add(_orderService.GetList(x => x.Id == OrdersId[i]).FirstOrDefault());
+                    if (auth)
+                        Orders.Add(_orderService.GetList(x => x.Id == OrdersId[i] && x.ClientId == _userManger.GetUserId(User)).FirstOrDefault());
+                    else
+                        Orders.Add(_orderService.GetList(x => x.Id == OrdersId[i]).FirstOrDefault());
                 }
             }
             var dt = ExcelExport.OrderExport(Orders);
