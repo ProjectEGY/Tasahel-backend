@@ -101,20 +101,20 @@
 </style>
 @if (ViewBag.message != null)
 {
-    <!-- Include jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
-    <script>
-        $(document).ready(function () {
-            swal({
-                title: "تنبيه",
-                html: true,
-                text: "@Html.Raw(message)",
-                icon: "info",
-                button: "OK",
-            });
-        });
-    </script>
+                <!-- Include jQuery -->
+                <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+                <script>
+                    $(document).ready(function () {
+                        swal({
+                            title: "تنبيه",
+                            html: true,
+                            text: "@Html.Raw(message)",
+                            icon: "info",
+                            button: "OK",
+                        });
+                    });
+                </script>
 
 }
 <!-- DataTables CSS -->
@@ -133,122 +133,123 @@
     <div class="panel-body">
         @if (!User.IsInRole("Accountant"))
         {
-            <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
-                <div class="panel panel-success">
+                        <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
+                            <div class="panel panel-success">
                     @if (TempData["CountryErrors"] != null)
                     {
                         var Errors = TempData["CountryErrors"] as List<string>;
-                        <div class="alert alert-danger text-center p-5 m-5">
-                            <ul style="list-style:none;">
+                                                <div class="alert alert-danger text-center p-5 m-5">
+                                                    <ul style="list-style:none;">
                                 @foreach (var error in Errors)
                                 {
-                                    <li>@error</li>
+                                                                        <li>@error</li>
                                 }
-                            </ul>
-                        </div>
+                                                    </ul>
+                                                </div>
                     }
 
                     @if (@ViewBag.deleted == 0)
                     {
-                        <div class="panel-heading collapsed" role="tab" id="headingOne" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                            <h4 class="panel-title">
-                                <a class="pointer"><i class="fa fa-fw fa-plus"></i> إضافة مستخدم</a>
-                            </h4>
-                        </div>
+                                                <div class="panel-heading collapsed" role="tab" id="headingOne" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                                    <h4 class="panel-title">
+                                                        <a class="pointer"><i class="fa fa-fw fa-plus"></i> إضافة مستخدم</a>
+                                                    </h4>
+                                                </div>
 
 
-                        <div id="collapseOne" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
-                            <div class="panel-body">
+                                                <div id="collapseOne" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+                                                    <div class="panel-body">
 
 
                                 @Html.ValidationSummary(false, "", new { @class = "text-danger" })
                                 @using (Html.BeginForm("CreateClient", "Users", FormMethod.Post, new { enctype = "multipart/form-data" }))
                                 {
                                     @Html.AntiForgeryToken()
-                                    <input name="page" type="text" id="page" value="ss" hidden />
-                                    <div class="row" style="margin:10px;">
-                                        <div class="col-lg-6 mb-10">
-                                            <div class="form-group">
-                                                <label for="NameEn" class="col-sm-5 control-label required">اسم الفرع:</label>
-                                                <div class="col-sm-7">
-                                                    <select name="BranchId" id="BranchId" class="select2 form-control">
+                                                                        <input name="page" type="text" id="page" value="ss" hidden />
+                                                                        <div class="row" style="margin:10px;">
+                                                                            <div class="col-lg-6 mb-10">
+                                                                                <div class="form-group">
+                                                                                    <label for="NameEn" class="col-sm-5 control-label required">اسم الفرع:</label>
+                                                                                    <div class="col-sm-7">
+                                                                                        <select name="BranchId" id="BranchId" class="select2 form-control">
                                                         @foreach (var branch in branchs)
                                                         {
-                                                            <option value="@branch.Id">@branch.Name - @branch.Address</option>
+                                                                                                            <option value="@branch.Id">@branch.Name - @branch.Address</option>
                                                         }
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-6 mb-10">
-                                            <div class="form-group">
-                                                <label for="NameAr" class="col-sm-5 control-label required">نوع المستخدم: </label>
-                                                <div class="col-sm-7">
-                                                    <select name="UserType" id="UserType" class="form-control">
+                                                                                        </select>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-lg-6 mb-10">
+                                                                                <div class="form-group">
+                                                                                    <label for="NameAr" class="col-sm-5 control-label required">نوع المستخدم: </label>
+                                                                                    <div class="col-sm-7">
+                                                                                        <select name="UserType" id="UserType" class="form-control">
                                                         @if (ViewBag.q == "c")
                                                         {
-                                                            <option value="0">راسل</option>
+                                                                                                            <option value="0">راسل</option>
                                                         }
                                                         @if (ViewBag.q == "d")
                                                         {
-                                                            <option value="1">مندوب</option>
+                                                                                                            <option value="1">مندوب</option>
                                                         }
 
                                                         @if (!User.IsInRole("HighAdmin") && !User.IsInRole("Accountant") && !User.IsInRole("LowAdmin"))
                                                         {
-                                                            <option value="3">مشرف عادى</option>
-                                                            <option value="4">مشرف مميز</option>
-                                                            <option value="6">محاسب</option>
+                                                                                                            <option value="3">مشرف عادى</option>
+                                                                                                            <option value="4">مشرف مميز</option>
+                                                                                                            <option value="6">محاسب</option>
                                                         }
                                                         @if (User.IsInRole("Admin"))
                                                         {
-                                                            <option value="5">أدمن</option>
-                                                            <option value="7">مساعد أدمن</option>
+                                                                                                            <option value="5">أدمن</option>
+                                                                                                            <option value="7">مساعد أدمن</option>
+                                                                                                            <option value="8">اكونت متابعه</option>
                                                         }
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-6 mb-10">
-                                            <div class="form-group">
-                                                <label for="NameAr" class="col-sm-5 control-label required">الاسم: </label>
-                                                <div class="col-sm-7">
-                                                    <input name="Name" type="text" id="Name" required class="form-control valid" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-6 mb-10">
-                                            <div class="form-group">
-                                                <label for="NameAr" class="col-sm-5 control-label required">الايميل (اختياري): </label>
-                                                <div class="col-sm-7">
-                                                    <input name="Email" type="email" id="Email" class="form-control valid" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-6 mb-10">
-                                            <div class="form-group">
-                                                <label for="NameEn" class="col-sm-5 control-label required">رقم الوتساب:</label>
-                                                <div class="col-sm-7">
-                                                    <input name="WhatsappPhone" type="text" required id="WhatsappPhone" class="form-control valid" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-6 mb-10">
-                                            <div class="form-group">
-                                                <label for="NameEn" class="col-sm-5 control-label required">رقم الهاتف:</label>
-                                                <div class="col-sm-7">
-                                                    <input name="Phone" type="text" required id="Phone" class="form-control valid" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-6 mb-10">
-                                            <div class="form-group">
-                                                <label for="NameEn" class="col-sm-5 control-label required">العنوان:</label>
-                                                <div class="col-sm-7">
-                                                    <input name="Address" type="text" required id="Address" class="form-control valid" />
-                                                </div>
-                                            </div>
-                                        </div>
+                                                                                        </select>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-lg-6 mb-10">
+                                                                                <div class="form-group">
+                                                                                    <label for="NameAr" class="col-sm-5 control-label required">الاسم: </label>
+                                                                                    <div class="col-sm-7">
+                                                                                        <input name="Name" type="text" id="Name" required class="form-control valid" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-lg-6 mb-10">
+                                                                                <div class="form-group">
+                                                                                    <label for="NameAr" class="col-sm-5 control-label required">الايميل (اختياري): </label>
+                                                                                    <div class="col-sm-7">
+                                                                                        <input name="Email" type="email" id="Email" class="form-control valid" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-lg-6 mb-10">
+                                                                                <div class="form-group">
+                                                                                    <label for="NameEn" class="col-sm-5 control-label required">رقم الوتساب:</label>
+                                                                                    <div class="col-sm-7">
+                                                                                        <input name="WhatsappPhone" type="text" required id="WhatsappPhone" class="form-control valid" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-lg-6 mb-10">
+                                                                                <div class="form-group">
+                                                                                    <label for="NameEn" class="col-sm-5 control-label required">رقم الهاتف:</label>
+                                                                                    <div class="col-sm-7">
+                                                                                        <input name="Phone" type="text" required id="Phone" class="form-control valid" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-lg-6 mb-10">
+                                                                                <div class="form-group">
+                                                                                    <label for="NameEn" class="col-sm-5 control-label required">العنوان:</label>
+                                                                                    <div class="col-sm-7">
+                                                                                        <input name="Address" type="text" required id="Address" class="form-control valid" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
                                         @if (!User.IsInRole("HighAdmin") && !User.IsInRole("Accountant") && !User.IsInRole("LowAdmin"))
                                         {
                                             @*  <div class="col-lg-6 mb-10">
@@ -269,70 +270,70 @@
                                                 </div>
                                             </div> *@
                                         }
-                                        <hr>
-                                        <div class="col-lg-12 mb-10">
-                                            <h5 style="text-align:center"> في حالة ان المستخدم مندوب</h5>
-                                        </div>
-                                        <div class="col-lg-6 mb-10">
-                                            <div class="form-group">
-                                                <label for="NameEn" class="col-sm-5 control-label required">وجة  صورة البطاقة:</label>
-                                                <div class="col-sm-7">
-                                                    <input name="IdentityFrontPhoto" type="file" id="IdentityFrontPhoto" class="form-control valid" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-6 mb-10">
-                                            <div class="form-group">
-                                                <label for="NameEn" class="col-sm-5 control-label required">ضهر  صورة البطاقة:</label>
-                                                <div class="col-sm-7">
-                                                    <input name="IdentityBackPhoto" type="file" id="IdentityBackPhoto" class="form-control valid" />
-                                                </div>
-                                            </div>
-                                        </div> <div class="col-lg-6 mb-10">
-                                            <div class="form-group">
-                                                <label for="NameEn" class="col-sm-5 control-label required">   رخصة القيادة:</label>
-                                                <div class="col-sm-7">
-                                                    <input name="RidingLecencePhoto" type="file" id="RidingLecencePhoto" class="form-control valid" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-6 mb-10">
-                                            <div class="form-group">
-                                                <label for="NameEn" class="col-sm-5 control-label required">   رخصة المركبة :</label>
-                                                <div class="col-sm-7">
-                                                    <input name="ViecleLecencePhoto" type="file" id="ViecleLecencePhoto" class="form-control valid" />
-                                                </div>
-                                            </div>
-                                        </div><div class="col-lg-6 mb-10">
-                                            <div class="form-group">
-                                                <label for="NameEn" class="col-sm-5 control-label required">   فيش جنائي :</label>
-                                                <div class="col-sm-7">
-                                                    <input name="FishPhotoPhoto" type="file" id="FishPhotoPhoto" class="form-control valid" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button type="submit" class="btn btn-success">إضافة</button>
+                                                                            <hr>
+                                                                            <div class="col-lg-12 mb-10">
+                                                                                <h5 style="text-align:center"> في حالة ان المستخدم مندوب</h5>
+                                                                            </div>
+                                                                            <div class="col-lg-6 mb-10">
+                                                                                <div class="form-group">
+                                                                                    <label for="NameEn" class="col-sm-5 control-label required">وجة  صورة البطاقة:</label>
+                                                                                    <div class="col-sm-7">
+                                                                                        <input name="IdentityFrontPhoto" type="file" id="IdentityFrontPhoto" class="form-control valid" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-lg-6 mb-10">
+                                                                                <div class="form-group">
+                                                                                    <label for="NameEn" class="col-sm-5 control-label required">ضهر  صورة البطاقة:</label>
+                                                                                    <div class="col-sm-7">
+                                                                                        <input name="IdentityBackPhoto" type="file" id="IdentityBackPhoto" class="form-control valid" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div> <div class="col-lg-6 mb-10">
+                                                                                <div class="form-group">
+                                                                                    <label for="NameEn" class="col-sm-5 control-label required">   رخصة القيادة:</label>
+                                                                                    <div class="col-sm-7">
+                                                                                        <input name="RidingLecencePhoto" type="file" id="RidingLecencePhoto" class="form-control valid" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-lg-6 mb-10">
+                                                                                <div class="form-group">
+                                                                                    <label for="NameEn" class="col-sm-5 control-label required">   رخصة المركبة :</label>
+                                                                                    <div class="col-sm-7">
+                                                                                        <input name="ViecleLecencePhoto" type="file" id="ViecleLecencePhoto" class="form-control valid" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div><div class="col-lg-6 mb-10">
+                                                                                <div class="form-group">
+                                                                                    <label for="NameEn" class="col-sm-5 control-label required">   فيش جنائي :</label>
+                                                                                    <div class="col-sm-7">
+                                                                                        <input name="FishPhotoPhoto" type="file" id="FishPhotoPhoto" class="form-control valid" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <button type="submit" class="btn btn-success">إضافة</button>
                                 }
-                            </div>
-                        </div>
+                                                    </div>
+                                                </div>
 
 
                     }
-                </div>
-            </div>
+                            </div>
+                        </div>
             @if (@ViewBag.deleted == 0)
             {
                 if (@ViewBag.q != "a")
                 {
-                    <a class="btn btn-info mb-5 mr-5" href="@Url.Action("PendingIndex","Users")">طلبات الاشتراك</a>
+                                                        <a class="btn btn-info mb-5 mr-5" href="@Url.Action("PendingIndex","Users")">طلبات الاشتراك</a>
                 }
-                <a class="btn btn-danger mb-5 mr-5" href="@Url.Action("Index", "Users", new { q = ViewBag.q, deleted = true,BranchId=ViewBag.branch })"> المحذوفين</a>
-                <a class="btn btn-warning mb-5 mr-5" asp-action="createUsers" asp-controller="Users" class="btn btn-warning">إضافة اكثر من مستخدم</a>
+                                        <a class="btn btn-danger mb-5 mr-5" href="@Url.Action("Index", "Users", new { q = ViewBag.q, deleted = true,BranchId=ViewBag.branch })"> المحذوفين</a>
+                                        <a class="btn btn-warning mb-5 mr-5" asp-action="createUsers" asp-controller="Users" class="btn btn-warning">إضافة اكثر من مستخدم</a>
             }
             else
             {
-                <a class="btn btn-success mb-5 mr-5" href="@Url.Action("Index", "Users", new { q = ViewBag.q,BranchId=ViewBag.branch  })"> المتاحين</a>
+                                        <a class="btn btn-success mb-5 mr-5" href="@Url.Action("Index", "Users", new { q = ViewBag.q,BranchId=ViewBag.branch  })"> المتاحين</a>
             }
         }
 
@@ -341,29 +342,29 @@
             {
                 @using (Html.BeginForm("index", "Users", FormMethod.Get))
                 {
-                    <input hidden name="q" id="q" value="@ViewBag.q" />
-                    <input hidden name="deleted" id="deleted" value="@ViewBag.deleted" />
-                    <div class="form-group">
-                        <label for="StoreId">برجاء اختيار الفرع</label>
-                        <select name="BranchId" id="BranchId" class="select2 form-control">
-                            if (@temp == 0)
-                            {
-                            <option selected="selected" value="-1">جميع الفروع</option>
-                            }
+                                            <input hidden name="q" id="q" value="@ViewBag.q" />
+                                            <input hidden name="deleted" id="deleted" value="@ViewBag.deleted" />
+                                            <div class="form-group">
+                                                <label for="StoreId">برجاء اختيار الفرع</label>
+                                                <select name="BranchId" id="BranchId" class="select2 form-control">
+                                                    if (@temp == 0)
+                                                    {
+                                                    <option selected="selected" value="-1">جميع الفروع</option>
+                                                    }
                             @foreach (var branch in branchs)
                             {
                                 if (ViewBag.branch == branch.Id)
                                 {
-                                    <option selected="selected" value="@branch.Id">@branch.Name - @branch.Address</option>
+                                                                                    <option selected="selected" value="@branch.Id">@branch.Name - @branch.Address</option>
                                 }
                                 else
                                 {
-                                    <option value="@branch.Id">@branch.Name - @branch.Address</option>
+                                                                                    <option value="@branch.Id">@branch.Name - @branch.Address</option>
                                 }
                             }
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-info">اختيار</button>
+                                                </select>
+                                            </div>
+                                            <button type="submit" class="btn btn-info">اختيار</button>
                 }
 
             }
@@ -379,14 +380,14 @@
                         <th style="text-align:center">الفرع </th>
                         @if (User.IsInRole("HighAdmin") || User.IsInRole("Accountant") || User.IsInRole("LowAdmin") || User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
                         {
-                            <th style="text-align:center ">الايميل</th>
+                                        <th style="text-align:center ">الايميل</th>
                         }
                         <th style="text-align:center ">رقم الهاتف</th>
                         <th style="text-align:center ">رقم الوتساب</th>
                         <th style="text-align:center">العنوان</th>
                         @if (ViewBag.r == 4)
                         {
-                            <th style="text-align:center">السيرفر</th>
+                            @* <th style="text-align:center">السيرفر</th> *@
                         }
                         <th style="text-align:center ">التحكم</th>
                     </tr>
@@ -394,52 +395,56 @@
                 <tbody style="text-align:center">
                     @foreach (var item in ViewBag.deleted == 1 ? Model.Where(x => x.IsDeleted).ToList() : Model)
                     {
-                        <tr>
-                            <td>
+                                    <tr>
+                                        <td>
                                 @if (item.UserType == PostexS.Models.Enums.UserType.Client)
                                 {
-                                    <span class="badge bg-green">راسل</span>
+                                                            <span class="badge bg-green">راسل</span>
                                 }
                                 else if (item.UserType == PostexS.Models.Enums.UserType.Driver)
                                 {
-                                    <span class="badge bg-gray">مندوب</span>
+                                                            <span class="badge bg-gray">مندوب</span>
                                 }
                                 else if (item.UserType == PostexS.Models.Enums.UserType.LowAdmin)
                                 {
-                                    <span class="badge bg-yellow">مشرف</span>
+                                                            <span class="badge bg-yellow">مشرف</span>
                                 }
                                 else if (item.UserType == PostexS.Models.Enums.UserType.HighAdmin)
                                 {
-                                    <span class="badge bg-orange">مشرف مميز</span>
+                                                            <span class="badge bg-orange">مشرف مميز</span>
                                 }
                                 else if (item.UserType == PostexS.Models.Enums.UserType.Admin)
                                 {
-                                    <span class="badge bg-red-gradient">مسؤول</span>
+                                                            <span class="badge bg-red-gradient">مسؤول</span>
                                 }
                                 else if (item.UserType == PostexS.Models.Enums.UserType.Accountant)
                                 {
-                                    <span class="badge bg-blue-gradient">محاسب</span>
+                                                            <span class="badge bg-blue-gradient">محاسب</span>
                                 }
-                            </td>
-                            <td>
+                                else if (item.UserType == PostexS.Models.Enums.UserType.TrackingAdmin)
+                                {
+                                     <span class="badge bg-red-gradient">متابعه</span>
+                                }
+                                        </td>
+                                        <td>
                                 @item.Name
-                            </td>
-                            <td>
+                                        </td>
+                                        <td>
                                 @item.Branch.Name
-                            </td>
+                                        </td>
                             @if (User.IsInRole("Accountant") || User.IsInRole("HighAdmin") || User.IsInRole("Accountant") || User.IsInRole("LowAdmin") || User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
                             {
-                                <td style="text-align:center ">@item.Email</td>
+                                                        <td style="text-align:center ">@item.Email</td>
                             }
-                            <td>
+                                        <td>
                                 @item.PhoneNumber
-                            </td>
-                            <td>
+                                        </td>
+                                        <td>
                                 @item.WhatsappPhone
-                            </td>
-                            <td>
+                                        </td>
+                                        <td>
                                 @item.Address
-                            </td>
+                                        </td>
                             @if (ViewBag.r == 4)
                             {
                                 @*   @switch (item.site)
@@ -461,82 +466,86 @@
                                         break;
                                 } *@
                             }
-                            <td>
+                                        <td>
                                 @if (!item.IsDeleted)
                                 {
                                     @if (User.IsInRole("Accountant"))
                                     {
-                                        <a asp-action="CompletedWallet" asp-controller="Orders" asp-route-id="@item.Id" class="btn btn-success">تسويات العميل</a>
+                                                       <a asp-action="CompletedWallet" asp-controller="Orders" asp-route-id="@item.Id" class="btn btn-success">تسويات العميل</a>
+                                    }
+                                    else if (item.UserType == PostexS.Models.Enums.UserType.Client && User.IsInRole("TrackingAdmin"))
+                                    {
+                                                       <a asp-action="createOrders" asp-controller="Users" asp-route-id="@item.Id" class="btn btn-warning" style="margin-top: 5px;">إضافة طلبات</a>
                                     }
                                     else
                                     {
-                                        <a asp-action="Edit" asp-controller="users" asp-route-id="@item.Id" asp-route-type="@ViewBag.q">تعديل</a>
-                                        <span>|</span>
-                                        <a href="/users/ChangePassword?UserId=@item.Id&q=@ViewBag.q">تغيير كلمة السر</a>
-                                        <span>|</span>
+                                                                            <a asp-action="Edit" asp-controller="users" asp-route-id="@item.Id" asp-route-type="@ViewBag.q">تعديل</a>
+                                                                            <span>|</span>
+                                                                            <a href="/users/ChangePassword?UserId=@item.Id&q=@ViewBag.q">تغيير كلمة السر</a>
+                                                                            <span>|</span>
                                         @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
                                         {
-                                            <a onclick="Delete('/Users/Delete?id=@item.Id')">حذف</a>
+                                                                                            <a onclick="Delete('/Users/Delete?id=@item.Id')">حذف</a>
                                         }
                                         @if (item.UserType == PostexS.Models.Enums.UserType.Driver)
                                         {
-                                            <span>|</span>
-                                            <a target="_blank" asp-action="DriverStatistics" asp-controller="users" asp-route-id="@item.Id">إحصائيات المندوب</a>
-                                            <span>|</span>
-                                            <a asp-action="AssignOrders" asp-controller="users" asp-route-id="@item.Id">إضافة طلبات</a>
-                                            <span>|</span>
+                                                                                            <span>|</span>
+                                                                                            <a target="_blank" asp-action="DriverStatistics" asp-controller="users" asp-route-id="@item.Id">إحصائيات المندوب</a>
+                                                                                            <span>|</span>
+                                                                                            <a asp-action="AssignOrders" asp-controller="users" asp-route-id="@item.Id">إضافة طلبات</a>
+                                                                                            <span>|</span>
 
-                                            <a asp-action="PrintAllNew" asp-controller="Orders" asp-route-Driver="@item.Id">طباعة طلباته</a>
-                                            <span>|</span>
+                                                                                            <a asp-action="PrintAllNew" asp-controller="Orders" asp-route-Driver="@item.Id">طباعة طلباته</a>
+                                                                                            <span>|</span>
                                             @if (User.IsInRole("HighAdmin"))
                                             {
-                                                <a asp-action="FinshedOrders" class="btn btn-success" asp-controller="users" asp-route-id="@item.Id">تقفيل الطلبات</a>
-                                                <span>|</span>
-                                                <a asp-action="FinshedReturnedOrders" class="btn btn-danger" asp-controller="users" asp-route-id="@item.Id">تقفيل المرتجعات</a>
-                                                <span>|</span>
+                                                                                                            <a asp-action="FinshedOrders" class="btn btn-success" asp-controller="users" asp-route-id="@item.Id">تقفيل الطلبات</a>
+                                                                                                            <span>|</span>
+                                                                                                            <a asp-action="FinshedReturnedOrders" class="btn btn-danger" asp-controller="users" asp-route-id="@item.Id">تقفيل المرتجعات</a>
+                                                                                                            <span>|</span>
                                             }     <a asp-action="Users" asp-controller="Orders" asp-route-id="@item.Id" asp-route-type="d">طلبات المندوب</a>
 
                                         }
                                         else if (item.UserType == PostexS.Models.Enums.UserType.Client)
                                         {
-                                            <span>|</span>
-                                            <a target="_blank" asp-action="Statistics" asp-controller="users" asp-route-id="@item.Id">إحصائيات الراسل</a>
-                                            <span>|</span>
-                                            <a asp-action="Users" asp-controller="Orders" asp-route-id="@item.Id" asp-route-type="c">طلبات العميل</a>
-                                            <span>|</span>
-                                            <a asp-action="CompletedWallet" asp-controller="Orders" asp-route-id="@item.Id">تسويات العميل</a>
-                                            <span>|</span>
-                                            <a asp-action="CompletedReturnedWallet" asp-controller="Orders" asp-route-id="@item.Id" class="btn btn-danger" style="margin-top: 5px;">تسويات المرتجعات</a>
-                                            <a asp-action="createOrders" asp-controller="Users" asp-route-id="@item.Id" class="btn btn-warning" style="margin-top: 5px;">إضافة طلبات</a>
-                                            <a asp-action="AcceptOrders" asp-controller="Users" asp-route-id="@item.Id" class="btn btn-success" style="margin-top: 5px;"> الطلبات المعلقة</a>
+                                                                                           <span>|</span>
+                                                                                                <a target="_blank" asp-action="Statistics" asp-controller="users" asp-route-id="@item.Id">إحصائيات الراسل</a>
+                                                                                                <span>|</span>
+                                                                                                <a asp-action="Users" asp-controller="Orders" asp-route-id="@item.Id" asp-route-type="c">طلبات العميل</a>
+                                                                                                <span>|</span>
+                                                                                                <a asp-action="CompletedWallet" asp-controller="Orders" asp-route-id="@item.Id">تسويات العميل</a>
+                                                                                                <span>|</span>
+                                                                                                <a asp-action="CompletedReturnedWallet" asp-controller="Orders" asp-route-id="@item.Id" class="btn btn-danger" style="margin-top: 5px;">تسويات المرتجعات</a>
+                                                                                                <a asp-action="createOrders" asp-controller="Users" asp-route-id="@item.Id" class="btn btn-warning" style="margin-top: 5px;">إضافة طلبات</a>
+                                                                                                <a asp-action="AcceptOrders" asp-controller="Users" asp-route-id="@item.Id" class="btn btn-success" style="margin-top: 5px;"> الطلبات المعلقة</a>
                                         }
                                         @if ((User.IsInRole("Admin") || User.IsInRole("TrustAdmin")) && (item.UserType == PostexS.Models.Enums.UserType.HighAdmin || item.UserType == PostexS.Models.Enums.UserType.Admin || item.UserType == PostexS.Models.Enums.UserType.Accountant))
                                         {
-                                            <span>|</span>
-                                            <a asp-action="Wallet" asp-controller="users" asp-route-id="@item.Id">المحفظة</a>
+                                                                                            <span>|</span>
+                                                                                            <a asp-action="Wallet" asp-controller="users" asp-route-id="@item.Id">المحفظة</a>
                                             @* <a asp-action="TestWallet" asp-controller="users" asp-route-id="@item.Id">المحفظة</a> *@
                                         }
 
                                         @if (ViewBag.r == 1)
                                         {
-                                            <span>|</span>
-                                            <a asp-action="PrintClientOrders" asp-controller="Orders" asp-route-Id="@item.Id">بيان التحميل</a>
+                                                                                            <span>|</span>
+                                                                                            <a asp-action="PrintClientOrders" asp-controller="Orders" asp-route-Id="@item.Id">بيان التحميل</a>
                                         }
                                     }
                                     @if (item.Latitude != null && item.Longitude != null && item.Tracking)
                                     {
-                                        <span>|</span>
-                                        <a target="_blank" href="https://www.google.com/maps/search/?api=1&query=@item.Latitude,@item.Longitude" class="btn btn-outline-primary" title="مشاهده السائق على خريطه جوجل">مشاهده السائق على خريطه جوجل</a>
-                                        <span>|</span>
-                                        <a asp-action="TrackingList" asp-controller="users" asp-route-id="@item.Id">مشاهده خط السير للمندوب</a>
+                                                                            <span>|</span>
+                                                                            <a target="_blank" href="https://www.google.com/maps/search/?api=1&query=@item.Latitude,@item.Longitude" class="btn btn-outline-primary" title="مشاهده السائق على خريطه جوجل">مشاهده السائق على خريطه جوجل</a>
+                                                                            <span>|</span>
+                                                                            <a asp-action="TrackingList" asp-controller="users" asp-route-id="@item.Id">مشاهده خط السير للمندوب</a>
                                     }
                                 }
                                 else
                                 {
-                                    <a onclick="Resotre('/Users/Delete?id=@item.Id')">إستعاده</a>
+                                                            <a onclick="Resotre('/Users/Delete?id=@item.Id')">إستعاده</a>
                                 }
-                            </td>
-                        </tr>
+                                        </td>
+                                    </tr>
                     }
                 </tbody>
             </table>
@@ -620,6 +629,6 @@
     });
 </script>
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+                <partial name="_ValidationScriptsPartial" />
 }
 

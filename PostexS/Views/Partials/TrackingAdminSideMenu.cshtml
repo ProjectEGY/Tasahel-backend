@@ -1,0 +1,55 @@
+﻿@model PostexS.Models.ViewModels.SideMenuVM
+<aside class="main-sidebar">
+    <!-- sidebar: style can be found in sidebar.less -->
+    <section class="sidebar">
+        <!-- Sidebar user panel -->
+        <div class="user-panel">
+            <div class="pull-right image">
+                @if (Model.UserImage != null)
+                {
+                    <img src="~/Content/Images/Users/@Model.UserImage" style="height:45px" class="img-circle" alt="@Model.Name" />
+                }
+                else
+                {
+                    <img src="~/Content/assets/imgs/avatar.png" style="height:45px" class="img-circle" alt="@Model.Name" />
+                }
+            </div>
+            <div class="pull-left info">
+                <p>@Model.Name</p>
+                <a href="#"><i class="fa fa-circle text-success"></i> متواجد</a>
+            </div>
+        </div>
+        <!-- sidebar menu: : style can be found in sidebar.less -->
+        <ul class="sidebar-menu">
+            <li class="treeview  @(Context.Request.Path.ToString().ToLower().Contains("home") ? "active" : "")">
+                <a href="@Url.Action("Index", "Home")">
+                    <i class="fa fa-book"></i>
+
+                    <span>
+                        الرئيسية
+                    </span>
+
+                </a>
+            </li>
+            <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("users/index?q=c") ? "active" : "")">
+                <a href="@Url.Action("Index", "Users", new {q = "c"})">
+                    <i class="fas fa-user"></i> <span>الراسلين</span>
+                </a>
+            </li>
+            <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("orders/index") ? "active" : "")">
+                <a href="@Url.Action("Index", "Orders")">
+                    <i class="fas fa-shopping-basket"></i> <span>الطلبات</span>
+                </a>
+            </li>
+            <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("orders/tracking") ? "active" : "")">
+                <a href="@Url.Action("Tracking", "Orders")">
+                    <i class="fa fa-shipping-fast" aria-hidden="true"></i>
+                    <span>تتبع الطلبات</span>
+                </a>
+            </li>
+          
+
+        </ul>
+    </section>
+    <!-- /.sidebar -->
+</aside>

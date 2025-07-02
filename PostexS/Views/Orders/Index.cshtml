@@ -238,7 +238,7 @@
         </div>
         <input hidden type="hidden" id="BId" value="@ViewBag.BranchId" />
         <input hidden type="hidden" id="Q" value="@ViewBag.q" />
-        @if (!User.IsInRole("Driver") && !User.IsInRole("Client") && !User.IsInRole("HighAdmin") && !User.IsInRole("Accountant"))
+        @if (!User.IsInRole("Driver") && !User.IsInRole("Client") && !User.IsInRole("HighAdmin") && !User.IsInRole("Accountant") && !User.IsInRole("TrackingAdmin"))
         {
                 <div class="row">
                 @using (Html.BeginForm("index", "Orders", FormMethod.Get))

@@ -30,6 +30,10 @@ namespace PostexS.Controllers
             {
                 name = "راسل";
             }
+            if (User.IsInRole("TrackingAdmin"))
+            {
+                name = "متابعه";
+            }
             else if (User.IsInRole("Admin"))
             {
                 name = "الأدمن";
@@ -109,6 +113,16 @@ namespace PostexS.Controllers
                 Name = user.Name,
                 //  Name = "الأدمن",
                 /*Complaints = db.Complaints.Count(w => w.IsDeleted == false && w.IsViewed == false)*/
+            };
+            return PartialView(sideMenuVM);
+        }
+        public async Task<ActionResult> TrackingAdminSideMenu()
+        {
+            var userid = _userManger.GetUserId(User);
+            var user = await _userManger.FindByIdAsync(userid);
+            SideMenuVM sideMenuVM = new SideMenuVM()
+            {
+                Name = user.Name,
             };
             return PartialView(sideMenuVM);
         }

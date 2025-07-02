@@ -7,6 +7,6 @@ namespace PostexS.Models.Enums
 {
     public enum UserType
     {
-        Client,Driver,Owner,LowAdmin,HighAdmin,Admin,Accountant,subAdmin
+        Client,Driver,Owner,LowAdmin,HighAdmin,Admin,Accountant,subAdmin, TrackingAdmin
     }
 }

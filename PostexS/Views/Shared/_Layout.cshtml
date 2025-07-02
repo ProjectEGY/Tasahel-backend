@@ -61,7 +61,7 @@
     </style>
     <style type="text/css">
         /* Always set the map height explicitly to define the size of the div
-                        * element that contains the map. */
+                                * element that contains the map. */
         #map {
             height: 700px;
         }
@@ -154,12 +154,12 @@
     </script>
 </head>
 
-   @* <script>
+@* <script>
         $('#table').DataTable({
             "pageLength": 50
         });
     </script>*@
-    
+
 <body class="skin-blue sidebar-mini">
     <div id="cover-spin"></div>
     <div class="wrapper">
@@ -169,6 +169,11 @@
         @if (User.IsInRole("Client"))
         {
             @Html.RenderAction("ClientSideMenu", "Partials")
+        }
+
+        else if (User.IsInRole("TrackingAdmin"))
+        {
+            @Html.RenderAction("TrackingAdminSideMenu", "Partials")
         }
 
         else

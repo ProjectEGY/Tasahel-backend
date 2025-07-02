@@ -191,6 +191,8 @@ namespace PostexS.Controllers
                 await _roleManager.CreateAsync(new IdentityRole("Driver"));
             if (!await _roleManager.RoleExistsAsync("Client"))
                 await _roleManager.CreateAsync(new IdentityRole("Client"));
+            if (!await _roleManager.RoleExistsAsync("TrackingAdmin"))
+                await _roleManager.CreateAsync(new IdentityRole("TrackingAdmin"));
         }
         [HttpPost]
         public async Task<IActionResult> Login(LoginVM Model)
@@ -205,7 +207,7 @@ namespace PostexS.Controllers
                 var currentUser = _user.Get(x => x.Email.Trim().ToLower()
                 == Model.Email.Trim().ToLower()).First();
                 if ((currentUser.UserType == UserType.Admin || currentUser.UserType == UserType.Client
-                     || currentUser.UserType == UserType.HighAdmin || currentUser.UserType == UserType.LowAdmin || currentUser.UserType == UserType.Accountant) && !currentUser.IsDeleted)
+                     || currentUser.UserType == UserType.HighAdmin || currentUser.UserType == UserType.LowAdmin || currentUser.UserType == UserType.TrackingAdmin || currentUser.UserType == UserType.Accountant) && !currentUser.IsDeleted)
                 {
                     /* var token = GenerateToken(currentUser);*/
 

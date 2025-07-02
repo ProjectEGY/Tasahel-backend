@@ -36,7 +36,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace PostexS.Controllers
 {
-    [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,Client,TrustAdmin")]
+    [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,Client,TrustAdmin,TrackingAdmin")]
     public class UsersController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManger;
@@ -76,7 +76,7 @@ namespace PostexS.Controllers
             _notification = notification;
             _pushNotification = pushNotification;
         }
-        [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin,TrackingAdmin")]
         public async Task<IActionResult> Index(string q, string? message, bool deleted = false, long BranchId = -1)
         {
             if (message != null)
@@ -84,7 +84,7 @@ namespace PostexS.Controllers
                 ViewBag.message = message;
             }
             ViewBag.Branchs = _branch.Get(x => !x.IsDeleted).ToList();
-            if (User.IsInRole("HighAdmin") || User.IsInRole("Accountant") || User.IsInRole("LowAdmin"))
+            if (User.IsInRole("HighAdmin") || User.IsInRole("Accountant") || User.IsInRole("LowAdmin") || User.IsInRole("TrackingAdmin"))
             {
                 var user = await _user.GetObj(x => x.Id == _userManger.GetUserId(User));
                 BranchId = user.BranchId;
@@ -92,6 +92,10 @@ namespace PostexS.Controllers
             }
             ViewBag.branch = BranchId;
             ViewBag.deleted = 0;
+
+            if (User.IsInRole("TrackingAdmin"))
+                q = "c";
+
             if (q == "d")
             {
                 ViewBag.q = "d";
@@ -119,7 +123,7 @@ namespace PostexS.Controllers
                 && (BranchId == -1 ? true : x.BranchId == BranchId)
                 && x.IsDeleted && !x.Branch.IsDeleted).ToList());
                 }
-                return View(_user.Get(x => (x.UserType == UserType.HighAdmin || x.UserType == UserType.Admin || x.UserType == UserType.Accountant ||
+                return View(_user.Get(x => (x.UserType == UserType.HighAdmin || x.UserType == UserType.Admin || x.UserType == UserType.TrackingAdmin || x.UserType == UserType.Accountant ||
                 x.UserType == UserType.LowAdmin)
                 && (BranchId == -1 ? true : x.BranchId == BranchId)
                 && !x.IsDeleted && !x.Branch.IsDeleted).ToList());
@@ -211,6 +215,10 @@ namespace PostexS.Controllers
             {
                 return BadRequest("هذا الرقم موجود من قبل");
             }
+            if (await _user.IsExist(x => x.Name == model.Name))
+            {
+                return BadRequest("هذا الاسم موجود من قبل");
+            }
 
             string Email = "";
             if (string.IsNullOrEmpty(model.Email))
@@ -279,6 +287,8 @@ namespace PostexS.Controllers
                 await _roleManager.CreateAsync(new IdentityRole("LowAdmin"));
             if (!await _roleManager.RoleExistsAsync("Admin"))
                 await _roleManager.CreateAsync(new IdentityRole("Admin"));
+            if (!await _roleManager.RoleExistsAsync("TrackingAdmin"))
+                await _roleManager.CreateAsync(new IdentityRole("TrackingAdmin"));
 
             if (model.UserType == UserType.HighAdmin)
             {
@@ -288,13 +298,13 @@ namespace PostexS.Controllers
             {
                 await _userManger.AddToRoleAsync(user, "LowAdmin");
             }
-            else if (model.UserType == UserType.Admin && User.IsInRole("Admin"))
+            else if (model.UserType == UserType.Admin)
             {
                 await _userManger.AddToRoleAsync(user, "Admin");
             }
-            else if (model.UserType == UserType.subAdmin && User.IsInRole("Admin"))
+            else if (model.UserType == UserType.TrackingAdmin)
             {
-                await _userManger.AddToRoleAsync(user, "TrustAdmin");
+                await _userManger.AddToRoleAsync(user, "TrackingAdmin");
             }
             else if (model.UserType == UserType.Client)
             {
@@ -317,7 +327,7 @@ namespace PostexS.Controllers
                 type = "d";
             else if (user.UserType == UserType.Client)
                 type = "c";
-            else if (user.UserType == UserType.Admin || user.UserType == UserType.subAdmin || user.UserType == UserType.HighAdmin || user.UserType == UserType.Accountant)
+            else if (user.UserType == UserType.Admin || user.UserType == UserType.subAdmin || user.UserType == UserType.HighAdmin || user.UserType == UserType.TrackingAdmin || user.UserType == UserType.Accountant)
                 type = "a";
             if (type != "")
             {

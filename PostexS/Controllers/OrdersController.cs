@@ -40,7 +40,7 @@ using System.Threading;
 
 namespace PostexS.Controllers
 {
-    [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,Driver,TrustAdmin")]
+    [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,Driver,TrustAdmin,TrackingAdmin")]
     public class OrdersController : Controller
     {
         private readonly IGeneric<ApplicationUser> _users;
@@ -81,7 +81,7 @@ namespace PostexS.Controllers
             _pushNotification = pushNotification;
         }
 
-        [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin")]
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin,TrackingAdmin")]
         public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 50,
             string q = "all", long BranchId = -1)
         {
@@ -212,7 +212,7 @@ namespace PostexS.Controllers
             {
                 ViewBag.IsAdmin = true;
             }
-            if (User.IsInRole("HighAdmin") || User.IsInRole("Accountant"))
+            if (User.IsInRole("HighAdmin") || User.IsInRole("Accountant")|| User.IsInRole("TrackingAdmin"))
             {
                 var user = await _users.GetObj(x => x.Id == _userManger.GetUserId(User));
                 BranchId = user.BranchId;
@@ -225,7 +225,7 @@ namespace PostexS.Controllers
             return View(GetPagedListItems("", pageNumber, pageSize, q, BranchId).Result);
         }
 
-        [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin")]
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin,TrackingAdmin")]
         public async Task<IActionResult> CreateOrderWebview(string UserId)
         {
             if (!await _users.IsExist(x => x.Id == UserId && x.UserType == UserType.Client))
@@ -1199,7 +1199,7 @@ namespace PostexS.Controllers
                 x.DeliveryId == Id && x.Status == OrderStatus.Assigned && !x.IsDeleted &&
                 x.OrderCompleted == OrderCompleted.NOK && !x.Finished && OrdersPrint.Contains(x.Id)));
         }
-        [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin")]
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin,TrackingAdmin")]
         public async Task<IActionResult> Details(long id)
         {
             if (!await _orders.IsExist(x => x.Id == id && !x.IsDeleted))
@@ -2050,7 +2050,7 @@ namespace PostexS.Controllers
             _orderService.GetList(c => c.CompletedId == walletId || c.ReturnedCompletedId == walletId).ToList();
 
         #region Edit Order
-        [Authorize(Roles = "Admin,HighAdmin,Accountant")]
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,TrackingAdmin")]
         public async Task<IActionResult> Edit(long id)
         {
             ViewBag.Branchs = _branch.Get(x => !x.IsDeleted).ToList();
@@ -2063,7 +2063,7 @@ namespace PostexS.Controllers
             ViewBag.Title = "تعديل طلب";
             return View(_orders.Get(x => x.Id == id).First());
         }
-        [Authorize(Roles = "Admin,HighAdmin,Accountant")]
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,TrackingAdmin")]
         [HttpPost]
         public async Task<IActionResult> Edit(Order model)
         {
@@ -2214,7 +2214,7 @@ namespace PostexS.Controllers
             return View(_notes
                 .GetAllAsIQueryable(x => x.OrderId == id && !x.IsDeleted, null, "Order,User,Order.Delivery").ToList());
         }
-        [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin")]
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin,TrackingAdmin")]
         [HttpPost]
         public async Task<IActionResult> Create(Order model)
         {

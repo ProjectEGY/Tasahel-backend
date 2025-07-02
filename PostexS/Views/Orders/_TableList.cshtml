@@ -51,7 +51,7 @@
             }
 
             @if ((User.IsInRole("Admin") || !(item.Status == OrderStatus.Completed || item.Finished == true || item.IsDeleted ||
-           item.OrderCompleted == OrderCompleted.OK)) && item.Status != OrderStatus.PartialReturned && !User.IsInRole("Client"))
+           item.OrderCompleted == OrderCompleted.OK)) && item.Status != OrderStatus.PartialReturned && !User.IsInRole("Client") && !User.IsInRole("TrackingAdmin"))
             {
                 <a asp-action="EditStatus" class="btn btn-info mt-5" style="border-radius: 15px;" asp-controller="Orders" asp-route-id="@item.Id">تعديل الحاله</a>
 
