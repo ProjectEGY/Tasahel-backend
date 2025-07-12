@@ -13,73 +13,76 @@
         <h4 style="margin: 10px; text-align: center;" class="no-print">
             <br />
             <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
-            <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
-
+            <button type="button" onclick="window.print();" class="btn btn-default"><i class="fa fa-print"></i> طباعة عادية</button>
+            <button type="button" onclick="printThermal()" class="btn btn-primary"><i class="fa fa-print"></i> طباعة حرارية</button>
         </h4>
     </div><!-- /.box-header -->
     <form asp-action="PrintAllNew" asp-controller="Orders" method="get">
         <button class="btn btn-success form-control no-print" type="submit">تطبيق التحديد</button>
         @for (var i = 0; i < Model.Count; i++)
         {
+            var order = Model[i];
+            var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(order.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
+
             <div class="box-body row" style="height: auto;margin:auto">
+                <!-- المحتوى الأصلي -->
                 <div class="text-center" style="margin-bottom:4px;">
-                    @if (Model[i].BarcodeImage != null)
+                    @if (order.BarcodeImage != null)
                     {
-                        <img src="data:image/png;base64,@Convert.ToBase64String(Model[i].BarcodeImage)" alt="Barcode" style="position: absolute;right: 20px; margin-top:0px;">
+                        <img src="data:image/png;base64,@Convert.ToBase64String(order.BarcodeImage)" alt="Barcode" style="position: absolute;right: 20px; margin-top:0px;">
                     }
-                    <h4 style="margin-bottom:8px;">الطلب رقم @(Model[i].Code)</h4>
+                    <h4 style="margin-bottom:8px;">الطلب رقم @(order.Code)</h4>
                     <div>
                         <h4 style="margin:4px">
-                            @if (Model[0].IsDeleted == true)
+                            @if (order.IsDeleted == true)
                             {
                                 <span class="badge bg-red">محذوف</span>
                             }
-                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Placed)
+                            else if (order.Status == PostexS.Models.Enums.OrderStatus.Placed)
                             {
                                 <span class="badge bg-gray">جديد</span>
                             }
-                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
+                            else if (order.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
                             {
                                 <span class="badge bg-yellow-active">مرتجع جزئي</span>
                             }
-                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Returned)
+                            else if (order.Status == PostexS.Models.Enums.OrderStatus.Returned)
                             {
                                 <span class="badge bg-yellow">مرتجع كامل</span>
                             }
-                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
+                            else if (order.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
                             {
                                 <span class="badge bg-yellow">مرتجع وشحن على الراسل</span>
                             }
-                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
+                            else if (order.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
                             {
                                 <span class="badge bg-yellow">مرتجع ودفع شحن </span>
                             }
-                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
+                            else if (order.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
                             {
                                 <span class="badge bg-blue-active">تم التوصيل مع تعديل السعر</span>
                             }
-                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+                            else if (order.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
                             {
                                 <span class="badge bg-blue-active">تم التوصيل جزئي</span>
                             }
-                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Assigned)
+                            else if (order.Status == PostexS.Models.Enums.OrderStatus.Assigned)
                             {
                                 <span class="badge bg-green">جارى التوصيل</span>
                             }
-                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Delivered)
+                            else if (order.Status == PostexS.Models.Enums.OrderStatus.Delivered)
                             {
                                 <span class="badge bg-blue-active">تم التوصيل</span>
                             }
-                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Rejected)
+                            else if (order.Status == PostexS.Models.Enums.OrderStatus.Rejected)
                             {
                                 <span class="badge bg-yellow">مرفوض</span>
                             }
-                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Waiting)
+                            else if (order.Status == PostexS.Models.Enums.OrderStatus.Waiting)
                             {
                                 <span class="badge bg-orange">مؤجل</span>
                             }
-
-                            else if (Model[0].Status == PostexS.Models.Enums.OrderStatus.Completed)
+                            else if (order.Status == PostexS.Models.Enums.OrderStatus.Completed)
                             {
                                 <span class="badge bg-light-blue">تم تسويته</span>
                             }
@@ -93,10 +96,10 @@
                                 <td style="width:38%">
                                     <span>الراسل</span>
                                     <br />
-                                    <p>@Model[i].Client.Name</p>
-                                    <p>الفرع :  @Model[i].Branch.Name </p>
-                                    <p>الهاتف :  <a dir="auto" href="tel:@Model[i].Client.PhoneNumber">@Model[i].Client.PhoneNumber</a> </p>
-                                    <p>العنوان : @Model[i].Client.Address</p>
+                                    <p>@order.Client.Name</p>
+                                    <p>الفرع :  @order.Branch.Name </p>
+                                    <p>الهاتف :  <a dir="auto" href="tel:@order.Client.PhoneNumber">@order.Client.PhoneNumber</a> </p>
+                                    <p>العنوان : @order.Client.Address</p>
                                 </td>
                                 <td style="width:20%">
                                     <img src="~/Content/Images/TasahelExpress.png" width="150" height="110" />
@@ -106,23 +109,22 @@
                                 <td style="width:42%">
                                     <span>المرسل إليه</span>
                                     <br />
-                                    <p class="badge">@Model[i].ClientCode</p>
-                                    <p>@Model[i].ClientName</p>
-                                    <p>الهاتف :  <a dir="auto" href="tel:@Model[i].ClientPhone">@Model[i].ClientPhone</a> </p>
-                                    <p>العنوان : @Model[i].AddressCity - @Model[i].Address</p>
+                                    <p class="badge">@order.ClientCode</p>
+                                    <p>@order.ClientName</p>
+                                    <p>الهاتف :  <a dir="auto" href="tel:@order.ClientPhone">@order.ClientPhone</a> </p>
+                                    <p>العنوان : @order.AddressCity - @order.Address</p>
                                 </td>
-                                <td><input class="check-box no-print" type="checkbox" name="Orders" value="@Model[i].Id" /></td>
-
+                                <td><input class="check-box no-print" type="checkbox" name="Orders" value="@order.Id" /></td>
                             </tr>
                             <tr>
                                 <td>
                                     ملاحظات
                                 </td>
                                 <td>
-                                    <span>الاجمالي : @Model[i].TotalCost جنية</span>
+                                    <span>الاجمالي : @order.TotalCost جنية</span>
                                 </td>
                                 <td style="font-size: 12px;">
-                                    @Model[i].Notes
+                                    @order.Notes
                                 </td>
                             </tr>
                         </tbody>
@@ -133,3 +135,146 @@
     </form>
     <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
 </div>
+@section Scripts {
+<script>
+    function printThermal() {
+        var originalContent = document.body.innerHTML;
+        var thermalContents = '';
+        var orders = [
+            @foreach (var order in Model)
+            {
+                var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(order.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
+                <text>
+                {
+                    CreatedOn: '@CreatedOn.ToString("yyyy/MM/dd hh:mm tt")',
+                    BarcodeImage: '@(order.BarcodeImage != null ? Convert.ToBase64String(order.BarcodeImage) : "")',
+                    ClientName: '@order.Client.Name',
+                    BranchName: '@order.Branch.Name',
+                    ClientPhone: '@order.Client.PhoneNumber',
+                    ClientAddress: '@order.Client.Address',
+                    ReceiverName: '@order.ClientName',
+                    ClientCode: '@order.ClientCode',
+                    ReceiverPhone: '@order.ClientPhone',
+                    Address: '@order.AddressCity - @order.Address',
+                    Status: '@order.Status',
+                    IsDeleted: @order.IsDeleted.ToString().ToLower(),
+                    TotalCost: '@order.TotalCost',
+                    ArrivedCost: '@(order.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered ? order.ArrivedCost.ToString() : "")',
+                    ReturnedCost: '@(order.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered ? order.ReturnedCost.ToString() : "")',
+                    Notes: '@order.Notes',
+                    OrderNotes: [
+                        @foreach (var note in order.OrderNotes)
+                        {
+                            <text>'@note.Content',</text>
+                        }
+                    ]
+                },
+                </text>
+            }
+        ];
+
+        orders.forEach(function(order, index) {
+            var isLastOrder = index === orders.length - 1;
+            
+            thermalContents += `
+                <div style="width:72.1mm; max-height:297mm; margin:0 auto; padding:1mm; font-size:11px; font-family:Arial; line-height:1.3; ${!isLastOrder ? 'page-break-after: always' : ''}">
+                    <div style="text-align:center; margin-bottom:3px;">
+                        <img src="@Url.Content("~/Content/Images/TasahelExpress.png")" style="width:60mm; max-height:25mm; object-fit:contain; margin:0 auto; display:block;" />
+                        <div style="font-size:10px; margin-top:2px;">${order.CreatedOn}</div>
+                    </div>
+
+                    ${order.BarcodeImage ? `
+                        <div style="text-align:center; margin:3px 0;">
+                            <img src="data:image/png;base64,${order.BarcodeImage}" alt="Barcode" style="width:60mm; max-height:15mm; object-fit:contain;">
+                        </div>
+                    ` : ''}
+
+                    <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                    <div style="margin-bottom:3px;">
+                        <div><strong>الراسل:</strong> ${order.ClientName}</div>
+                        <div><strong>الفرع:</strong> ${order.BranchName}</div>
+                        <div><strong>الهاتف:</strong> ${order.ClientPhone}</div>
+                        <div><strong>العنوان:</strong> ${order.ClientAddress}</div>
+                    </div>
+
+                    <div style="margin-bottom:3px;">
+                        <div><strong>المستلم:</strong> ${order.ReceiverName}</div>
+                        <div><strong>الكود:</strong> ${order.ClientCode}</div>
+                        <div><strong>الهاتف:</strong> ${order.ReceiverPhone}</div>
+                        <div><strong>العنوان:</strong> ${order.Address}</div>
+                    </div>
+
+                    <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                    <div style="margin-bottom:3px;">
+                        <div><strong>الحالة:</strong>
+                            ${getStatusText(order)}
+                        </div>
+                    </div>
+
+                    <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                    <div style="margin-bottom:3px;">
+                        <div><strong>الإجمالي:</strong> ${order.TotalCost} جنية</div>
+                        ${order.ArrivedCost ? `
+                            <div><strong>إستلام:</strong> ${order.ArrivedCost} جنية</div>
+                            <div><strong>مرتجع:</strong> ${order.ReturnedCost} جنية</div>
+                        ` : ''}
+                    </div>
+
+                    <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                    <div style="margin-bottom:3px; word-wrap:break-word;">
+                        <div><strong>ملاحظات:</strong></div>
+                        ${order.Notes ? `
+                            <div style="word-wrap:break-word; max-width:68mm;">${order.Notes}</div>
+                        ` : ''}
+                        ${order.OrderNotes.filter(note => note).map(note => `
+                            <div style="word-wrap:break-word; max-width:68mm;">${note}</div>
+                        `).join('')}
+                        ${!order.Notes && order.OrderNotes.filter(note => note).length === 0 ? `
+                            <div>لا توجد ملاحظات</div>
+                        ` : ''}
+                    </div>
+
+                    <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                    <div style="text-align:center; margin-top:3px;">
+                        <div>شكراً لاستخدامكم خدماتنا</div>
+                    </div>
+                </div>
+            `;
+        });
+
+        // Replace page content with all thermal contents
+        document.body.innerHTML = thermalContents;
+
+        // Delay printing to ensure content loads
+        setTimeout(function() {
+            window.print();
+            // Restore original content after printing
+            document.body.innerHTML = originalContent;
+        }, 500);
+
+        function getStatusText(order) {
+            if (order.IsDeleted) return 'محذوف';
+            switch(order.Status) {
+                case 'Placed': return 'جديد';
+                case 'PartialReturned': return 'مرتجع جزئي';
+                case 'Returned': return 'مرتجع كامل';
+                case 'Returned_And_DeliveryCost_On_Sender': return 'مرتجع وشحن على الراسل';
+                case 'Returned_And_Paid_DeliveryCost': return 'مرتجع ودفع شحن';
+                case 'Delivered_With_Edit_Price': return 'تم التوصيل مع تعديل السعر';
+                case 'PartialDelivered': return 'تم التوصيل جزئي';
+                case 'Assigned': return 'جارى التوصيل';
+                case 'Delivered': return 'تم التوصيل';
+                case 'Rejected': return 'مرفوض';
+                case 'Waiting': return 'مؤجل';
+                case 'Completed': return 'تم تسويته';
+                default: return '';
+            }
+        }
+    }
+</script>
+}

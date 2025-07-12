@@ -396,28 +396,18 @@
                     }
                 }
         </td>
-            @*  @if (!User.IsInRole("Client"))
-    { *@
+
             @if (@ViewBag.q != "pen")
             {
-            <td id="switch2" style="display:block">
-                    @* @if (item.Status == OrderStatus.Placed && item.DeliveryId == null && !item.IsDeleted && !item.Pending)
-        { *@
+            <td>
                 <input class="check-box no-print" type="checkbox" name="OrderId" value="@item.Id" />
-                    @* } *@
             </td>
-            <td id="delete2" style="display:none"><input class="check-box no-print" type="checkbox" name="OrderId" value="@item.Id" /></td>
             }
             else
             {
             <td id="delete2" style="display:block"><input class="check-box no-print" type="checkbox" name="OrderId" value="@item.Id" /></td>
             }
-            @* } *@
-            @* <td >
-    <input class="check-box" type="checkbox" name="OrdersId" value="@item.Id">
 
-
-    </td>*@
 
     </tr>
 }

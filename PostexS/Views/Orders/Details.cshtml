@@ -2,7 +2,6 @@
 @{
     ViewBag.Title = "تفاصيل الطلب رقم " + (Model.Code);
     var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(Model.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
-
 }
 <div class="row">
     <div class="col-md-12">
@@ -70,7 +69,6 @@
                             {
                                 <span class="badge bg-orange">مؤجل</span>
                             }
-
                             else if (Model.Status == PostexS.Models.Enums.OrderStatus.Completed)
                             {
                                 <span class="badge bg-light-blue">تم تسويته</span>
@@ -79,8 +77,8 @@
                         <h4 style="margin:10px" class="no-print">
                             <br />
                             <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
-                            <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
-
+                            <button type="button" onclick="window.print();" class="btn btn-default"><i class="fa fa-print"></i> طباعة عادية</button>
+                            <button type="button" onclick="printThermal()" class="btn btn-primary"><i class="fa fa-print"></i> طباعة حرارية</button>
                         </h4>
                     </div>
                 </div>
@@ -93,7 +91,6 @@
                                     <br />
                                     <p>@Model.Client.Name</p>
                                     <p>الهاتف :  <a dir="auto" href="tel:@Model.Client.PhoneNumber">@Model.Client.PhoneNumber</a> </p>
-                                    <p>العنوان : @Model.Client.Address</p>
                                 </td>
                                 <td style="width:20%">
                                     <img src="~/Content/Images/TasahelExpress.png" width="150" height="110" />
@@ -101,24 +98,18 @@
                                 <td style="width:40%">
                                     <span>المرسل إليه</span>
                                     <br />
-
-                                    <p class="badge">@Model.ClientCode</p>
                                     <p>@Model.ClientName</p>
                                     <p>الهاتف :  <a dir="auto" href="tel:@Model.ClientPhone">@Model.ClientPhone</a> </p>
                                     <p>العنوان : @Model.AddressCity - @Model.Address</p>
-
                                 </td>
                             </tr>
                             <tr>
                                 <td style="text-align:center">
                                     ملاحظات
-
                                     @foreach (var item in Model.OrderNotes)
                                     {
                                         @item.Content
                                     }
-
-
                                 </td>
                                 @if (@Model.Status != PostexS.Models.Enums.OrderStatus.PartialReturned)
                                 {
@@ -148,4 +139,144 @@
             </div>
         </div>
     </div>
+</div>
 
+@section Scripts {
+    <script>
+        function printThermal() {
+            var originalContent = document.body.innerHTML;
+
+            var thermalContent = `
+                <div style="width:72.1mm; max-height:297mm; margin:0 auto; padding:1mm; font-size:11px; font-family:Arial; line-height:1.3;">
+                    <div style="text-align:center; margin-bottom:3px;">
+                        <img src="@Url.Content("~/Content/Images/TasahelExpress.png")" style="width:60mm; max-height:25mm; object-fit:contain; margin:0 auto; display:block;" />
+                        <div style="font-size:10px; margin-top:2px;">@CreatedOn.ToString("yyyy/MM/dd hh:mm tt")</div>
+                    </div>
+
+        @if (Model.BarcodeImage != null)
+        {
+                            <div style="text-align:center; margin:3px 0;">
+                                <img src="data:image/png;base64,@Convert.ToBase64String(Model.BarcodeImage)" alt="Barcode" style="width:60mm; max-height:15mm; object-fit:contain;">
+                            </div>
+        }
+
+                    <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                    <div style="margin-bottom:3px;">
+                        <div><strong>الراسل:</strong> @Model.Client.Name</div>
+                        <div><strong>الهاتف:</strong> @Model.Client.PhoneNumber</div>
+                    </div>
+
+                    <div style="margin-bottom:3px;">
+                        <div><strong>المستلم:</strong> @Model.ClientName</div>
+                        <div><strong>الهاتف:</strong> @Model.ClientPhone</div>
+                        <div><strong>العنوان:</strong> @Model.AddressCity - @Model.Address</div>
+                    </div>
+
+                    <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                    <div style="margin-bottom:3px;">
+                        <div><strong>الحالة:</strong>
+        @if (Model.IsDeleted == true)
+        {
+                                    <span>محذوف</span>
+        }
+        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Placed)
+        {
+                                    <span>جديد</span>
+        }
+        else if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
+        {
+                                    <span>مرتجع جزئي</span>
+        }
+        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned)
+        {
+                                    <span>مرتجع كامل</span>
+        }
+        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
+        {
+                                    <span>مرتجع وشحن على الراسل</span>
+        }
+        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
+        {
+                                    <span>مرتجع ودفع شحن</span>
+        }
+        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
+        {
+                                    <span>تم التوصيل مع تعديل السعر</span>
+        }
+        else if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+        {
+                                    <span>تم التوصيل جزئي</span>
+        }
+        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Assigned)
+        {
+                                    <span>جارى التوصيل</span>
+        }
+        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Delivered)
+        {
+                                    <span>تم التوصيل</span>
+        }
+        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Rejected)
+        {
+                                    <span>مرفوض</span>
+        }
+        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Waiting)
+        {
+                                    <span>مؤجل</span>
+        }
+        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Completed)
+        {
+                                    <span>تم تسويته</span>
+        }
+                        </div>
+                    </div>
+
+                    <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                    <div style="margin-bottom:3px;">
+                        <div><strong>الإجمالي:</strong> @Model.TotalCost جنية</div>
+        @if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+        {
+                                <div><strong>إستلام:</strong> @Model.ArrivedCost جنية</div>
+                                <div><strong>مرتجع:</strong> @Model.ReturnedCost جنية</div>
+        }
+                    </div>
+
+                    <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                    <div style="margin-bottom:3px; word-wrap:break-word;">
+                        <div><strong>ملاحظات:</strong></div>
+        @if (Model.Notes != null && !string.IsNullOrEmpty(Model.Notes))
+        {
+                                <div style="word-wrap:break-word; max-width:68mm;">@Model.Notes</div>
+        }
+        @foreach (var item in Model.OrderNotes)
+        {
+            if (!string.IsNullOrEmpty(item.Content))
+            {
+                                        <div style="word-wrap:break-word; max-width:68mm;">@item.Content</div>
+            }
+        }
+        @if (string.IsNullOrEmpty(Model.Notes) && !Model.OrderNotes.Any(note => !string.IsNullOrEmpty(note.Content)))
+        {
+                                <div>لا توجد ملاحظات</div>
+        }
+                    </div>
+
+                    <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                    <div style="text-align:center; margin-top:3px;">
+                        <div>شكراً لاستخدامكم خدماتنا</div>
+                    </div>
+                </div>
+            `;
+
+            document.body.innerHTML = thermalContent;
+            setTimeout(function() {
+                window.print();
+                document.body.innerHTML = originalContent;
+            }, 200);
+        }
+    </script>
+}

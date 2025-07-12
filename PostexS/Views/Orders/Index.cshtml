@@ -557,51 +557,43 @@
     });
 </script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+       document.addEventListener('DOMContentLoaded', function () {
         const printSelectedBtn = document.getElementById('printSelectedBtn');
 
         printSelectedBtn.addEventListener('click', function () {
-            const selectedOrderIds = [];
+            const selectedOrderIds = new Set(); // Using Set to ensure uniqueness
 
             // Find all checkboxes that are checked
-            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            const checkboxes = document.querySelectorAll('input[type="checkbox"][name="OrderId"]');
             checkboxes.forEach(function (checkbox) {
                 if (checkbox.checked) {
-                    selectedOrderIds.push(parseInt(checkbox.value));
+                    selectedOrderIds.add(parseInt(checkbox.value));
                 }
             });
 
-            // Call the server-side method
-            if (selectedOrderIds.length > 0) {
-                const driver = ""; // You can pass a driver name here if needed
+            // Convert Set to Array
+            const uniqueOrderIds = Array.from(selectedOrderIds);
+
+            if (uniqueOrderIds.length > 0) {
+                const driver = "";
                 fetch('/Orders/PrintSelectedOrders', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        Orders: selectedOrderIds,
+                        Orders: uniqueOrderIds,
                         Driver: driver
                     })
                 })
-                    .then(response => {
-                        console.log('Response status:', response.status);
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log('Response data:', data);
-                        if (data.redirectUrl) {
-                            //window.location.href = data.redirectUrl; // Navigate to the redirect URL
-                            window.open(data.redirectUrl, '_blank'); // Open the redirect URL in a new tab
-                        } else {
-                            console.error('Redirect URL not found in response');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                    });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.redirectUrl) {
+                        window.open(data.redirectUrl, '_blank');
+                    }
+                });
             } else {
-                alert('Please select at least one order to print.');
+                alert('من فضلك قم بإختيار طلب واحد علي الاقل.');
             }
         });
     });
@@ -674,7 +666,7 @@
 </script>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function () {
         const selectAllBtn = document.getElementById('selectAllBtn');
 
         selectAllBtn.addEventListener('click', function () {
@@ -695,11 +687,7 @@
             });
 
             // Update button text
-            if (allChecked) {
-                selectAllBtn.textContent = 'تحديد الكل';
-            } else {
-                selectAllBtn.textContent = 'إلغاء التحديد';
-            }
+            selectAllBtn.textContent = allChecked ? 'تحديد الكل' : 'إلغاء التحديد';
         });
     });
 </script>
