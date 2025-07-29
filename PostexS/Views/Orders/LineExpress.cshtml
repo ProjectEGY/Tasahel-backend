@@ -3,7 +3,289 @@
 @{
     ViewData["Title"] = "طلبات Line Express";
 }
+<style>
+    /* Main Panel Styling */
+    .panel-primary {
+        border: none;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        overflow: hidden;
+    }
 
+    .panel-heading {
+        background-color: #3498db;
+        color: white;
+        padding: 15px 20px;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0 !important;
+    }
+
+    .panel-title {
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .panel-body {
+        padding: 20px;
+        background-color: #f9f9f9;
+    }
+
+    /* Filter Form Container */
+    .form-inline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: flex-end;
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        margin-bottom: 25px;
+    }
+
+    /* Form Group Styling */
+    .form-group {
+        margin-bottom: 0;
+        flex: 1 1 200px;
+        min-width: 0;
+        max-width: fit-content;
+    }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+        }
+
+    /* Input and Select Styling */
+    .form-control {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        background-color: white;
+        transition: all 0.3s ease;
+        font-size: 14px;
+        height: 40px;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+        .form-control:focus {
+            border-color: #4dabf7;
+            box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.25);
+            outline: none;
+        }
+
+    /* Date Input Specific Styling */
+    input[type="date"].form-control {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%235a5a5a' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        padding-right: 35px;
+    }
+
+    /* Select Dropdown Styling */
+    select.form-control {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%235a5a5a' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        padding-right: 35px;
+    }
+
+    /* Button Styling */
+    .btn-primary {
+        background-color: #4dabf7;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 6px;
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        height: 40px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        flex: 0 0 auto;
+    }
+
+        .btn-primary:hover {
+            background-color: #339af0;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+
+    /* Responsive Adjustments */
+    @@media (max-width: 768px) {
+        .form-inline
+
+    {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .form-group {
+        flex: 1 1 100%;
+    }
+
+    .btn-primary {
+        width: 100%;
+        margin-top: 5px;
+    }
+
+    }
+
+    /* Focus State for Better Accessibility */
+    .form-control:focus-visible {
+        outline: 2px solid #4dabf7;
+        outline-offset: 2px;
+    }
+
+    /* Animation for Form Interaction */
+    @@keyframes fadeInUp {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+
+    .form-inline {
+        animation: fadeInUp 0.4s ease-out;
+    }
+    /* Table Styling */
+    .table-responsive {
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .table {
+        margin-bottom: 0;
+        background-color: white;
+    }
+
+        .table thead th {
+            background-color: #f8f9fa;
+            color: #495057;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+            padding: 12px 15px;
+            white-space: nowrap;
+        }
+
+        .table tbody td {
+            padding: 12px 15px;
+            vertical-align: middle;
+            border-top: 1px solid #eee;
+        }
+
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(52, 152, 219, 0.05);
+    }
+
+    /* Pagination Styling */
+    .pagination-container {
+        margin-top: 25px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .pagination {
+        display: flex;
+        padding-left: 0;
+        list-style: none;
+        border-radius: 4px;
+    }
+
+        .pagination li {
+            margin: 0 3px;
+        }
+
+            .pagination li a {
+                position: relative;
+                display: block;
+                padding: 8px 15px;
+                color: #3498db;
+                text-decoration: none;
+                background-color: #fff;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                transition: all 0.3s;
+            }
+
+                .pagination li a:hover {
+                    background-color: #f8f9fa;
+                    border-color: #ddd;
+                }
+
+        .pagination .active a {
+            color: #fff;
+            background-color: #3498db;
+            border-color: #3498db;
+        }
+
+    /* Responsive Adjustments */
+    @@media (max-width: 768px) {
+        .form-inline
+
+    {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .form-group {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table thead th {
+        white-space: nowrap;
+    }
+
+    }
+
+    /* Loading Animation (optional) */
+    @@keyframes fadeIn {
+        from
+
+    {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+
+    }
+
+    .table tbody tr {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+</style>
 <div class="panel panel-primary">
     <div class="panel-heading">
         <h3 class="panel-title"><i class="fa fa-fw fa-truck"></i> طلبات Line Express</h3>
@@ -28,6 +310,7 @@
                     <option value="25" selected="@(ViewBag.PageSize == 25)">25</option>
                     <option value="50" selected="@(ViewBag.PageSize == 50)">50</option>
                     <option value="100" selected="@(ViewBag.PageSize == 100)">100</option>
+                    <option value="500" selected="@(ViewBag.PageSize == 500)">500</option>
                 </select>
             </div>
             <button type="submit" class="btn btn-primary">بحث</button>
@@ -54,49 +337,105 @@
                 <tbody>
                     @foreach (var shipment in Model)
                     {
-                        <tr>
-                            <td>@shipment.AWB</td>
-                            <td>@shipment.TransDate.ToString("yyyy-MM-dd")</td>
-                            <td>@shipment.ToConsigneeName</td>
-                            <td>@shipment.ToPhone</td>
-                            <td>@shipment.ToAddress</td>
-                            <td>@shipment.COD.ToString("N0")</td>
-                            <td>@shipment.StatusNameA</td>
-                            <td>@(shipment.DeliveryDate?.ToString("yyyy-MM-dd") ?? "لم يتم التسليم")</td>
-                            <td>@shipment.SpecialInstuctions</td>
-                            <td>@shipment.CurrentBranch</td>
-                            <td>@shipment.ShipmentFees.ToString("N0")</td>
-                            <td>@shipment.RunnerName - @shipment.RunnerMobile</td>
-                        </tr>
+                            <tr>
+                                <td>@shipment.AWB</td>
+                                <td>@shipment.TransDate.ToString("yyyy-MM-dd")</td>
+                                <td>@shipment.ToConsigneeName</td>
+                                <td>@shipment.ToPhone</td>
+                                <td>@shipment.ToAddress</td>
+                                <td>@shipment.COD.ToString("N0")</td>
+                                <td>@shipment.StatusNameA</td>
+                                <td>@(shipment.DeliveryDate?.ToString("yyyy-MM-dd") ?? "لم يتم التسليم")</td>
+                                <td>@shipment.SpecialInstuctions</td>
+                                <td>@shipment.CurrentBranch</td>
+                                <td>@shipment.ShipmentFees.ToString("N0")</td>
+                                <td>@shipment.RunnerName - @shipment.RunnerMobile</td>
+                            </tr>
                     }
                 </tbody>
             </table>
         </div>
 
-        <!-- Pagination will be added here -->
+       <!-- Pagination section -->
+        @if (ViewBag.PageNumber > 1 || ViewBag.HasNextPage)
+        {
+        <div class="pagination-container">
+            <ul class="pagination">
+                    @if (ViewBag.PageNumber > 1)
+                    {
+                        <li>
+                            <a href="@Url.Action("LineExpress", new {
+                        fromDate = ViewBag.FromDate,
+                        toDate = ViewBag.ToDate,
+                        pageSize = ViewBag.PageSize,
+                        pageNumber = ViewBag.PageNumber - 1
+                    })">السابق</a>
+                        </li>
+                    }
+
+                    @if (ViewBag.PageNumber > 1)
+                    {
+                        <li>
+                            <a href="@Url.Action("LineExpress", new {
+                        fromDate = ViewBag.FromDate,
+                        toDate = ViewBag.ToDate,
+                        pageSize = ViewBag.PageSize,
+                        pageNumber = ViewBag.PageNumber - 1
+                    })">@(ViewBag.PageNumber - 1)</a>
+                        </li>
+                    }
+
+                <li class="active">
+                    <a href="#">@ViewBag.PageNumber</a>
+                </li>
+
+                    @if (ViewBag.HasNextPage)
+                    {
+                        <li>
+                            <a href="@Url.Action("LineExpress", new {
+                        fromDate = ViewBag.FromDate,
+                        toDate = ViewBag.ToDate,
+                        pageSize = ViewBag.PageSize,
+                        pageNumber = ViewBag.PageNumber + 1
+                    })">@(ViewBag.PageNumber + 1)</a>
+                        </li>
+
+                        <li>
+                            <a href="@Url.Action("LineExpress", new {
+                        fromDate = ViewBag.FromDate,
+                        toDate = ViewBag.ToDate,
+                        pageSize = ViewBag.PageSize,
+                        pageNumber = ViewBag.PageNumber + 1
+                    })">التالي</a>
+                        </li>
+                    }
+            </ul>
+        </div>
+        }
+
     </div>
 </div>
 
 @section Scripts {
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const fromDate = document.getElementById('fromDate');
-            const toDate = document.getElementById('toDate');
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const fromDate = document.getElementById('fromDate');
+                const toDate = document.getElementById('toDate');
 
-            // Prevent selecting same day in both fields
-            fromDate.addEventListener('change', function() {
-                toDate.min = this.value;
-                if (new Date(toDate.value) < new Date(this.value)) {
-                    toDate.value = this.value;
-                }
-            });
+                // Prevent selecting same day in both fields
+                fromDate.addEventListener('change', function() {
+                    toDate.min = this.value;
+                    if (new Date(toDate.value) < new Date(this.value)) {
+                        toDate.value = this.value;
+                    }
+                });
 
-            toDate.addEventListener('change', function() {
-                fromDate.max = this.value;
-                if (new Date(fromDate.value) > new Date(this.value)) {
-                    fromDate.value = this.value;
-                }
+                toDate.addEventListener('change', function() {
+                    fromDate.max = this.value;
+                    if (new Date(fromDate.value) > new Date(this.value)) {
+                        fromDate.value = this.value;
+                    }
+                });
             });
-        });
-    </script>
+        </script>
 }

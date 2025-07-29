@@ -868,10 +868,13 @@ namespace PostexS.Controllers
             ViewBag.FromDate = fromDate.Value.ToString("yyyy-MM-dd");
             ViewBag.ToDate = toDate.Value.ToString("yyyy-MM-dd");
             ViewBag.PageSize = pageSize;
+            ViewBag.PageNumber = pageNumber;
+
+            // نحتفظ بعدد العناصر في الصفحة الحالية فقط
+            ViewBag.HasNextPage = shipments.Count == pageSize;
 
             return View(shipments);
         }
-
         private async Task<List<Shipment>> GetShipmentsFromApi(DateTime fromDate, DateTime toDate, int pageNumber, int pageSize)
         {
             var apiUrl = "https://vsoftapi.com-eg.net/api/ClientUsers/V6/GetShipmentsPage";
@@ -909,9 +912,6 @@ namespace PostexS.Controllers
                 return new List<Shipment>();
             }
         }
-
-
-
 
         #endregion
 
