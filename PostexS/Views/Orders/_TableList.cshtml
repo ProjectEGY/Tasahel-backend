@@ -388,11 +388,11 @@
                 <span>|</span>
                     @if (!item.IsDeleted @* && item.Status != PostexS.Models.Enums.OrderStatus.PartialReturned *@)
                     {
-                    <a onclick="Delete('Delete?id=@item.Id')">حذف</a>
+                    <a onclick="Delete('Orders/Delete?id=@item.Id')">حذف</a>
                     }
                     else if (item.IsDeleted @* && item.Status != PostexS.Models.Enums.OrderStatus.PartialReturned *@)
                     {
-                    <a onclick="Resotre('Delete?id=@item.Id')">إستعادة</a>
+                    <a onclick="Resotre('Orders/Delete?id=@item.Id')">إستعادة</a>
                     }
                 }
         </td>

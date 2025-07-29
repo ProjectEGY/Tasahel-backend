@@ -37,6 +37,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using System.Threading;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace PostexS.Controllers
 {
@@ -844,6 +847,74 @@ namespace PostexS.Controllers
                     return query.OrderByDescending(x => x.CreateOn);
             }
         }
+
+        #region LineExpress Orders
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,Driver,TrustAdmin,TrackingAdmin")]
+        public async Task<IActionResult> LineExpress(DateTime? fromDate = null, DateTime? toDate = null, int pageNumber = 1, int pageSize = 50)
+        {
+            // Set default dates (last 3 days)
+            if (!fromDate.HasValue)
+            {
+                fromDate = DateTime.UtcNow.AddDays(-3).Date;
+            }
+            if (!toDate.HasValue)
+            {
+                toDate = DateTime.UtcNow.Date;
+            }
+
+            // Call API to get shipments
+            var shipments = await GetShipmentsFromApi(fromDate.Value, toDate.Value, pageNumber, pageSize);
+
+            ViewBag.FromDate = fromDate.Value.ToString("yyyy-MM-dd");
+            ViewBag.ToDate = toDate.Value.ToString("yyyy-MM-dd");
+            ViewBag.PageSize = pageSize;
+
+            return View(shipments);
+        }
+
+        private async Task<List<Shipment>> GetShipmentsFromApi(DateTime fromDate, DateTime toDate, int pageNumber, int pageSize)
+        {
+            var apiUrl = "https://vsoftapi.com-eg.net/api/ClientUsers/V6/GetShipmentsPage";
+
+            var requestData = new
+            {
+                fromDate = fromDate.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                toDate = toDate.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                pageParam = new
+                {
+                    pageSize = pageSize,
+                    pageNumber = pageNumber
+                }
+            };
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new FlexibleDateTimeConverter() }
+            };
+
+            using (var client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Add("CompanyID", "180109");
+                client.DefaultRequestHeaders.Add("AccessToken", "44FFBD0A-99FD-4935-9BEB-379B0BA840DA");
+
+                var response = await client.PostAsJsonAsync(apiUrl, requestData);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<ApiResponse>(options);
+                    return result?.Shipments ?? new List<Shipment>();
+                }
+
+                return new List<Shipment>();
+            }
+        }
+
+
+
+
+        #endregion
+
 
         #region Archive
         [Authorize(Roles = "Admin,TrustAdmin,Accountant")]
