@@ -285,6 +285,34 @@
     .table tbody tr {
         animation: fadeIn 0.3s ease-in-out;
     }
+    .search-container {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.input-group {
+    /* max-width: 400px; */
+    margin: 0 auto;
+    display : flex !important;
+}
+
+#shipmentSearch {
+    border-radius: 6px 0 0 6px;
+    height: 40px;
+}
+
+#clearSearch {
+    border-radius: 0 6px 6px 0;
+    height: 40px;
+    background-color: #f8f9fa;
+    border-color: #ced4da;
+}
+
+#clearSearch:hover {
+    background-color: #e9ecef;
+}
 </style>
 <div class="panel panel-primary">
     <div class="panel-heading">
@@ -315,7 +343,16 @@
             </div>
             <button type="submit" class="btn btn-primary">بحث</button>
         </form>
-
+         <div class="search-container" style="margin-bottom: 20px;">
+    <div class="input-group">
+        <input type="text" id="shipmentSearch" class="form-control" placeholder="ابحث بكود الشحنة أو رقم الهاتف...">
+        <div class="input-group-append">
+            <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                <i class="fa fa-search"></i> ابحث
+            </button>
+        </div>
+    </div>
+</div>
         <div class="table-responsive" style="margin-top: 20px;">
             <table class="table table-striped table-bordered table-hover">
                 <thead>
@@ -337,20 +374,20 @@
                 <tbody>
                     @foreach (var shipment in Model)
                     {
-                            <tr>
-                                <td>@shipment.AWB</td>
-                                <td>@shipment.TransDate.ToString("yyyy-MM-dd")</td>
-                                <td>@shipment.ToConsigneeName</td>
-                                <td>@shipment.ToPhone</td>
-                                <td>@shipment.ToAddress</td>
-                                <td>@shipment.COD.ToString("N0")</td>
-                                <td>@shipment.StatusNameA</td>
-                                <td>@(shipment.DeliveryDate?.ToString("yyyy-MM-dd") ?? "لم يتم التسليم")</td>
-                                <td>@shipment.SpecialInstuctions</td>
-                                <td>@shipment.CurrentBranch</td>
-                                <td>@shipment.ShipmentFees.ToString("N0")</td>
-                                <td>@shipment.RunnerName - @shipment.RunnerMobile</td>
-                            </tr>
+                                    <tr>
+                                        <td>@shipment.AWB</td>
+                                        <td>@shipment.TransDate.ToString("yyyy-MM-dd")</td>
+                                        <td>@shipment.ToConsigneeName</td>
+                                        <td>@shipment.ToPhone</td>
+                                        <td>@shipment.ToAddress</td>
+                                        <td>@shipment.COD.ToString("N0")</td>
+                                        <td>@shipment.StatusNameA</td>
+                                        <td>@(shipment.DeliveryDate?.ToString("yyyy-MM-dd") ?? "لم يتم التسليم")</td>
+                                        <td>@shipment.SpecialInstuctions</td>
+                                        <td>@shipment.CurrentBranch</td>
+                                        <td>@shipment.ShipmentFees.ToString("N0")</td>
+                                        <td>@shipment.RunnerName - @shipment.RunnerMobile</td>
+                                    </tr>
                     }
                 </tbody>
             </table>
@@ -359,70 +396,119 @@
        <!-- Pagination section -->
         @if (ViewBag.PageNumber > 1 || ViewBag.HasNextPage)
         {
-        <div class="pagination-container">
-            <ul class="pagination">
+                <div class="pagination-container">
+                    <ul class="pagination">
                     @if (ViewBag.PageNumber > 1)
                     {
-                        <li>
-                            <a href="@Url.Action("LineExpress", new {
+                                        <li>
+                                            <a href="@Url.Action("LineExpress", new {
                         fromDate = ViewBag.FromDate,
                         toDate = ViewBag.ToDate,
                         pageSize = ViewBag.PageSize,
                         pageNumber = ViewBag.PageNumber - 1
                     })">السابق</a>
-                        </li>
+                                        </li>
                     }
 
                     @if (ViewBag.PageNumber > 1)
                     {
-                        <li>
-                            <a href="@Url.Action("LineExpress", new {
+                                        <li>
+                                            <a href="@Url.Action("LineExpress", new {
                         fromDate = ViewBag.FromDate,
                         toDate = ViewBag.ToDate,
                         pageSize = ViewBag.PageSize,
                         pageNumber = ViewBag.PageNumber - 1
                     })">@(ViewBag.PageNumber - 1)</a>
-                        </li>
+                                        </li>
                     }
 
-                <li class="active">
-                    <a href="#">@ViewBag.PageNumber</a>
-                </li>
+                        <li class="active">
+                            <a href="#">@ViewBag.PageNumber</a>
+                        </li>
 
                     @if (ViewBag.HasNextPage)
                     {
-                        <li>
-                            <a href="@Url.Action("LineExpress", new {
+                                        <li>
+                                            <a href="@Url.Action("LineExpress", new {
                         fromDate = ViewBag.FromDate,
                         toDate = ViewBag.ToDate,
                         pageSize = ViewBag.PageSize,
                         pageNumber = ViewBag.PageNumber + 1
                     })">@(ViewBag.PageNumber + 1)</a>
-                        </li>
+                                        </li>
 
-                        <li>
-                            <a href="@Url.Action("LineExpress", new {
+                                        <li>
+                                            <a href="@Url.Action("LineExpress", new {
                         fromDate = ViewBag.FromDate,
                         toDate = ViewBag.ToDate,
                         pageSize = ViewBag.PageSize,
                         pageNumber = ViewBag.PageNumber + 1
                     })">التالي</a>
-                        </li>
+                                        </li>
                     }
-            </ul>
-        </div>
+                    </ul>
+                </div>
         }
 
     </div>
 </div>
 
 @section Scripts {
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const fromDate = document.getElementById('fromDate');
+                        const toDate = document.getElementById('toDate');
+
+                        // Prevent selecting same day in both fields
+                        fromDate.addEventListener('change', function() {
+                            toDate.min = this.value;
+                            if (new Date(toDate.value) < new Date(this.value)) {
+                                toDate.value = this.value;
+                            }
+                        });
+
+                        toDate.addEventListener('change', function() {
+                            fromDate.max = this.value;
+                            if (new Date(fromDate.value) > new Date(this.value)) {
+                                fromDate.value = this.value;
+                            }
+                        });
+                    });
+                        document.addEventListener('DOMContentLoaded', function() {
+                // Existing date picker code...
                 const fromDate = document.getElementById('fromDate');
                 const toDate = document.getElementById('toDate');
 
-                // Prevent selecting same day in both fields
+                // New search functionality
+                const searchInput = document.getElementById('shipmentSearch');
+                const clearSearch = document.getElementById('clearSearch');
+                const tableRows = document.querySelectorAll('.table tbody tr');
+
+                // Search function
+                function performSearch() {
+                    const searchTerm = searchInput.value.trim().toLowerCase();
+
+                    tableRows.forEach(row => {
+                        const awb = row.cells[0].textContent.toLowerCase();
+                        const phone = row.cells[3].textContent.toLowerCase();
+
+                        if (searchTerm === '' || awb.includes(searchTerm) || phone.includes(searchTerm)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                }
+
+                // Event listeners
+                searchInput.addEventListener('input', performSearch);
+
+                clearSearch.addEventListener('click', function() {
+                    searchInput.value = '';
+                    performSearch();
+                });
+
+                // Existing date picker event listeners...
                 fromDate.addEventListener('change', function() {
                     toDate.min = this.value;
                     if (new Date(toDate.value) < new Date(this.value)) {
@@ -437,5 +523,5 @@
                     }
                 });
             });
-        </script>
+                </script>
 }
