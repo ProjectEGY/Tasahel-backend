@@ -215,7 +215,7 @@ namespace PostexS.Controllers
             {
                 ViewBag.IsAdmin = true;
             }
-            if (User.IsInRole("HighAdmin") || User.IsInRole("Accountant")|| User.IsInRole("TrackingAdmin"))
+            if (User.IsInRole("HighAdmin") || User.IsInRole("Accountant") || User.IsInRole("TrackingAdmin"))
             {
                 var user = await _users.GetObj(x => x.Id == _userManger.GetUserId(User));
                 BranchId = user.BranchId;
@@ -1590,6 +1590,51 @@ namespace PostexS.Controllers
         [Authorize(Roles = "Admin,HighAdmin,TrustAdmin,Accountant")]
         [Route("Returned-Orders")]
         public async Task<IActionResult> ReturnedComplete(string UserId)
+        {
+            bool authAccountant = User.IsInRole("Accountant");
+            bool authHighAdmin = User.IsInRole("HighAdmin");
+            var user = new ApplicationUser();
+
+            var Accountant = new ApplicationUser();
+            ViewBag.branchId = 0;
+            if (authAccountant || authHighAdmin)
+            {
+                Accountant = await _userManger.GetUserAsync(User);
+                ViewBag.branchId = Accountant.BranchId;
+            }
+
+            var orders = new List<Order>();
+            if (UserId != null)
+                orders = _orderService.GetList(x => x.BranchId == x.Client.BranchId &&
+                                                   ((x.OrderCompleted == OrderCompleted.NOK && (x.Status == OrderStatus.Returned ||
+                                                          x.Status == OrderStatus.PartialReturned))
+                                                          || (x.ReturnedOrderCompleted == OrderCompleted.NOK && x.ReturnedFinished &&
+                                                          (x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender ||
+                                                         x.Status == OrderStatus.Returned_And_Paid_DeliveryCost)))
+                                                    && x.Finished
+                                                    && !x.IsDeleted
+                                                    && (UserId == x.ClientId)).ToList();
+            //else
+            //    orders = _orderService.GetList(x => x.BranchId == x.Client.BranchId &&
+            //                                        ((x.OrderCompleted == OrderCompleted.NOK && (x.Status == OrderStatus.Returned ||
+            //                                              x.Status == OrderStatus.PartialReturned))
+            //                                              || (x.ReturnedOrderCompleted == OrderCompleted.NOK &&
+            //                                              (x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender ||
+            //                                             x.Status == OrderStatus.Returned_And_Paid_DeliveryCost)))
+            //                                        && x.Finished
+            //                                        && !x.IsDeleted).ToList();
+            ViewBag.senders = _orderService.GetUsers(x => ((x.OrderCompleted == OrderCompleted.NOK && (x.Status == OrderStatus.Returned ||
+                                                          x.Status == OrderStatus.PartialReturned))
+                                                          || (x.ReturnedOrderCompleted == OrderCompleted.NOK && x.ReturnedFinished &&
+                                                          (x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender ||
+                                                         x.Status == OrderStatus.Returned_And_Paid_DeliveryCost)))
+                                                          && x.Finished
+                                                          && !x.IsDeleted).ToList();
+            return View(orders);
+        }
+        [Authorize(Roles = "Admin,HighAdmin,TrustAdmin,Accountant")]
+        [Route("Returned-Orders-New")]
+        public async Task<IActionResult> ReturnedCompleteNew(string UserId)
         {
             bool authAccountant = User.IsInRole("Accountant");
             bool authHighAdmin = User.IsInRole("HighAdmin");

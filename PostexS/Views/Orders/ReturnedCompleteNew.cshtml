@@ -15,24 +15,36 @@
         max-width: 100%; /* يضمن أن الصورة لا تتجاوز عرض المودال */
         height: auto; /* يحافظ على نسب العرض والارتفاع */
     }
+
+    .selected-row {
+        background-color: #d4edda !important; /* لون خلفية للصف المحدد */
+    }
+
+    .selection-status {
+        font-weight: bold;
+        padding: 5px;
+        border-radius: 4px;
+    }
+
+    .received {
+        color: #28a745;
+        background-color: #d4edda;
+    }
+
+    .ignored {
+        color: #dc3545;
+        background-color: #f8d7da;
+    }
 </style>
 <div class="panel panel-primary">
     <div class="panel-heading">
         <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> تسوية المرتجعات </h3>
-    </div>
-    <div class="no-print" style="margin: 15px 0;">
-        <a href="@Url.Action("ReturnedCompleteNew", "Orders")" class="btn btn-success">
-            <i class="fa fa-arrow-right"></i> الانتقال إلى واجهة التسوية الجديدة
-        </a>
     </div>
     <h4 style="color: red;">تنبيه:-</h4>
     <h4 class="text-danger mr-5">تسوية المرتجع تعني تسليم المرتجع للراسل .</h4>
     <p style="color: darkred; margin-bottom: 5px;">
         يرجى العلم أن عند تسوية الطلب المرتجع ، يتم بذلك تأكيد تسليم المرتجع للراسل.
     </p>
-    @* <p style="color: darkred;">
-    الرجاء إدخال القيمة <kbd>0</kbd> أو <kbd>1-</kbd> فقط. <kbd>0</kbd> يعني استلام الراسل للجزء المرتجع و <kbd>1-</kbd> يعني تجنب المرتجع.
-    </p> *@
     <div class="panel-body">
         <div id="accordion" class="panel-group" aria-multiselectable="true" role="tablist">
             <div class="panel panel-success">
@@ -50,17 +62,15 @@
                 }
             </div>
         </div>
-        @* <a href="/Orders/AllReturnedComplete?q=a" target="_blank" class="btn btn-info form-control  mb-10  no-print">مخزن المرتجعات</a> *@
 
         @if (!User.IsInRole("Client"))
         {
             <div class="row no-print">
-
-                @using (Html.BeginForm("ReturnedComplete", "Orders", FormMethod.Get))
+                @using (Html.BeginForm("ReturnedCompleteNew", "Orders", FormMethod.Get))
                 {
                     <div class="form-group">
                         <label for="StoreId">برجاء اختيار الراسل</label>
-                        <select name="UserId" id="UserId" class="select2 form-control" >
+                        <select name="UserId" id="UserId" class="select2 form-control">
                             @foreach (var user in senders)
                             {
                                 @if (user.BranchId == @ViewBag.branchId || ViewBag.branchId == 0)
@@ -74,24 +84,58 @@
                 }
             </div>
         }
+
         @Html.ValidationSummary(false, "", new { @class = "text-danger" })
-        @using (Html.BeginForm("ReturnedComplete", "Orders", FormMethod.Post))
+        @if (temp.Count() > 0)
+        {
+            <div class="row no-print" style="margin:10px;">
+                <div class="col-lg-12 mb-10">
+                    <div class="form-group">
+                        <label for="Orders" class="col-sm-2 control-label required">اختار الطلبات: </label>
+                        <div class="col-sm-10">
+                            <select id="OrdersSelector" class="select2 form-control" multiple>
+                                @foreach (var order in temp.Take(200))
+                                {
+                                    <option value="@order.Id">
+                                        @(order.Code) - @order.Client.Name - @order.TotalCost جنية
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row no-print" style="margin:10px;">
+                <div class="col-lg-12 mb-10">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label required"></label>
+                        <div class="col-sm-10">
+                            <button id="selectAllBtn" class="btn btn-secondary">تحديد الكل</button>
+                            <button id="deselectAllBtn" class="btn btn-secondary">إلغاء تحديد الكل</button>
+                            <div class="mt-3" id="selectedCount">عدد الطلبات المحددة: 0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @using (Html.BeginForm("ReturnedComplete", "Orders", FormMethod.Post, new { id = "mainForm" }))
         {
             @Html.AntiForgeryToken()
             <div class="table-responsive">
-                <table id="" cellpadding="0" cellspacing="0" border="0" class=" table-striped table-bordered table-hover" style="width:100%">
+                <table id="ordersTable" cellpadding="0" cellspacing="0" border="0" class="table-striped table-bordered table-hover" style="width:100%">
                     <thead>
                         <tr>
+                            <th style="text-align:center">تحديد</th>
                             <th style="text-align:center">رقم الطلب</th>
                             <th style="text-align:center">الحالة</th>
                             <th style="text-align:center">الفرع الحالي</th>
                             <th style="text-align:center">ملاحظات</th>
                             <th style="text-align:center">اسم الراسل</th>
                             <th style="text-align:center">اسم المرسل إلية</th>
-                            @* <th style="text-align:center">المندوب</th> *@
                             <th style="text-align:center">رقم هاتف المرسل إليه</th>
                             <th style="text-align:center ">مبلغ المرتجع</th>
-                            <th style="text-align:center">استلام المرتجع</th>
                             <th style="text-align:center ">العنوان</th>
                             <th style="text-align:center">ملاحظات المندوب</th>
                         </tr>
@@ -102,7 +146,12 @@
                         }
                         @foreach (var item in temp.Take(200))
                         {
-                            <tr>
+                            <tr id="row-@item.Id" data-order-id="@item.Id">
+                                <td>
+                                    <span class="selection-status ignored">تجنب</span>
+                                    <input type="hidden" name="OrderId[]" value="@item.Id" />
+                                    <input type="hidden" name="Recieve[@index]" id="recieve-@item.Id" value="false" />
+                                </td>
                                 <td style="padding:8px;">
                                     <span class="badge">@(item.Code)</span>
                                     @if (item.Returned_Image != null)
@@ -131,7 +180,6 @@
                                             </div>
                                         </div>
                                     }
-
                                 </td>
                                 <td>
                                     @if (item.IsDeleted == true)
@@ -182,7 +230,6 @@
                                     {
                                         <span class="badge bg-orange">مؤجل</span>
                                     }
-
                                     else if (item.Status == PostexS.Models.Enums.OrderStatus.Completed)
                                     {
                                         <span class="badge bg-light-blue">تم تسويته</span>
@@ -206,17 +253,13 @@
                                     @item.ClientName <span class="badge bg-blue-active"> @item.ClientCode</span>
                                 </td>
                                 <td>
-                                    @*  @if (item.DeliveryId != null)
-                            {
-                            @item.Delivery.Name
-                            } *@
                                     @item.ClientPhone
                                 </td>
                                 @if (item.Status == PostexS.Models.Enums.OrderStatus.PartialReturned
-                               || item.Status == PostexS.Models.Enums.OrderStatus.Returned
-                               || item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender
-                               || item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost
-                               )
+                                                        || item.Status == PostexS.Models.Enums.OrderStatus.Returned
+                                                        || item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender
+                                                        || item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost
+                                                        )
                                 {
                                     <td class="text-danger">
                                         @(item.ReturnedCost) جنيه
@@ -226,22 +269,6 @@
                                 {
                                     <td></td>
                                 }
-                                <!-- Radio buttons for receive and ignore -->
-                                <td style="width: 150px">
-                                    <input type="hidden" name="OrderId[]" id="OrderId[]" value="@item.Id" />
-                                    <!-- Radio button for receive -->
-                                    <label>
-                                        <input type="radio" @(User.IsInRole("Client") ? "disabled" : "") name="Recieve[@index]" class="form-check-input" value="true" checked="checked" />
-                                        استلام
-                                    </label>
-                                    <br />
-                                    <!-- Radio button for ignore -->
-                                    <label>
-                                        <input type="radio" @(User.IsInRole("Client") ? "disabled" : "") name="Recieve[@index]" class="form-check-input" value="false" />
-                                        تجنب
-                                    </label>
-                                </td>
-
                                 <td style="width: 150px">
                                     @item.AddressCity -  @item.Address
                                 </td>
@@ -260,101 +287,72 @@
                         }
                     </tbody>
                 </table>
-                <table class="table table-striped table-bordered table-hover">
-                    <tr>
-                        <td style="width:50%;text-align:left">
-                            @* المبلغ المستحق للراسل : *@
-                        </td>
-                        @*  <td id="cost" style="width:50%;text-align:right;color:green">
-                    </td> *@
-                    </tr>
-                </table>
+
                 <div class="no-print">
                     <p class="text-danger">سيتم نقلك إلى صفحة الطباعه عند تسويتها</p>
                     <p>عند تسوية الطلبات سيتم تسوية الطلبات فقط عندما يكون نسبة الراسل اكبر من او يساوي 0 جنية</p>
-
-                    @*  <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>*@
-
-                    <input type="submit" class="btn btn-primary" onclick="return confirm('هل  تريد تسويتها وسيتم نقلك إلى صفحة الطباعه ?')" value="تسوية الطلبات" />
+                    <input type="submit" class="btn btn-primary" onclick="return confirm('هل تريد تسوية الطلبات المحددة؟ سيتم نقلك إلى صفحة الطباعه')" value="تسوية الطلبات المحددة" />
                 </div>
             </div>
         }
     </div>
 </div>
-<script>
-    $(function () {
-        $('#table').DataTable({
-            "paging": false,
-            "pageLength": 1
-        });
-    }
-                                                                                                                                                                                                                                            function Delete(url) {
-            swal({
-                title: "هل متأكد؟",
-                text: "عند مسح هذا الطلب سوف يتم نقله إلى الطلبات المحذوفة",
-                icon: "warning",
-                dangerMode: true
-            }).then((willDelete) => {
-                if (willDelete) {
-                    $.ajax({
-                        type: "Delete",
-                        url: url,
-                        success: function (data) {
-                            if (data.success) {
-                                toastr.success(data.message);
-                                setInterval('location.reload()', 2500);
-                            }
-                            else {
-                                toastr.error(data.message);
-                            }
-                        }
-                    })
-                }
-            })
-        }
-                                                                                                                                                                                                                                        function Resotre(url) {
-            swal({
-                title: "هل متأكد؟",
-                text: "هل تريد استراجع هذا الطلب مرة أخرى",
-                icon: "success"
-            }).then((willDelete) => {
-                if (willDelete) {
-                    $.ajax({
-                        type: "Delete",
-                        url: url,
-                        success: function (data) {
-                            if (data.success) {
-                                toastr.success(data.message);
-                                setInterval('location.reload()', 2500);
-                            }
-                            else {
-                                toastr.error(data.message);
-                            }
-                        }
-                    })
-                }
-            })
-        }
-</script>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    @*     <script type="text/javascript">
+    <script>
+        $(document).ready(function() {
+            // تهيئة select2
+            $('#OrdersSelector').select2();
 
-                                                                                                                                                                                                                                                                                                                                                                                $(document).ready(function () {
-                GetCost();
-            });
-        function GetCost() {
-            let cost = document.getElementsByName('Recieve[]');
-            let writ = document.getElementById("cost");
-            let num = 0;
-            for (var x = 0; x < cost.length; x++) {
-                if (parseInt(cost[x].value)) {
-                    num += parseInt(cost[x].value);
+            // عند اختيار طلب من القائمة
+            $('#OrdersSelector').on('change', function() {
+                var selectedOrders = $(this).val();
+                updateSelectedCount();
+
+                // إعادة تعيين جميع الصفوف إلى حالة "تجنب"
+                $('tr[id^="row-"]').removeClass('selected-row');
+                $('tr[id^="row-"]').find('.selection-status')
+                    .removeClass('received')
+                    .addClass('ignored')
+                    .text('تجنب');
+                $('tr[id^="row-"]').find('input[name^="Recieve"]').val('false');
+
+                // تعيين الطلبات المحددة إلى حالة "استلام"
+                if (selectedOrders) {
+                    selectedOrders.forEach(function(orderId) {
+                        $('#row-' + orderId).addClass('selected-row');
+                        $('#row-' + orderId).find('.selection-status')
+                            .removeClass('ignored')
+                            .addClass('received')
+                            .text('استلام');
+                        $('#recieve-' + orderId).val('true');
+                    });
                 }
+            });
+
+            // تحديث عدد الطلبات المحددة
+            function updateSelectedCount() {
+                var selectedCount = $('#OrdersSelector option:selected').length;
+                $('#selectedCount').text('عدد الطلبات المحددة: ' + selectedCount);
             }
-            writ.innerHTML = "";
-            writ.innerHTML = num + " " + "جنية";
-        }
-    </script> *@
+
+            // تحديد الكل
+            $('#selectAllBtn').click(function(e) {
+                e.preventDefault();
+                $('#OrdersSelector option').prop('selected', true);
+                $('#OrdersSelector').trigger('change');
+            });
+
+            // إلغاء تحديد الكل
+            $('#deselectAllBtn').click(function(e) {
+                e.preventDefault();
+                $('#OrdersSelector option').prop('selected', false);
+                $('#OrdersSelector').trigger('change');
+            });
+
+            // تحديث العدد عند تحميل الصفحة
+            updateSelectedCount();
+        });
+    </script>
 }
