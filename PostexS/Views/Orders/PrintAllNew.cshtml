@@ -2,6 +2,7 @@
 @{
     ViewBag.Title = "طباعه الطلبات";
     var Ids = Model.Select(x => x.Id);
+    var orderIds = Model.Select(o => o.Id).ToList();  // لاستخدامها في JS
 }
 <link href="~/css/printsite.css" rel="stylesheet" />
 <div class="row">
@@ -13,8 +14,8 @@
         <h4 style="margin: 10px; text-align: center;" class="no-print">
             <br />
             <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
-            <button type="button" onclick="window.print();" class="btn btn-default"><i class="fa fa-print"></i> طباعة عادية</button>
-            <button type="button" onclick="printThermal()" class="btn btn-primary"><i class="fa fa-print"></i> طباعة حرارية</button>
+            <button type="button" onclick="markAndPrint('normal');" class="btn btn-default"><i class="fa fa-print"></i> طباعة عادية</button>
+            <button type="button" onclick="markAndPrint('thermal');" class="btn btn-primary"><i class="fa fa-print"></i> طباعة حرارية</button>
         </h4>
     </div><!-- /.box-header -->
     <form asp-action="PrintAllNew" asp-controller="Orders" method="get">
@@ -136,7 +137,42 @@
     <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
 </div>
 @section Scripts {
+    <script>
+    var orderIds = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Select(o => o.Id).ToList()));
+    console.log("Order IDs:", orderIds); // للتأكد من القيم في console
+</script>
 <script>
+        function markAndPrint(type) {
+    console.log("Order IDs to print:", orderIds); // للتأكد من القيم
+    
+    if (!orderIds || orderIds.length === 0) {
+        alert('لا توجد طلبات محددة للطباعة');
+        return;
+    }
+
+    $.ajax({
+        type: 'POST',
+        url: '/Orders/MarkAsPrinted',
+        contentType: 'application/json',
+        data: JSON.stringify(orderIds),
+        success: function (data) {
+            if (data.success) {
+                if (type === 'normal') {
+                    window.print();
+                } else {
+                    printThermal();
+                }
+            } else {
+                alert('خطأ في تحديث حالة الطباعة: ' + (data.message || ''));
+            }
+        },
+        error: function (xhr, status, error) {
+            console.error("AJAX Error:", status, error, xhr.responseText);
+            alert('خطأ في الاتصال بالسيرفر: ' + error);
+        }
+    });
+}
+
     function printThermal() {
         var originalContent = document.body.innerHTML;
         var thermalContents = '';
@@ -194,7 +230,7 @@
                     <div style="margin-bottom:3px;">
                         <div><strong>الراسل:</strong> ${order.ClientName}</div>
                         <div><strong>الفرع:</strong> ${order.BranchName}</div>
-                        <div><strong>الهاتف:</strong> ${order.ClientPhone}</div>
+                        
                         <div><strong>العنوان:</strong> ${order.ClientAddress}</div>
                     </div>
 

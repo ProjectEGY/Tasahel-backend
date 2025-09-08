@@ -51,7 +51,7 @@
             }
 
             @if ((User.IsInRole("Admin") || !(item.Status == OrderStatus.Completed || item.Finished == true || item.IsDeleted ||
-           item.OrderCompleted == OrderCompleted.OK)) && item.Status != OrderStatus.PartialReturned && !User.IsInRole("Client") && !User.IsInRole("TrackingAdmin"))
+                    item.OrderCompleted == OrderCompleted.OK)) && item.Status != OrderStatus.PartialReturned && !User.IsInRole("Client") && !User.IsInRole("TrackingAdmin"))
             {
                 <a asp-action="EditStatus" class="btn btn-info mt-5" style="border-radius: 15px;" asp-controller="Orders" asp-route-id="@item.Id">تعديل الحاله</a>
 
@@ -189,7 +189,7 @@
                         {
                             <span class="badge bg-green">تم تأكيد التحويل</span>
                         }
-                        else
+                else
                         {
                             <span class="badge bg-red">لم يتم تأكيد التحويل</span>
                         }
@@ -270,14 +270,24 @@
         <td>
             <!-- الفرع الحالي للطلب -->
             <span class="badge" style="background-color: #007bff; color: white;">@item.Branch.Name</span>
-                @* @item.Branch.Name *@
+            @* @item.Branch.Name *@
         </td>
-            @if (item.Status != OrderStatus.PartialReturned)
+        <td>
+            @if (item.IsPrinted)
             {
+                <span class="badge bg-green">تم الطباعة</span>
+            }
+            else
+            {
+                <span class="badge bg-red">لم يتم الطباعة</span>
+            }
+        </td>
+        @if (item.Status != OrderStatus.PartialReturned)
+        {
             <td>
-                    @item.Cost جنية
-                    @if (item.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
-                    {
+                @item.Cost جنية
+                @if (item.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+                {
                     <div class="badge" style="border-radius: 10px; padding: 10px; margin-top: 10px;background-color:#eee;">
                         <div style="color: blue;">
                             <strong>إستلام:</strong> @(item.ArrivedCost) جنية
@@ -286,32 +296,32 @@
                             <strong>مرتجع:</strong> @(item.TotalCost - item.ArrivedCost) جنية
                         </div>
                     </div>
-                    }
+                }
             </td>
 
-            }
-            else
-            {
+        }
+        else
+        {
             <td>
-                    @item.ReturnedCost جنية
+                @item.ReturnedCost جنية
             </td>
-            }
-            @if (item.Status != OrderStatus.PartialReturned)
-            {
+        }
+        @if (item.Status != OrderStatus.PartialReturned)
+        {
             <td>
-                    @item.DeliveryFees جنية
+                @item.DeliveryFees جنية
             </td>
-            }
-            else
-            {
+        }
+        else
+        {
             <td>
                 ـــ
             </td>
-            }
+        }
         <td style="width: 150px">
-                @item.AddressCity - @item.Address
+            @item.AddressCity - @item.Address
         </td>
-            @* @if (item.BranchId != item.Client.BranchId)
+        @* @if (item.BranchId != item.Client.BranchId)
     {
     <td>@item.Branch.Name</td>
     }
@@ -319,63 +329,63 @@
         <td>@item.Client.Name</td>
         <td>@item.ClientName <span class="badge">@item.ClientCode</span></td>
         <td>
-                @if (item.DeliveryId != null)
-                {
-                    @item.Delivery.Name
-                    @item.Delivery.PhoneNumber
-                }
+            @if (item.DeliveryId != null)
+            {
+                @item.Delivery.Name
+                @item.Delivery.PhoneNumber
+            }
         </td>
         <td style="width: 150px">@item.Notes</td>
         <td style="width:150px">
-                @if (item.OrderNotes.Count > 0)
+            @if (item.OrderNotes.Count > 0)
+            {
+                foreach (var x in item.OrderNotes)
                 {
-                    foreach (var x in item.OrderNotes)
-                    {
                     <p>@x.Content</p>
-                    }
                 }
+            }
         </td>
         <td>
             <a asp-action="Reviews" asp-controller="Orders" asp-route-id="@item.Id">ملاحظات</a>
             <span>|</span>
             <a asp-action="Details" asp-controller="Orders" asp-route-id="@item.Id">التفاصيل</a>
-                @if (!User.IsInRole("Client") && !User.IsInRole("TrustAdmin"))
+            @if (!User.IsInRole("Client") && !User.IsInRole("TrustAdmin"))
+            {
+                @if (User.IsInRole("Admin") || !(item.Status == OrderStatus.Completed || item.Finished == true || item.IsDeleted ||
+                        item.OrderCompleted == OrderCompleted.OK))
                 {
-                    @if (User.IsInRole("Admin") || !(item.Status == OrderStatus.Completed || item.Finished == true || item.IsDeleted ||
-                   item.OrderCompleted == OrderCompleted.OK))
-                    {
                     <span>|</span>
                     <a asp-action="Edit" asp-controller="Orders" asp-route-id="@item.Id">تعديل</a>
-                    }
-                    @if (item.Pending)
-                    {
+                }
+                @if (item.Pending)
+                {
                     <span>|</span>
                     <a asp-action="Accept" asp-controller="Orders" asp-route-id="@item.Id">موافقة على الطلب</a>
-                    }
                 }
+            }
             <span>|</span>
             <button type="button" data-toggle="modal" data-target=".myModal" onclick="FillPopup('/Orders/Copy?id=@item.Id')">
                 نسخ
             </button>
-                @* @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+            @* @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
         { *@
-                @if (!User.IsInRole("Client"))
-                {
+            @if (!User.IsInRole("Client"))
+            {
                 <span>|</span>
                 <button type="button" data-toggle="modal" data-target=".myModal" onclick="FillPopup('/Orders/history?id=@item.Id')">
                     عمليات الطلب
                 </button>
-                }
-                @* } *@
-                @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
-                {
-                    @*  if (item.Status == OrderStatus.Placed && item.DeliveryId == null && !item.IsDeleted && !item.Pending)
+            }
+            @* } *@
+            @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+            {
+                @*  if (item.Status == OrderStatus.Placed && item.DeliveryId == null && !item.IsDeleted && !item.Pending)
         {
         <span>|</span>
         <a asp-action="EditBranch" asp-controller="Orders" asp-route-id="@item.Id">تحويل الطلب </a>
         } *@
-                }
-                @*  else if (User.IsInRole("TrustAdmin"))
+            }
+            @*  else if (User.IsInRole("TrustAdmin"))
         {
         <span>|</span>
         if ((item.Status == OrderStatus.Placed || (item.Status == OrderStatus.Waiting && item.DeliveryId == null)) && !item.IsDeleted && !item.Pending && ((item.BranchId == item.Client.BranchId) || (item.BranchId == item.Client.BranchId && item.TransferredConfirmed)))
@@ -383,30 +393,31 @@
         <a asp-action="EditBranch" asp-controller="Orders" asp-route-id="@item.Id">تحويل الطلب </a>
         }
         } *@
-                @if (User.IsInRole("Admin") @* || User.IsInRole("TrustAdmin") *@)
-                {
+            @if (User.IsInRole("Admin") @* || User.IsInRole("TrustAdmin") *@)
+            {
                 <span>|</span>
-                    @if (!item.IsDeleted @* && item.Status != PostexS.Models.Enums.OrderStatus.PartialReturned *@)
-                    {
+                @if (!item.IsDeleted @* && item.Status != PostexS.Models.Enums.OrderStatus.PartialReturned *@)
+                {
                     <a onclick="Delete('Orders/Delete?id=@item.Id')">حذف</a>
-                    }
-                    else if (item.IsDeleted @* && item.Status != PostexS.Models.Enums.OrderStatus.PartialReturned *@)
-                    {
-                    <a onclick="Resotre('Orders/Delete?id=@item.Id')">إستعادة</a>
-                    }
                 }
+                else if (item.IsDeleted
+        @* && item.Status != PostexS.Models.Enums.OrderStatus.PartialReturned *@)
+                {
+                    <a onclick="Resotre('Orders/Delete?id=@item.Id')">إستعادة</a>
+                }
+            }
         </td>
 
-            @if (@ViewBag.q != "pen")
-            {
+        @if (@ViewBag.q != "pen")
+        {
             <td>
                 <input class="check-box no-print" type="checkbox" name="OrderId" value="@item.Id" />
             </td>
-            }
-            else
-            {
+        }
+        else
+        {
             <td id="delete2" style="display:block"><input class="check-box no-print" type="checkbox" name="OrderId" value="@item.Id" /></td>
-            }
+        }
 
 
     </tr>

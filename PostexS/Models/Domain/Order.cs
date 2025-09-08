@@ -56,7 +56,7 @@ namespace PostexS.Models.Domain
         public virtual ICollection<OrderNotes> OrderNotes { get; set; }
         public virtual ICollection<OrderTransferrHistory> OrderTransferrHistories { get; set; }
 
-
+        public bool IsPrinted { get; set; } = false;
 
         #region Special for Status [ Returned_And_Paid_DeliveryCost - Returned_And_DeliveryCost_On_Sender ]
         public bool ReturnedFinished { get; set; } = false;

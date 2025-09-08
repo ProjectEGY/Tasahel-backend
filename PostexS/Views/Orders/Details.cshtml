@@ -77,8 +77,8 @@
                         <h4 style="margin:10px" class="no-print">
                             <br />
                             <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
-                            <button type="button" onclick="window.print();" class="btn btn-default"><i class="fa fa-print"></i> طباعة عادية</button>
-                            <button type="button" onclick="printThermal()" class="btn btn-primary"><i class="fa fa-print"></i> طباعة حرارية</button>
+                            <button type="button" onclick="markAndPrint('normal', @Model.Id);" class="btn btn-default"><i class="fa fa-print"></i> طباعة عادية</button>
+                            <button type="button" onclick="markAndPrint('thermal', @Model.Id);" class="btn btn-primary"><i class="fa fa-print"></i> طباعة حرارية</button>
                         </h4>
                     </div>
                 </div>
@@ -143,6 +143,43 @@
 
 @section Scripts {
     <script>
+        function markAndPrint(type, orderId) {
+            console.log("Order ID:", orderId); // Debugging: Log the orderId
+
+            if (!orderId) {
+                alert('معرف الطلب غير موجود أو غير صالح');
+                return;
+            }
+
+            var orderIds = [orderId];
+            console.log("Order IDs array:", orderIds); // Debugging: Log the orderIds array
+
+            $.ajax({
+                type: 'POST',
+                url: '/Orders/MarkAsPrinted',
+                contentType: 'application/json',
+                data: JSON.stringify(orderIds),
+                success: function (data) {
+                    console.log("AJAX Success:", data); // Debugging: Log server response
+                    if (data.success) {
+                        if (type === 'normal') {
+                            console.log("Performing normal print");
+                            window.print();
+                        } else {
+                            console.log("Performing thermal print");
+                            printThermal();
+                        }
+                    } else {
+                        alert('خطأ في تحديث حالة الطباعة: ' + (data.message || 'غير معروف'));
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error("AJAX Error:", status, error, xhr.responseText); // Debugging: Log error details
+                    alert('خطأ في الاتصال بالسيرفر: ' + error);
+                }
+            });
+        }
+
         function printThermal() {
             var originalContent = document.body.innerHTML;
 
@@ -155,9 +192,9 @@
 
         @if (Model.BarcodeImage != null)
         {
-                            <div style="text-align:center; margin:3px 0;">
-                                <img src="data:image/png;base64,@Convert.ToBase64String(Model.BarcodeImage)" alt="Barcode" style="width:60mm; max-height:15mm; object-fit:contain;">
-                            </div>
+                                <div style="text-align:center; margin:3px 0;">
+                                    <img src="data:image/png;base64,@Convert.ToBase64String(Model.BarcodeImage)" alt="Barcode" style="width:60mm; max-height:15mm; object-fit:contain;">
+                                </div>
         }
 
                     <hr style="border-top:1px dashed #000; margin:3px 0;">
@@ -179,55 +216,55 @@
                         <div><strong>الحالة:</strong>
         @if (Model.IsDeleted == true)
         {
-                                    <span>محذوف</span>
+                                        <span>محذوف</span>
         }
         else if (Model.Status == PostexS.Models.Enums.OrderStatus.Placed)
         {
-                                    <span>جديد</span>
+                                        <span>جديد</span>
         }
         else if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
         {
-                                    <span>مرتجع جزئي</span>
+                                        <span>مرتجع جزئي</span>
         }
         else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned)
         {
-                                    <span>مرتجع كامل</span>
+                                        <span>مرتجع كامل</span>
         }
         else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
         {
-                                    <span>مرتجع وشحن على الراسل</span>
+                                        <span>مرتجع وشحن على الراسل</span>
         }
         else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
         {
-                                    <span>مرتجع ودفع شحن</span>
+                                        <span>مرتجع ودفع شحن</span>
         }
         else if (Model.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
         {
-                                    <span>تم التوصيل مع تعديل السعر</span>
+                                        <span>تم التوصيل مع تعديل السعر</span>
         }
         else if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
         {
-                                    <span>تم التوصيل جزئي</span>
+                                        <span>تم التوصيل جزئي</span>
         }
         else if (Model.Status == PostexS.Models.Enums.OrderStatus.Assigned)
         {
-                                    <span>جارى التوصيل</span>
+                                        <span>جارى التوصيل</span>
         }
         else if (Model.Status == PostexS.Models.Enums.OrderStatus.Delivered)
         {
-                                    <span>تم التوصيل</span>
+                                        <span>تم التوصيل</span>
         }
         else if (Model.Status == PostexS.Models.Enums.OrderStatus.Rejected)
         {
-                                    <span>مرفوض</span>
+                                        <span>مرفوض</span>
         }
         else if (Model.Status == PostexS.Models.Enums.OrderStatus.Waiting)
         {
-                                    <span>مؤجل</span>
+                                        <span>مؤجل</span>
         }
         else if (Model.Status == PostexS.Models.Enums.OrderStatus.Completed)
         {
-                                    <span>تم تسويته</span>
+                                        <span>تم تسويته</span>
         }
                         </div>
                     </div>
@@ -238,8 +275,8 @@
                         <div><strong>الإجمالي:</strong> @Model.TotalCost جنية</div>
         @if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
         {
-                                <div><strong>إستلام:</strong> @Model.ArrivedCost جنية</div>
-                                <div><strong>مرتجع:</strong> @Model.ReturnedCost جنية</div>
+                                    <div><strong>إستلام:</strong> @Model.ArrivedCost جنية</div>
+                                    <div><strong>مرتجع:</strong> @Model.ReturnedCost جنية</div>
         }
                     </div>
 
@@ -249,18 +286,18 @@
                         <div><strong>ملاحظات:</strong></div>
         @if (Model.Notes != null && !string.IsNullOrEmpty(Model.Notes))
         {
-                                <div style="word-wrap:break-word; max-width:68mm;">@Model.Notes</div>
+                                    <div style="word-wrap:break-word; max-width:68mm;">@Model.Notes</div>
         }
         @foreach (var item in Model.OrderNotes)
         {
-            if (!string.IsNullOrEmpty(item.Content))
-            {
-                                        <div style="word-wrap:break-word; max-width:68mm;">@item.Content</div>
-            }
+                if (!string.IsNullOrEmpty(item.Content))
+                {
+                                                <div style="word-wrap:break-word; max-width:68mm;">@item.Content</div>
+                }
         }
         @if (string.IsNullOrEmpty(Model.Notes) && !Model.OrderNotes.Any(note => !string.IsNullOrEmpty(note.Content)))
         {
-                                <div>لا توجد ملاحظات</div>
+                                    <div>لا توجد ملاحظات</div>
         }
                     </div>
 

@@ -55,9 +55,8 @@ namespace PostexS.Controllers
             if (User.IsInRole("Client"))
             {
                 if (!await _user.IsExist(x => x.Id == id))
-                {
                     return NotFound();
-                }
+
                 var user = _user.Get(x => x.Id == id).First();
                 CurrentStatisticsVM model = new CurrentStatisticsVM();
                 model.Name = user.Name;
@@ -65,53 +64,62 @@ namespace PostexS.Controllers
 
                 if (user != null)
                 {
+                    var allOrders = _orders.Get(x => x.ClientId == id).ToList();
 
-                    //عدد الطلبات الحاليه
-                    model.CurrentOrdersCount = _orders.Get(x => x.ClientId == id
-                            && !x.IsDeleted && x.Status != OrderStatus.Waiting && x.Status != OrderStatus.Assigned && x.Status != OrderStatus.Placed).Count();
-                    var orders = _orders.Get(x =>
-           (x.Status == OrderStatus.Delivered
-           || (x.Status == OrderStatus.Waiting)
-           || (x.Status == OrderStatus.Rejected)
-           || (x.Status == OrderStatus.PartialDelivered)
-           || (x.Status == OrderStatus.Returned)
-           ) && !x.Finished && !x.IsDeleted
-           && x.ClientId == id).ToList();
+                    // الطلبات الحالية
+                    model.CurrentOrdersCount = allOrders.Count(x =>
+                        !x.IsDeleted && !x.Finished &&!x.ReturnedFinished &&
+                        (x.Status == OrderStatus.Placed || x.Status == OrderStatus.Assigned || x.Status == OrderStatus.Waiting));
 
-                    model.ReturnedCount = orders.Count(x => x.Status == OrderStatus.Returned);
-                    model.PartialDeliveredCount = orders.Count(x => x.Status == OrderStatus.PartialDelivered);
-                    model.DeliveredCount = orders.Count(x => x.Status == OrderStatus.Delivered);
-                    model.WaitingCount = orders.Count(x => x.Status == OrderStatus.Waiting);
-                    model.RejectedCount = orders.Count(x => x.Status == OrderStatus.Rejected);
-                    model.AllOrdersCount = model.CurrentOrdersCount + orders.Count();
+                    // الطلبات المعلقة
+                    model.WaitingCount = allOrders.Count(x => !x.IsDeleted && x.Status == OrderStatus.Waiting);
 
-                    var OrdersMoney = orders.Where(x => x.Status != OrderStatus.PartialReturned).Sum(x => x.ArrivedCost);
-                    model.OrdersMoney = OrdersMoney;
-                    var DriverMoney = orders.Where(x => x.Status != OrderStatus.PartialReturned).Sum(x => x.ClientCost);
-                    model.DriverMoney = DriverMoney;
-                    model.SystemMoney = OrdersMoney - DriverMoney;
+                    // الطلبات مع المناديب
+                    model.AssignedCount = allOrders.Count(x => !x.IsDeleted && x.Status == OrderStatus.Assigned);
+
+                    // الطلبات المنتهية
+                    var finishedOrders = allOrders.Where(x =>
+                        !x.IsDeleted &&
+                        (x.Status == OrderStatus.Delivered || x.Status == OrderStatus.Rejected ||
+                         x.Status == OrderStatus.Returned || x.Status == OrderStatus.PartialDelivered ||
+                         x.Status == OrderStatus.PartialReturned || x.Status == OrderStatus.Finished ||
+                         x.Status == OrderStatus.Completed || x.Status == OrderStatus.Delivered_With_Edit_Price ||
+                         x.Status == OrderStatus.Returned_And_Paid_DeliveryCost ||
+                         x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender)).ToList();
+
+                    // الطلبات المحذوفة
+                    model.DeletedCount = allOrders.Count(x => x.IsDeleted);
+
+                    // إجمالي الطلبات
+                    model.AllOrdersCount = allOrders.Count;
+
+                    model.DeliveredCount = finishedOrders.Count(x => x.Status == OrderStatus.Delivered || x.Status == OrderStatus.Delivered_With_Edit_Price);
+                    model.RejectedCount = finishedOrders.Count(x => x.Status == OrderStatus.Rejected);
+                    model.ReturnedCount = finishedOrders.Count(x => x.Status == OrderStatus.Returned || x.Status == OrderStatus.Returned_And_Paid_DeliveryCost || x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender);
+                    model.PartialDeliveredCount = finishedOrders.Count(x => x.Status == OrderStatus.PartialDelivered);
+                    model.PartialReturnedCount = finishedOrders.Count(x => x.Status == OrderStatus.PartialReturned);
+
+                    // حساب المبالغ المالية
+                    model.OrdersMoney = finishedOrders.Sum(x => x.ArrivedCost);
+                    model.DriverMoney = finishedOrders.Sum(x => x.ClientCost);
+                    model.SystemMoney = model.OrdersMoney - model.DriverMoney;
+
                     // حساب النسب المئوية
                     if (model.AllOrdersCount > 0)
                     {
                         model.DeliveredPercentage = (double)model.DeliveredCount / model.AllOrdersCount * 100;
                         model.ReturnedPercentage = (double)model.ReturnedCount / model.AllOrdersCount * 100;
+                        model.PartialDeliveredPercentage = (double)model.PartialDeliveredCount / model.AllOrdersCount * 100;
+                        model.RejectedPercentage = (double)model.RejectedCount / model.AllOrdersCount * 100;
+                        model.WaitingPercentage = (double)model.WaitingCount / model.AllOrdersCount * 100;
+                        model.PartialReturnedPercentage = (double)model.PartialReturnedCount / model.AllOrdersCount * 100;
+                        model.DeletedPercentage = (double)model.DeletedCount / model.AllOrdersCount * 100;
+                        model.AssignedPercentage = (double)model.AssignedCount / model.AllOrdersCount * 100;
                     }
                 }
 
                 return View(model);
             }
-
-            /* if (!await _roleManager.RoleExistsAsync("Driver"))
-                 await _roleManager.CreateAsync(new IdentityRole("Driver"));
-             if (!await _roleManager.RoleExistsAsync("Client"))
-                 await _roleManager.CreateAsync(new IdentityRole("Client"));*/
-
-
-
-            /*  if (!User.Identity.IsAuthenticated)
-              {
-                  return RedirectToAction(nameof(Login));
-              }*/
 
             var wallet = (await _user.GetObj(x => x.Id == "9897454b-add0-45ef-ad3b-53027814ede7")).Wallet;
             if (FilterTime == null && FilterTimeTo == null)
@@ -120,13 +128,11 @@ namespace PostexS.Controllers
                 return View();
             }
             wallet = _orders.Get(x => (FilterTime.HasValue ? DateTime.Compare(FilterTime.Value.ToUniversalTime(), x.CreateOn) <= 0 : true) &&
-            (FilterTimeTo.HasValue ? DateTime.Compare(FilterTimeTo.Value.ToUniversalTime(), x.CreateOn) >= 0 : true)).Sum(x => x.ArrivedCost - (x.ClientCost + x.DeliveryCost));
+                (FilterTimeTo.HasValue ? DateTime.Compare(FilterTimeTo.Value.ToUniversalTime(), x.CreateOn) >= 0 : true)).Sum(x => x.ArrivedCost - (x.ClientCost + x.DeliveryCost));
             ViewBag.wallet = wallet;
             return View();
-
-
-
         }
+
         public async Task<IActionResult> Login()
         {
             await GeneratRoles();

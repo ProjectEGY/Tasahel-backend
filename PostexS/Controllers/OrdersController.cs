@@ -3418,5 +3418,29 @@ namespace PostexS.Controllers
         }
 
         #endregion
+
+        [HttpPost]
+        public async Task<IActionResult> MarkAsPrinted([FromBody] List<long> orderIds)
+        {
+            Console.WriteLine($"Received order IDs: {string.Join(", ", orderIds)}"); // للتتبع
+
+            if (orderIds == null || !orderIds.Any())
+            {
+                return BadRequest(new { success = false, message = "No order IDs provided" });
+            }
+
+            foreach (var id in orderIds)
+            {
+                var order = await _orders.GetObj(x => x.Id == id);
+                if (order != null)
+                {
+                    order.IsPrinted = true;
+                    await _orders.Update(order);
+                    await _CRUD.Update(order.Id);
+                }
+            }
+
+            return Ok(new { success = true, message = "تم تحديث حالة الطباعة بنجاح" });
+        }
     }
 }
