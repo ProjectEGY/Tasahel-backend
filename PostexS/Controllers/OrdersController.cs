@@ -3374,6 +3374,21 @@ namespace PostexS.Controllers
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
                                   && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
                 }
+                else if (q == "notprinted")
+                {
+                    filter = f => !f.IsDeleted && !f.IsPrinted &&
+                              ((string.IsNullOrEmpty(searchStr)
+                                   ? true
+                                   : f.ClientPhone.ToLower().Contains(searchStr))
+                                || (string.IsNullOrEmpty(searchStr)
+                                   ? true
+                                   : f.ClientCode.ToLower().Contains(searchStr))
+                                || (string.IsNullOrEmpty(searchStr)
+                                   ? true
+                                   : f.Code.Contains(searchStr)))
+                              && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
+                              && (auth ? f.ClientId == user.Id : true);
+                }
                 else
                 {
                     filter = f => !f.IsDeleted &&
