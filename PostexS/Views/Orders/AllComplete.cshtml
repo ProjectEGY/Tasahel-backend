@@ -73,6 +73,7 @@
                         <th style="text-align:center ">تم تسديده</th>
                         <th style="text-align:center">تكلفة الشحن</th>
                         <th style="text-align:center">نسبة الراسل</th>
+                        <th style="text-align:center">نسبة المندوب</th>
                         <th style="text-align:center ">العنوان</th>
                         <th style="text-align:center">ملاحظات المندوب</th>
                     </tr>
@@ -180,7 +181,7 @@
                                     @item.Delivery.PhoneNumber
                                 }
                             </td>
-                            <td class="@(item.ArrivedCost!= item.TotalCost?"text-danger":"")">
+                            <td class="@(item.ArrivedCost != item.TotalCost ? "text-danger" : "")">
                                 @item.ArrivedCost
                             </td>
                             <td>
@@ -191,6 +192,9 @@
                             </td>
                             <td id="senderPercentage-@item.Id">
                                 @item.ClientCost
+                            </td>
+                            <td>
+                                @item.DeliveryCost
                             </td>
                             <td style="width: 150px">
                                 @item.AddressCity -  @item.Address
