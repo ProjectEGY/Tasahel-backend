@@ -99,6 +99,7 @@
                                     <br />
                                     <p>@order.Client.Name</p>
                                     <p>الفرع :  @order.Branch.Name </p>
+                                    <p>الهاتف :  <a dir="auto" href="tel:@order.Client.PhoneNumber">@order.Client.PhoneNumber</a> </p>
                                     <p>العنوان : @order.Client.Address</p>
                                 </td>
                                 <td style="width:20%">
@@ -137,179 +138,179 @@
 </div>
 @section Scripts {
     <script>
-    var orderIds = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Select(o => o.Id).ToList()));
-    console.log("Order IDs:", orderIds); // للتأكد من القيم في console
-</script>
-<script>
-        function markAndPrint(type) {
-    console.log("Order IDs to print:", orderIds); // للتأكد من القيم
-    
-    if (!orderIds || orderIds.length === 0) {
-        alert('لا توجد طلبات محددة للطباعة');
-        return;
-    }
+        var orderIds = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Select(o => o.Id).ToList()));
+        console.log("Order IDs:", orderIds); // للتأكد من القيم في console
+    </script>
+    <script>
+                function markAndPrint(type) {
+            console.log("Order IDs to print:", orderIds); // للتأكد من القيم
 
-    $.ajax({
-        type: 'POST',
-        url: '/Orders/MarkAsPrinted',
-        contentType: 'application/json',
-        data: JSON.stringify(orderIds),
-        success: function (data) {
-            if (data.success) {
-                if (type === 'normal') {
-                    window.print();
-                } else {
-                    printThermal();
-                }
-            } else {
-                alert('خطأ في تحديث حالة الطباعة: ' + (data.message || ''));
+            if (!orderIds || orderIds.length === 0) {
+                alert('لا توجد طلبات محددة للطباعة');
+                return;
             }
-        },
-        error: function (xhr, status, error) {
-            console.error("AJAX Error:", status, error, xhr.responseText);
-            alert('خطأ في الاتصال بالسيرفر: ' + error);
-        }
-    });
-}
 
-    function printThermal() {
-        var originalContent = document.body.innerHTML;
-        var thermalContents = '';
-        var orders = [
-            @foreach (var order in Model)
-            {
-                var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(order.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
-                <text>
-                {
-                    CreatedOn: '@CreatedOn.ToString("yyyy/MM/dd hh:mm tt")',
-                    BarcodeImage: '@(order.BarcodeImage != null ? Convert.ToBase64String(order.BarcodeImage) : "")',
-                    ClientName: '@order.Client.Name',
-                    BranchName: '@order.Branch.Name',
-                    ClientPhone: '@order.Client.PhoneNumber',
-                    ClientAddress: '@order.Client.Address',
-                    ReceiverName: '@order.ClientName',
-                    ClientCode: '@order.ClientCode',
-                    ReceiverPhone: '@order.ClientPhone',
-                    Address: '@order.AddressCity - @order.Address',
-                    Status: '@order.Status',
-                    IsDeleted: @order.IsDeleted.ToString().ToLower(),
-                    TotalCost: '@order.TotalCost',
-                    ArrivedCost: '@(order.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered ? order.ArrivedCost.ToString() : "")',
-                    ReturnedCost: '@(order.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered ? order.ReturnedCost.ToString() : "")',
-                    Notes: '@order.Notes',
-                    OrderNotes: [
-                        @foreach (var note in order.OrderNotes)
-                        {
-                            <text>'@note.Content',</text>
+            $.ajax({
+                type: 'POST',
+                url: '/Orders/MarkAsPrinted',
+                contentType: 'application/json',
+                data: JSON.stringify(orderIds),
+                success: function (data) {
+                    if (data.success) {
+                        if (type === 'normal') {
+                            window.print();
+                        } else {
+                            printThermal();
                         }
-                    ]
+                    } else {
+                        alert('خطأ في تحديث حالة الطباعة: ' + (data.message || ''));
+                    }
                 },
-                </text>
-            }
-        ];
-
-        orders.forEach(function(order, index) {
-            var isLastOrder = index === orders.length - 1;
-            
-            thermalContents += `
-                <div style="width:72.1mm; max-height:297mm; margin:0 auto; padding:1mm; font-size:11px; font-family:Arial; line-height:1.3; ${!isLastOrder ? 'page-break-after: always' : ''}">
-                    <div style="text-align:center; margin-bottom:3px;">
-                        <img src="@Url.Content("~/Content/Images/TasahelExpress.png")" style="width:60mm; max-height:25mm; object-fit:contain; margin:0 auto; display:block;" />
-                        <div style="font-size:10px; margin-top:2px;">${order.CreatedOn}</div>
-                    </div>
-
-                    ${order.BarcodeImage ? `
-                        <div style="text-align:center; margin:3px 0;">
-                            <img src="data:image/png;base64,${order.BarcodeImage}" alt="Barcode" style="width:60mm; max-height:15mm; object-fit:contain;">
-                        </div>
-                    ` : ''}
-
-                    <hr style="border-top:1px dashed #000; margin:3px 0;">
-
-                    <div style="margin-bottom:3px;">
-                        <div><strong>الراسل:</strong> ${order.ClientName}</div>
-                        <div><strong>الفرع:</strong> ${order.BranchName}</div>
-                        
-                        <div><strong>العنوان:</strong> ${order.ClientAddress}</div>
-                    </div>
-
-                    <div style="margin-bottom:3px;">
-                        <div><strong>المستلم:</strong> ${order.ReceiverName}</div>
-                        <div><strong>الكود:</strong> ${order.ClientCode}</div>
-                        <div><strong>الهاتف:</strong> ${order.ReceiverPhone}</div>
-                        <div><strong>العنوان:</strong> ${order.Address}</div>
-                    </div>
-
-                    <hr style="border-top:1px dashed #000; margin:3px 0;">
-
-                    <div style="margin-bottom:3px;">
-                        <div><strong>الحالة:</strong>
-                            ${getStatusText(order)}
-                        </div>
-                    </div>
-
-                    <hr style="border-top:1px dashed #000; margin:3px 0;">
-
-                    <div style="margin-bottom:3px;">
-                        <div><strong>الإجمالي:</strong> ${order.TotalCost} جنية</div>
-                        ${order.ArrivedCost ? `
-                            <div><strong>إستلام:</strong> ${order.ArrivedCost} جنية</div>
-                            <div><strong>مرتجع:</strong> ${order.ReturnedCost} جنية</div>
-                        ` : ''}
-                    </div>
-
-                    <hr style="border-top:1px dashed #000; margin:3px 0;">
-
-                    <div style="margin-bottom:3px; word-wrap:break-word;">
-                        <div><strong>ملاحظات:</strong></div>
-                        ${order.Notes ? `
-                            <div style="word-wrap:break-word; max-width:68mm;">${order.Notes}</div>
-                        ` : ''}
-                        ${order.OrderNotes.filter(note => note).map(note => `
-                            <div style="word-wrap:break-word; max-width:68mm;">${note}</div>
-                        `).join('')}
-                        ${!order.Notes && order.OrderNotes.filter(note => note).length === 0 ? `
-                            <div>لا توجد ملاحظات</div>
-                        ` : ''}
-                    </div>
-
-                    <hr style="border-top:1px dashed #000; margin:3px 0;">
-
-                    <div style="text-align:center; margin-top:3px;">
-                        <div>شكراً لاستخدامكم خدماتنا</div>
-                    </div>
-                </div>
-            `;
-        });
-
-        // Replace page content with all thermal contents
-        document.body.innerHTML = thermalContents;
-
-        // Delay printing to ensure content loads
-        setTimeout(function() {
-            window.print();
-            // Restore original content after printing
-            document.body.innerHTML = originalContent;
-        }, 500);
-
-        function getStatusText(order) {
-            if (order.IsDeleted) return 'محذوف';
-            switch(order.Status) {
-                case 'Placed': return 'جديد';
-                case 'PartialReturned': return 'مرتجع جزئي';
-                case 'Returned': return 'مرتجع كامل';
-                case 'Returned_And_DeliveryCost_On_Sender': return 'مرتجع وشحن على الراسل';
-                case 'Returned_And_Paid_DeliveryCost': return 'مرتجع ودفع شحن';
-                case 'Delivered_With_Edit_Price': return 'تم التوصيل مع تعديل السعر';
-                case 'PartialDelivered': return 'تم التوصيل جزئي';
-                case 'Assigned': return 'جارى التوصيل';
-                case 'Delivered': return 'تم التوصيل';
-                case 'Rejected': return 'مرفوض';
-                case 'Waiting': return 'مؤجل';
-                case 'Completed': return 'تم تسويته';
-                default: return '';
-            }
+                error: function (xhr, status, error) {
+                    console.error("AJAX Error:", status, error, xhr.responseText);
+                    alert('خطأ في الاتصال بالسيرفر: ' + error);
+                }
+            });
         }
-    }
-</script>
+
+            function printThermal() {
+                var originalContent = document.body.innerHTML;
+                var thermalContents = '';
+                var orders = [
+                    @foreach (var order in Model)
+                    {
+                            var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(order.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
+                            <text>
+                            {
+                                CreatedOn: '@CreatedOn.ToString("yyyy/MM/dd hh:mm tt")',
+                                BarcodeImage: '@(order.BarcodeImage != null ? Convert.ToBase64String(order.BarcodeImage) : "")',
+                                ClientName: '@order.Client.Name',
+                                BranchName: '@order.Branch.Name',
+                                ClientPhone: '@order.Client.PhoneNumber',
+                                ClientAddress: '@order.Client.Address',
+                                ReceiverName: '@order.ClientName',
+                                ClientCode: '@order.ClientCode',
+                                ReceiverPhone: '@order.ClientPhone',
+                                Address: '@order.AddressCity - @order.Address',
+                                Status: '@order.Status',
+                                IsDeleted: @order.IsDeleted.ToString().ToLower(),
+                                TotalCost: '@order.TotalCost',
+                                ArrivedCost: '@(order.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered ? order.ArrivedCost.ToString() : "")',
+                                ReturnedCost: '@(order.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered ? order.ReturnedCost.ToString() : "")',
+                                Notes: '@order.Notes',
+                                OrderNotes: [
+                                    @foreach (var note in order.OrderNotes)
+                                    {
+                                            <text>'@note.Content',</text>
+                                    }
+                                ]
+                            },
+                            </text>
+                    }
+                ];
+
+                orders.forEach(function(order, index) {
+                    var isLastOrder = index === orders.length - 1;
+
+                    thermalContents += `
+                        <div style="width:72.1mm; max-height:297mm; margin:0 auto; padding:1mm; font-size:11px; font-family:Arial; line-height:1.3; ${!isLastOrder ? 'page-break-after: always' : ''}">
+                            <div style="text-align:center; margin-bottom:3px;">
+                                <img src="@Url.Content("~/Content/Images/TasahelExpress.png")" style="width:60mm; max-height:25mm; object-fit:contain; margin:0 auto; display:block;" />
+                                <div style="font-size:10px; margin-top:2px;">${order.CreatedOn}</div>
+                            </div>
+
+                            ${order.BarcodeImage ? `
+                                <div style="text-align:center; margin:3px 0;">
+                                    <img src="data:image/png;base64,${order.BarcodeImage}" alt="Barcode" style="width:60mm; max-height:15mm; object-fit:contain;">
+                                </div>
+                            ` : ''}
+
+                            <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                            <div style="margin-bottom:3px;">
+                                <div><strong>الراسل:</strong> ${order.ClientName}</div>
+                                <div><strong>الفرع:</strong> ${order.BranchName}</div>
+
+                                <div><strong>العنوان:</strong> ${order.ClientAddress}</div>
+                            </div>
+
+                            <div style="margin-bottom:3px;">
+                                <div><strong>المستلم:</strong> ${order.ReceiverName}</div>
+                                <div><strong>الكود:</strong> ${order.ClientCode}</div>
+                                <div><strong>الهاتف:</strong> ${order.ReceiverPhone}</div>
+                                <div><strong>العنوان:</strong> ${order.Address}</div>
+                            </div>
+
+                            <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                            <div style="margin-bottom:3px;">
+                                <div><strong>الحالة:</strong>
+                                    ${getStatusText(order)}
+                                </div>
+                            </div>
+
+                            <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                            <div style="margin-bottom:3px;">
+                                <div><strong>الإجمالي:</strong> ${order.TotalCost} جنية</div>
+                                ${order.ArrivedCost ? `
+                                    <div><strong>إستلام:</strong> ${order.ArrivedCost} جنية</div>
+                                    <div><strong>مرتجع:</strong> ${order.ReturnedCost} جنية</div>
+                                ` : ''}
+                            </div>
+
+                            <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                            <div style="margin-bottom:3px; word-wrap:break-word;">
+                                <div><strong>ملاحظات:</strong></div>
+                                ${order.Notes ? `
+                                    <div style="word-wrap:break-word; max-width:68mm;">${order.Notes}</div>
+                                ` : ''}
+                                ${order.OrderNotes.filter(note => note).map(note => `
+                                    <div style="word-wrap:break-word; max-width:68mm;">${note}</div>
+                                `).join('')}
+                                ${!order.Notes && order.OrderNotes.filter(note => note).length === 0 ? `
+                                    <div>لا توجد ملاحظات</div>
+                                ` : ''}
+                            </div>
+
+                            <hr style="border-top:1px dashed #000; margin:3px 0;">
+
+                            <div style="text-align:center; margin-top:3px;">
+                                <div>شكراً لاستخدامكم خدماتنا</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Replace page content with all thermal contents
+                document.body.innerHTML = thermalContents;
+
+                // Delay printing to ensure content loads
+                setTimeout(function() {
+                    window.print();
+                    // Restore original content after printing
+                    document.body.innerHTML = originalContent;
+                }, 500);
+
+                function getStatusText(order) {
+                    if (order.IsDeleted) return 'محذوف';
+                    switch(order.Status) {
+                        case 'Placed': return 'جديد';
+                        case 'PartialReturned': return 'مرتجع جزئي';
+                        case 'Returned': return 'مرتجع كامل';
+                        case 'Returned_And_DeliveryCost_On_Sender': return 'مرتجع وشحن على الراسل';
+                        case 'Returned_And_Paid_DeliveryCost': return 'مرتجع ودفع شحن';
+                        case 'Delivered_With_Edit_Price': return 'تم التوصيل مع تعديل السعر';
+                        case 'PartialDelivered': return 'تم التوصيل جزئي';
+                        case 'Assigned': return 'جارى التوصيل';
+                        case 'Delivered': return 'تم التوصيل';
+                        case 'Rejected': return 'مرفوض';
+                        case 'Waiting': return 'مؤجل';
+                        case 'Completed': return 'تم تسويته';
+                        default: return '';
+                    }
+                }
+            }
+    </script>
 }
