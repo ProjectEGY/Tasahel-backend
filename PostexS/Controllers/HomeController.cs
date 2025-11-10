@@ -149,10 +149,10 @@ namespace PostexS.Controllers
             }
             var user = new ApplicationUser()
             {
-                Email = "Admin@Tasahel.com",
-                UserName = "Admin@Tasahel.com",
+                Email = "Developer@Tasahel.com",
+                UserName = "Developer@Tasahel.com",
                 UserType = UserType.Admin,
-                Name = "Test",
+                Name = "Developer",
                 PhoneNumber = "000",
                 BranchId = 1,
                 SecurityStamp = Guid.NewGuid().ToString(),

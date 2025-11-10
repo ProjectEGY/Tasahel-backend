@@ -2166,7 +2166,7 @@ namespace PostexS.Controllers
             _orderService.GetList(c => c.CompletedId == walletId || c.ReturnedCompletedId == walletId).ToList();
 
         #region Edit Order
-        [Authorize(Roles = "Admin,HighAdmin,Accountant,TrackingAdmin")]
+        [Authorize(Roles = "Admin,TrustAdmin,HighAdmin,Accountant,TrackingAdmin")]
         public async Task<IActionResult> Edit(long id)
         {
             ViewBag.Branchs = _branch.Get(x => !x.IsDeleted).ToList();
@@ -2179,7 +2179,7 @@ namespace PostexS.Controllers
             ViewBag.Title = "تعديل طلب";
             return View(_orders.Get(x => x.Id == id).First());
         }
-        [Authorize(Roles = "Admin,HighAdmin,Accountant,TrackingAdmin")]
+        [Authorize(Roles = "Admin,HighAdmin,TrustAdmin,Accountant,TrackingAdmin")]
         [HttpPost]
         public async Task<IActionResult> Edit(Order model)
         {

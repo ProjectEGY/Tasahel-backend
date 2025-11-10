@@ -78,7 +78,16 @@
                             <br />
                             <a href="/Orders/Index" class="btn btn-default no-print">العودة</a>
                             <button type="button" onclick="markAndPrint('normal', @Model.Id);" class="btn btn-default"><i class="fa fa-print"></i> طباعة عادية</button>
-                            <button type="button" onclick="markAndPrint('thermal', @Model.Id);" class="btn btn-primary"><i class="fa fa-print"></i> طباعة حرارية</button>
+                            <div class="btn-group no-print" style="display:inline-block;">
+                                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <i class="fa fa-print"></i> طباعة حرارية <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#" onclick="markAndPrint('thermal', @Model.Id, '7.5x13'); return false;">7.5 × 13 سم</a></li>
+                                    <li><a href="#" onclick="markAndPrint('thermal', @Model.Id, '10x10'); return false;">10 × 10 سم</a></li>
+                                    <li><a href="#" onclick="markAndPrint('thermal', @Model.Id, '10x15'); return false;">10 × 15 سم</a></li>
+                                </ul>
+                            </div>
                         </h4>
                     </div>
                 </div>
@@ -143,7 +152,7 @@
 
 @section Scripts {
     <script>
-        function markAndPrint(type, orderId) {
+        function markAndPrint(type, orderId, size) {
             console.log("Order ID:", orderId); // Debugging: Log the orderId
 
             if (!orderId) {
@@ -167,7 +176,7 @@
                             window.print();
                         } else {
                             console.log("Performing thermal print");
-                            printThermal();
+                            printThermal(size || '10x10');
                         }
                     } else {
                         alert('خطأ في تحديث حالة الطباعة: ' + (data.message || 'غير معروف'));
@@ -180,131 +189,150 @@
             });
         }
 
-        function printThermal() {
+        function printThermal(size) {
             var originalContent = document.body.innerHTML;
+            
+            // تحديد المقاسات
+            var sizes = {
+                '7.5x13': { width: '75mm', height: '130mm', pageSize: '75mm 130mm' },
+                '10x10': { width: '100mm', height: '100mm', pageSize: '100mm 100mm' },
+                '10x15': { width: '100mm', height: '150mm', pageSize: '100mm 150mm' }
+            };
+            
+            var selectedSize = sizes[size] || sizes['10x10'];
+            var fontSize = size === '7.5x13' ? '12px' : (size === '10x10' ? '11px' : '14px');
+            var logoWidth = size === '7.5x13' ? '35mm' : (size === '10x10' ? '30mm' : '40mm');
+            var logoHeight = size === '7.5x13' ? '15mm' : (size === '10x10' ? '12mm' : '20mm');
+            var barcodeWidth = size === '7.5x13' ? '60mm' : (size === '10x10' ? '85mm' : '130mm');
+            var barcodeHeight = size === '7.5x13' ? '10mm' : (size === '10x10' ? '10mm' : '12mm');
+            var padding = size === '10x10' ? '1.5mm' : '2mm';
+            var marginBottom = size === '10x10' ? '2px' : '5px';
 
             var thermalContent = `
-                <div style="width:72.1mm; max-height:297mm; margin:0 auto; padding:1mm; font-size:11px; font-family:Arial; line-height:1.3;">
-                    <div style="text-align:center; margin-bottom:3px;">
-                        <img src="@Url.Content("~/Content/Images/TasahelExpress.png")" style="width:60mm; max-height:25mm; object-fit:contain; margin:0 auto; display:block;" />
-                        <div style="font-size:10px; margin-top:2px;">@CreatedOn.ToString("yyyy/MM/dd hh:mm tt")</div>
+                <style>
+                    @@media print {
+                        @@page {
+                            size: ${selectedSize.pageSize};
+                            margin: 0;
+                        }
+                        * {
+                            margin: 0;
+                            padding: 0;
+                            box-sizing: border-box;
+                        }
+                        body {
+                            width: ${selectedSize.width};
+                            height: ${selectedSize.height};
+                            margin: 0;
+                            padding: 0;
+                            overflow: hidden;
+                        }
+                    }
+                </style>
+                <div style="width:${selectedSize.width}; height:${selectedSize.height}; margin:0; padding:${padding}; font-size:${fontSize}; font-family:Arial; line-height:1.3; direction:rtl; position:relative; border:2px solid #000; box-sizing:border-box; overflow:hidden;">
+                    <!-- Logo Inside Border - Centered -->
+                    <div style="text-align:center; margin:0;">
+                        <img src="@Url.Content("~/Content/Images/TasahelExpress.png")" style="width:${logoWidth}; max-height:${logoHeight}; object-fit:contain;" />
                     </div>
-
+                    <!-- Date and Barcode Section - Centered -->
+                    <div style="text-align:center; margin-bottom:${marginBottom};">
+                        <div style="font-size:${fontSize}; margin-bottom:2px;">@CreatedOn.ToString("hh:mm tt yyyy/MM/dd")</div>
         @if (Model.BarcodeImage != null)
         {
-                                <div style="text-align:center; margin:3px 0;">
-                                    <img src="data:image/png;base64,@Convert.ToBase64String(Model.BarcodeImage)" alt="Barcode" style="width:60mm; max-height:15mm; object-fit:contain;">
-                                </div>
+                        <div style="text-align:center; margin-top:2px;">
+                            <img src="data:image/png;base64,@Convert.ToBase64String(Model.BarcodeImage)" alt="Barcode" style="width:${barcodeWidth}; max-height:${barcodeHeight}; object-fit:contain; display:block; margin:0 auto;">
+                        </div>
         }
-
-                    <hr style="border-top:1px dashed #000; margin:3px 0;">
-
-                    <div style="margin-bottom:3px;">
-                        <div><strong>الراسل:</strong> @Model.Client.Name</div>
-                        <div><strong>الهاتف:</strong> @Model.Client.PhoneNumber</div>
                     </div>
 
-                    <div style="margin-bottom:3px;">
-                        <div><strong>المستلم:</strong> @Model.ClientName</div>
+                    <hr style="border-top:2px solid #000; margin:${marginBottom} 0;">
+
+                    <!-- Client Code Section - Right Aligned -->
+                    <div style="text-align:right; margin-bottom:${marginBottom};">
+                        <div style="font-size:${fontSize}; font-weight:bold;">كود العميل: @(Model.ClientCode ?? "0")</div>
+                    </div>
+
+                    <hr style="border-top:2px solid #000; margin:${marginBottom} 0;">
+
+                    <!-- Recipient Information Section -->
+                    <div style="margin-bottom:${marginBottom};">
+                        <div><strong>المرسل اليه:</strong> @Model.ClientName</div>
                         <div><strong>الهاتف:</strong> @Model.ClientPhone</div>
                         <div><strong>العنوان:</strong> @Model.AddressCity - @Model.Address</div>
                     </div>
 
-                    <hr style="border-top:1px dashed #000; margin:3px 0;">
+                    <hr style="border-top:2px solid #000; margin:${marginBottom} 0;">
 
-                    <div style="margin-bottom:3px;">
-                        <div><strong>الحالة:</strong>
-        @if (Model.IsDeleted == true)
-        {
-                                        <span>محذوف</span>
-        }
-        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Placed)
-        {
-                                        <span>جديد</span>
-        }
-        else if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
-        {
-                                        <span>مرتجع جزئي</span>
-        }
-        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned)
-        {
-                                        <span>مرتجع كامل</span>
-        }
-        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
-        {
-                                        <span>مرتجع وشحن على الراسل</span>
-        }
-        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
-        {
-                                        <span>مرتجع ودفع شحن</span>
-        }
-        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
-        {
-                                        <span>تم التوصيل مع تعديل السعر</span>
-        }
-        else if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
-        {
-                                        <span>تم التوصيل جزئي</span>
-        }
-        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Assigned)
-        {
-                                        <span>جارى التوصيل</span>
-        }
-        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Delivered)
-        {
-                                        <span>تم التوصيل</span>
-        }
-        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Rejected)
-        {
-                                        <span>مرفوض</span>
-        }
-        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Waiting)
-        {
-                                        <span>مؤجل</span>
-        }
-        else if (Model.Status == PostexS.Models.Enums.OrderStatus.Completed)
-        {
-                                        <span>تم تسويته</span>
-        }
-                        </div>
-                    </div>
-
-                    <hr style="border-top:1px dashed #000; margin:3px 0;">
-
-                    <div style="margin-bottom:3px;">
-                        <div><strong>الإجمالي:</strong> @Model.TotalCost جنية</div>
-        @if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
-        {
-                                    <div><strong>إستلام:</strong> @Model.ArrivedCost جنية</div>
-                                    <div><strong>مرتجع:</strong> @Model.ReturnedCost جنية</div>
-        }
-                    </div>
-
-                    <hr style="border-top:1px dashed #000; margin:3px 0;">
-
-                    <div style="margin-bottom:3px; word-wrap:break-word;">
-                        <div><strong>ملاحظات:</strong></div>
+                    <!-- Notes Section with Vertical Barcode -->
+                    <div style="margin-bottom:${marginBottom}; border:2px solid #000; padding:2px; min-height:${size === '10x10' ? '12mm' : '15mm'}; position:relative;">
+                        <div style="margin-left:18mm;">
+                            <div><strong>الملاحظات:</strong></div>
         @if (Model.Notes != null && !string.IsNullOrEmpty(Model.Notes))
         {
-                                    <div style="word-wrap:break-word; max-width:68mm;">@Model.Notes</div>
+                            <div style="word-wrap:break-word; font-size:${fontSize}; margin-top:2px;">@Model.Notes</div>
         }
         @foreach (var item in Model.OrderNotes)
         {
-                if (!string.IsNullOrEmpty(item.Content))
-                {
-                                                <div style="word-wrap:break-word; max-width:68mm;">@item.Content</div>
-                }
+            if (!string.IsNullOrEmpty(item.Content))
+            {
+                            <div style="word-wrap:break-word; font-size:${fontSize}; margin-top:2px;">@item.Content</div>
+            }
         }
         @if (string.IsNullOrEmpty(Model.Notes) && !Model.OrderNotes.Any(note => !string.IsNullOrEmpty(note.Content)))
         {
-                                    <div>لا توجد ملاحظات</div>
+                            <div style="font-size:${fontSize}; margin-top:2px;">لا توجد ملاحظات</div>
+        }
+                        </div>
+        @if (Model.BarcodeImage != null)
+        {
+                        <div style="position:absolute; left:2px; top:2px; bottom:2px; display:flex; flex-direction:column; align-items:center; justify-content:center; border-right:1px solid #ddd; padding-right:2px;">
+                            <img src="data:image/png;base64,@Convert.ToBase64String(Model.BarcodeImage)" alt="Barcode" style="height:calc(100% - 10px); max-height:calc(100% - 10px); width:16mm; object-fit:contain; transform:rotate(-90deg);" />
+                        </div>
         }
                     </div>
 
-                    <hr style="border-top:1px dashed #000; margin:3px 0;">
+                    <hr style="border-top:2px solid #000; margin:${marginBottom} 0;">
 
-                    <div style="text-align:center; margin-top:3px;">
-                        <div>شكراً لاستخدامكم خدماتنا</div>
+                    <!-- Financial Summary and Sender Information -->
+                    <div style="display:flex; justify-content:space-between; margin-top:${marginBottom};">
+                        <!-- Sender Information -->
+                        <div style="flex:1; margin-left:5px;">
+                            <div><strong>الراسل:</strong> @Model.Client.Name@(Model.Branch != null ? " - " + Model.Branch.Name : "")</div>
+                            <div><strong>الهاتف:</strong> @Model.Client.PhoneNumber</div>
+                        </div>
+                        <!-- Financial Summary Table -->
+                        <div style="flex:1; border:2px solid #000; padding:3px;">
+                            <table style="width:100%; border-collapse:collapse; font-size:${fontSize};">
+                                <tr>
+                                    <td style="padding:2px; border-bottom:2px solid #000;"><strong>سعر الطلب</strong></td>
+                                    <td style="padding:2px; border-bottom:2px solid #000; text-align:left;">@Model.Cost</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:2px; border-bottom:2px solid #000;"><strong>الشحن</strong></td>
+                                    <td style="padding:2px; border-bottom:2px solid #000; text-align:left;">@Model.DeliveryFees</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:2px;"><strong>الاجمالي</strong></td>
+                                    <td style="padding:2px; text-align:left;"><strong>@Model.TotalCost</strong></td>
+                                </tr>
+        @if (Model.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
+        {
+                                <tr>
+                                    <td style="padding:2px; border-top:2px solid #000;"><strong>إستلام</strong></td>
+                                    <td style="padding:2px; border-top:2px solid #000; text-align:left;">@Model.ArrivedCost</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:2px;"><strong>مرتجع</strong></td>
+                                    <td style="padding:2px; text-align:left;">@Model.ReturnedCost</td>
+                                </tr>
+        }
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="text-align:center; margin-top:${marginBottom}; font-size:${fontSize}; border-top:2px solid #000; padding-top:2px;">
+                        <div>خدمة العملاء 01044577578</div>
                     </div>
                 </div>
             `;

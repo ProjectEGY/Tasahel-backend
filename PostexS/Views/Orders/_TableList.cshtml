@@ -50,7 +50,7 @@
                 <span>@OrderOn.ToString("dd/MM/yyyy HH:mm")</span>
             }
 
-            @if ((User.IsInRole("Admin") || !(item.Status == OrderStatus.Completed || item.Finished == true || item.IsDeleted ||
+            @if ((User.IsInRole("Admin") || User.IsInRole("TrustAdmin") || !(item.Status == OrderStatus.Completed || item.Finished == true || item.IsDeleted ||
                     item.OrderCompleted == OrderCompleted.OK)) && item.Status != OrderStatus.PartialReturned && !User.IsInRole("Client") && !User.IsInRole("TrackingAdmin"))
             {
                 <a asp-action="EditStatus" class="btn btn-info mt-5" style="border-radius: 15px;" asp-controller="Orders" asp-route-id="@item.Id">تعديل الحاله</a>
@@ -349,9 +349,9 @@
             <a asp-action="Reviews" asp-controller="Orders" asp-route-id="@item.Id">ملاحظات</a>
             <span>|</span>
             <a asp-action="Details" asp-controller="Orders" asp-route-id="@item.Id">التفاصيل</a>
-            @if (!User.IsInRole("Client") && !User.IsInRole("TrustAdmin"))
+            @if (!User.IsInRole("Client"))
             {
-                @if (User.IsInRole("Admin") || !(item.Status == OrderStatus.Completed || item.Finished == true || item.IsDeleted ||
+                @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin") || !(item.Status == OrderStatus.Completed || item.Finished == true || item.IsDeleted ||
                         item.OrderCompleted == OrderCompleted.OK))
                 {
                     <span>|</span>
