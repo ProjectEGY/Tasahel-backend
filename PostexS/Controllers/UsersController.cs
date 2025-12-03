@@ -302,6 +302,10 @@ namespace PostexS.Controllers
             {
                 await _userManger.AddToRoleAsync(user, "Admin");
             }
+            else if (model.UserType == UserType.subAdmin)
+            {
+                await _userManger.AddToRoleAsync(user, "TrustAdmin");
+            }
             else if (model.UserType == UserType.TrackingAdmin)
             {
                 await _userManger.AddToRoleAsync(user, "TrackingAdmin");
