@@ -62,9 +62,10 @@ namespace PostexS.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IGeneric<Notification> _notification;
         private IGeneric<DeviceTokens> _pushNotification;
+        private readonly IWapilotService _wapilotService;
         public OrdersController(IGeneric<ApplicationUser> users, IGeneric<Order> orders, IGeneric<OrderOperationHistory> histories
             , ICRUD<Order> CRUD, ICRUD<OrderOperationHistory> CRUDhistory, IGeneric<OrderNotes> notes, IGeneric<Branch> branch,
-            IOrderService orderService, IGeneric<OrderTransferrHistory> TransferHistories, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IWebHostEnvironment webHostEnvironment, UserManager<ApplicationUser> userManger, IGeneric<OrderNotes> OrderNotes, IGeneric<Wallet> wallet)
+            IOrderService orderService, IGeneric<OrderTransferrHistory> TransferHistories, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IWebHostEnvironment webHostEnvironment, UserManager<ApplicationUser> userManger, IGeneric<OrderNotes> OrderNotes, IGeneric<Wallet> wallet, IWapilotService wapilotService)
         {
             _orderService = orderService;
             _users = users;
@@ -82,6 +83,7 @@ namespace PostexS.Controllers
 
             _notification = notification;
             _pushNotification = pushNotification;
+            _wapilotService = wapilotService;
         }
 
         [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin,TrackingAdmin")]
@@ -1493,6 +1495,9 @@ namespace PostexS.Controllers
                                         await _Histories.Update(history);
                                         //                                    await _CRUDHistory.Update(history.Id);
                                     }
+                                    
+                                    // Send WhatsApp message to sender's group when order is completed
+                                    await _wapilotService.EnqueueOrderStatusUpdateAsync(order, _userManger.GetUserId(User), "تم تقفيل الطلب");
                                 }
                                 orders.Add(order.Id);
                             }
@@ -3038,7 +3043,37 @@ namespace PostexS.Controllers
 
             await _orders.Update(order);
             await SendNotify(order, user, model.Note, order.Returned_Image);
+            
+            // Send WhatsApp message to sender's group
+            var statusNote = $"تم تحديث حالة الطلب إلى: {GetStatusInArabic(model.Status)}";
+            if (!string.IsNullOrWhiteSpace(model.Note))
+            {
+                statusNote += $"\nملاحظة: {model.Note}";
+            }
+            await _wapilotService.EnqueueOrderStatusUpdateAsync(order, _userManger.GetUserId(User), statusNote);
+            
             return RedirectToAction(nameof(PrintClientOrders), new { Id = order.DeliveryId, message = "تم تنفيذ العملية بنجاح" });
+        }
+        
+        private string GetStatusInArabic(OrderStatus status)
+        {
+            return status switch
+            {
+                OrderStatus.Placed => "جديد",
+                OrderStatus.Assigned => "جارى التوصيل",
+                OrderStatus.Delivered => "تم التوصيل",
+                OrderStatus.Waiting => "مؤجل",
+                OrderStatus.Rejected => "مرفوض",
+                OrderStatus.Finished => "منتهي",
+                OrderStatus.Completed => "تم تسويته",
+                OrderStatus.PartialDelivered => "تم التوصيل جزئي",
+                OrderStatus.Returned => "مرتجع كامل",
+                OrderStatus.PartialReturned => "مرتجع جزئي",
+                OrderStatus.Delivered_With_Edit_Price => "تم التوصيل مع تعديل السعر",
+                OrderStatus.Returned_And_Paid_DeliveryCost => "مرتجع ودفع شحن",
+                OrderStatus.Returned_And_DeliveryCost_On_Sender => "مرتجع وشحن على الراسل",
+                _ => status.ToString()
+            };
         }
         public async Task<IActionResult> FinishAllOrders(DriverSubmitOrdersDto model)
         {

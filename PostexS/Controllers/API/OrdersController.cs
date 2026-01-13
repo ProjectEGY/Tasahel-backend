@@ -40,9 +40,10 @@ namespace PostexS.Controllers.API
         private readonly BaseResponse baseResponse;
         private readonly ICRUD<Order> _CRUD;
         private readonly IGeneric<Location> _locations;
+        private readonly IWapilotService _wapilotService;
 
         public OrdersController(IGeneric<Notification> notification, IGeneric<DeviceTokens> pushNotification, IGeneric<Order> order, IGeneric<ApplicationUser> user,
-            IGeneric<OrderNotes> orderNotes, IGeneric<Location> locations, IWebHostEnvironment webHostEnvironment, ICRUD<Order> CRUD, IGeneric<OrderOperationHistory> histories)
+            IGeneric<OrderNotes> orderNotes, IGeneric<Location> locations, IWebHostEnvironment webHostEnvironment, ICRUD<Order> CRUD, IGeneric<OrderOperationHistory> histories, IWapilotService wapilotService)
         {
             _user = user;
             _order = order;
@@ -54,6 +55,7 @@ namespace PostexS.Controllers.API
             _CRUD = CRUD;
             _Histories = histories;
             _webHostEnvironment = webHostEnvironment;
+            _wapilotService = wapilotService;
         }
         [HttpPut("Finshed")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
@@ -260,6 +262,14 @@ namespace PostexS.Controllers.API
                 order.Returned_Image = Returned_Image == "" ? null : Returned_Image;
                 await SendNotify(order, user, model.Note, model.Image);
                 await _order.Update(order);
+                
+                // Send WhatsApp message to sender's group
+                var statusNote = $"تم تحديث حالة الطلب إلى: {GetStatusInArabic(model.Status)}";
+                if (!string.IsNullOrWhiteSpace(model.Note))
+                {
+                    statusNote += $"\nملاحظة: {model.Note}";
+                }
+                await _wapilotService.EnqueueOrderStatusUpdateAsync(order, userid, statusNote);
             }
             if (latitude.HasValue && longitude.HasValue)
             {
@@ -272,6 +282,28 @@ namespace PostexS.Controllers.API
             }
             return Ok(baseResponse);
         }
+        
+        private string GetStatusInArabic(OrderStatus status)
+        {
+            return status switch
+            {
+                OrderStatus.Placed => "جديد",
+                OrderStatus.Assigned => "جارى التوصيل",
+                OrderStatus.Delivered => "تم التوصيل",
+                OrderStatus.Waiting => "مؤجل",
+                OrderStatus.Rejected => "مرفوض",
+                OrderStatus.Finished => "منتهي",
+                OrderStatus.Completed => "تم تسويته",
+                OrderStatus.PartialDelivered => "تم التوصيل جزئي",
+                OrderStatus.Returned => "مرتجع كامل",
+                OrderStatus.PartialReturned => "مرتجع جزئي",
+                OrderStatus.Delivered_With_Edit_Price => "تم التوصيل مع تعديل السعر",
+                OrderStatus.Returned_And_Paid_DeliveryCost => "مرتجع ودفع شحن",
+                OrderStatus.Returned_And_DeliveryCost_On_Sender => "مرتجع وشحن على الراسل",
+                _ => status.ToString()
+            };
+        }
+        
         private async Task<bool> SendNotify(Order order, ApplicationUser Captian, string note, string image = null)
         {
             var Title = $"تحديث حاله الطلب :  {order.Code} ";

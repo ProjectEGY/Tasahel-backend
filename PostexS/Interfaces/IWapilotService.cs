@@ -47,6 +47,10 @@ namespace PostexS.Interfaces
 
         // Message Formatting
         string FormatOrderCompletionMessage(Order order);
+        string FormatOrderStatusUpdateMessage(Order order, string statusChangeNote = "");
+        
+        // Order Status Update Notifications
+        Task<bool> EnqueueOrderStatusUpdateAsync(Order order, string updatedBy, string statusChangeNote = "");
     }
 
     public class WapilotSendResult

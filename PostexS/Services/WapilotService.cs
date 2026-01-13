@@ -19,15 +19,21 @@ namespace PostexS.Services
         private readonly ApplicationDbContext _context;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<WapilotService> _logger;
+        private readonly IWhatsAppProviderService _providerService;
+        private readonly IWhatsAppBotCloudService _whatsAppBotCloudService;
 
         public WapilotService(
             ApplicationDbContext context,
             IHttpClientFactory httpClientFactory,
-            ILogger<WapilotService> logger)
+            ILogger<WapilotService> logger,
+            IWhatsAppProviderService providerService,
+            IWhatsAppBotCloudService whatsAppBotCloudService)
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
             _logger = logger;
+            _providerService = providerService;
+            _whatsAppBotCloudService = whatsAppBotCloudService;
         }
 
         #region Settings Management
@@ -132,6 +138,73 @@ namespace PostexS.Services
                 order.Id,
                 order.Code,
                 createdBy,
+                order.ClientId,
+                senderName
+            );
+        }
+
+        public async Task<bool> EnqueueOrderStatusUpdateAsync(Order order, string updatedBy, string statusChangeNote = "")
+        {
+            // Load order with related entities if not already loaded
+            if (order.Client == null || order.Branch == null || (order.Delivery == null && !string.IsNullOrEmpty(order.DeliveryId)))
+            {
+                order = await _context.Orders
+                    .Include(o => o.Client)
+                    .Include(o => o.Branch)
+                    .Include(o => o.Delivery)
+                        .ThenInclude(d => d != null ? d.Branch : null)
+                    .FirstOrDefaultAsync(o => o.Id == order.Id);
+
+                if (order == null)
+                    return false;
+            }
+
+            // Get active provider
+            var activeProvider = await _providerService.GetActiveProviderAsync();
+            
+            // Get client's WhatsApp group - must have a group to send
+            string chatId = null;
+            string senderName = order.Client?.Name ?? order.ClientName;
+
+            if (!string.IsNullOrEmpty(order.ClientId))
+            {
+                var client = await _context.Users
+                    .Where(u => u.Id == order.ClientId)
+                    .Select(u => new { u.Name, u.WhatsappGroupId })
+                    .FirstOrDefaultAsync();
+
+                if (client != null)
+                {
+                    senderName = client.Name ?? senderName;
+                    chatId = client.WhatsappGroupId;
+                }
+            }
+
+            // Skip if no chat ID is available (client must have a group)
+            if (string.IsNullOrEmpty(chatId))
+                return false;
+
+            var message = FormatOrderStatusUpdateMessage(order, statusChangeNote);
+
+            // Use WhatsApp Bot Cloud if it's the active provider
+            if (activeProvider == WhatsAppProvider.WhatsAppBotCloud)
+            {
+                var botCloudSettings = await _whatsAppBotCloudService.GetSettingsAsync();
+                if (botCloudSettings != null && botCloudSettings.IsActive)
+                {
+                    // Send directly via WhatsApp Bot Cloud (for group messages)
+                    var result = await _whatsAppBotCloudService.SendGroupMessageAsync(chatId, message);
+                    return result.Success;
+                }
+            }
+
+            // Default to Wapilot (enqueue for processing)
+            return await EnqueueMessageAsync(
+                message,
+                chatId,
+                order.Id,
+                order.Code,
+                updatedBy,
                 order.ClientId,
                 senderName
             );
@@ -833,6 +906,55 @@ namespace PostexS.Services
 المبلغ المستحق: {order.ArrivedCost:N2} جنيه
 نسبة التوصيل: {order.DeliveryCost:N2} جنيه
 صافي الراسل: {order.ClientCost:N2} جنيه";
+
+            return message;
+        }
+
+        public string FormatOrderStatusUpdateMessage(Order order, string statusChangeNote = "")
+        {
+            // Load related data if not already loaded
+            var senderName = order.Client?.Name ?? "غير محدد";
+            var senderPhone = order.Client?.PhoneNumber ?? "";
+            var branchName = order.Branch?.Name ?? "غير محدد";
+            var deliveryName = order.Delivery?.Name ?? "غير محدد";
+            var deliveryPhone = order.Delivery?.PhoneNumber ?? "";
+            var deliveryBranch = order.Delivery?.Branch?.Name ?? "";
+            var statusArabic = GetStatusInArabic(order.Status);
+            
+            var address = string.IsNullOrEmpty(order.AddressCity) 
+                ? order.Address 
+                : $"{order.AddressCity} - {order.Address}";
+            
+            var deliveryInfo = string.IsNullOrEmpty(deliveryPhone)
+                ? deliveryName
+                : $"{deliveryName} : {deliveryPhone}";
+            
+            if (!string.IsNullOrEmpty(deliveryBranch))
+            {
+                deliveryInfo = $"{deliveryInfo} - {deliveryBranch}";
+            }
+
+            var merchantInfo = senderName;
+            if (!string.IsNullOrEmpty(senderPhone))
+            {
+                merchantInfo = $"{merchantInfo} - {senderPhone}";
+            }
+
+            var message = $@"{statusChangeNote}
+
+رقم الشحنة : {order.Code}
+اسم العميل : {order.ClientName ?? "غير محدد"}
+رقم هاتف العميل : {order.ClientPhone ?? "غير محدد"}
+العنوان : {address ?? "غير محدد"}
+المندوب : {deliveryInfo}
+الفرع : {branchName}
+الاجمالي : {order.TotalCost:N0} جنية
+التاجر : {merchantInfo}";
+
+            if (!string.IsNullOrEmpty(order.Notes))
+            {
+                message += $"\nملاحظات : {order.Notes}";
+            }
 
             return message;
         }
