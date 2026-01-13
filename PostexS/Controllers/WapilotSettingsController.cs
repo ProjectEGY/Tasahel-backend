@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PostexS.Interfaces;
 using PostexS.Models.Domain;
+using PostexS.Models.Enums;
 using PostexS.Models.ViewModels;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace PostexS.Controllers
@@ -13,39 +15,78 @@ namespace PostexS.Controllers
     public class WapilotSettingsController : Controller
     {
         private readonly IWapilotService _wapilotService;
+        private readonly IWhatsAppBotCloudService _whatsAppBotCloudService;
+        private readonly IWhatsAppProviderService _providerService;
         private readonly UserManager<ApplicationUser> _userManager;
 
         public WapilotSettingsController(
             IWapilotService wapilotService,
+            IWhatsAppBotCloudService whatsAppBotCloudService,
+            IWhatsAppProviderService providerService,
             UserManager<ApplicationUser> userManager)
         {
             _wapilotService = wapilotService;
+            _whatsAppBotCloudService = whatsAppBotCloudService;
+            _providerService = providerService;
             _userManager = userManager;
         }
 
         // GET: Settings page
         public async Task<IActionResult> Index()
         {
-            var settings = await _wapilotService.GetSettingsAsync();
+            var wapilotSettings = await _wapilotService.GetSettingsAsync();
+            var whatsAppBotCloudSettings = await _whatsAppBotCloudService.GetSettingsAsync();
             var stats = await _wapilotService.GetQueueStatisticsAsync();
+            var providerSettings = await _providerService.GetProviderSettingsAsync();
 
-            ViewBag.Statistics = stats;
-            return View(settings);
+            var viewModel = new WhatsAppSettingsViewModel
+            {
+                WapilotSettings = wapilotSettings,
+                WhatsAppBotCloudSettings = whatsAppBotCloudSettings,
+                ProviderSettings = providerSettings,
+                Statistics = stats,
+                ActiveProvider = providerSettings.ActiveProvider
+            };
+
+            return View(viewModel);
         }
 
         // POST: Save settings
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Index(WapilotSettings model)
+        public async Task<IActionResult> Index(WhatsAppSettingsViewModel viewModel, string providerType)
         {
-            if (!ModelState.IsValid)
-            {
-                ViewBag.Statistics = await _wapilotService.GetQueueStatisticsAsync();
-                return View(model);
-            }
-
             var userId = _userManager.GetUserId(User);
-            var result = await _wapilotService.UpdateSettingsAsync(model, userId);
+            bool result = false;
+
+            if (providerType == "Wapilot")
+            {
+                if (!TryValidateModel(viewModel.WapilotSettings))
+                {
+                    var stats = await _wapilotService.GetQueueStatisticsAsync();
+                    var providerSettings = await _providerService.GetProviderSettingsAsync();
+                    viewModel.Statistics = stats;
+                    viewModel.ProviderSettings = providerSettings;
+                    viewModel.ActiveProvider = providerSettings.ActiveProvider;
+                    return View(viewModel);
+                }
+
+                result = await _wapilotService.UpdateSettingsAsync(viewModel.WapilotSettings, userId);
+            }
+            else if (providerType == "WhatsAppBotCloud")
+            {
+                if (!TryValidateModel(viewModel.WhatsAppBotCloudSettings))
+                {
+                    var stats = await _wapilotService.GetQueueStatisticsAsync();
+                    var providerSettings = await _providerService.GetProviderSettingsAsync();
+                    viewModel.Statistics = stats;
+                    viewModel.ProviderSettings = providerSettings;
+                    viewModel.ActiveProvider = providerSettings.ActiveProvider;
+                    return View(viewModel);
+                }
+
+                result = await _whatsAppBotCloudService.UpdateSettingsAsync(viewModel.WhatsAppBotCloudSettings, userId);
+            }
 
             if (result)
             {
@@ -266,6 +307,93 @@ namespace PostexS.Controllers
             };
 
             return View(viewModel);
+        }
+
+        // POST: Update Active Provider
+        [HttpPost]
+        public async Task<IActionResult> UpdateProvider(int provider)
+        {
+            var userId = _userManager.GetUserId(User);
+            var providerEnum = (PostexS.Models.Enums.WhatsAppProvider)provider;
+            var result = await _providerService.UpdateProviderAsync(providerEnum, userId);
+
+            return Json(new
+            {
+                success = result,
+                message = result ? "تم تحديث المزود النشط بنجاح" : "حدث خطأ أثناء تحديث المزود"
+            });
+        }
+
+        // POST: Get Groups for WhatsApp Bot Cloud
+        [HttpPost]
+        public async Task<IActionResult> GetGroupsForWhatsAppBotCloud()
+        {
+            var result = await _whatsAppBotCloudService.GetGroupsAsync();
+
+            return Json(new
+            {
+                success = result.Success,
+                groups = result.Groups.Select(g => new { id = g.GroupId, name = g.GroupName, description = g.Description }),
+                message = result.Success
+                    ? $"تم جلب {result.Groups.Count} جروب بنجاح"
+                    : $"فشل جلب الجروبات: {result.ErrorMessage}",
+                response = result.ResponseBody,
+                statusCode = result.StatusCode
+            });
+        }
+
+        // POST: Send test message via WhatsApp Bot Cloud
+        [HttpPost]
+        public async Task<IActionResult> SendTestMessageWhatsAppBotCloud(string phoneNumber, string message)
+        {
+            var settings = await _whatsAppBotCloudService.GetSettingsAsync();
+            if (!settings.IsActive)
+            {
+                return Json(new { success = false, message = "خدمة الارسال متوقفة. قم بتفعيلها أولاً من الاعدادات" });
+            }
+
+            if (string.IsNullOrEmpty(phoneNumber) || string.IsNullOrEmpty(message))
+            {
+                return Json(new { success = false, message = "برجاء ادخال رقم الهاتف والرسالة" });
+            }
+
+            var result = await _whatsAppBotCloudService.SendMessageAsync(phoneNumber, message);
+
+            return Json(new
+            {
+                success = result.Success,
+                message = result.Success ? "تم ارسال الرسالة بنجاح" : $"فشل ارسال الرسالة: {result.ErrorMessage}",
+                response = result.ResponseBody,
+                statusCode = result.StatusCode,
+                duration = result.DurationMs
+            });
+        }
+
+        // POST: Send test group message via WhatsApp Bot Cloud
+        [HttpPost]
+        public async Task<IActionResult> SendTestGroupMessageWhatsAppBotCloud(string groupId, string message)
+        {
+            var settings = await _whatsAppBotCloudService.GetSettingsAsync();
+            if (!settings.IsActive)
+            {
+                return Json(new { success = false, message = "خدمة الارسال متوقفة. قم بتفعيلها أولاً من الاعدادات" });
+            }
+
+            if (string.IsNullOrEmpty(groupId) || string.IsNullOrEmpty(message))
+            {
+                return Json(new { success = false, message = "برجاء إدخال معرف الجروب والرسالة" });
+            }
+
+            var result = await _whatsAppBotCloudService.SendGroupMessageAsync(groupId, message);
+
+            return Json(new
+            {
+                success = result.Success,
+                message = result.Success ? "تم ارسال الرسالة للجروب بنجاح" : $"فشل ارسال الرسالة: {result.ErrorMessage}",
+                response = result.ResponseBody,
+                statusCode = result.StatusCode,
+                duration = result.DurationMs
+            });
         }
     }
 }

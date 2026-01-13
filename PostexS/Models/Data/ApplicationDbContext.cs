@@ -27,6 +27,8 @@ namespace PostexS.Models.Data
         public DbSet<Branch> Branches { get; set; }
         public DbSet<Location> Locations { get; set; }
         public DbSet<WapilotSettings> WapilotSettings { get; set; }
+        public DbSet<WhatsAppBotCloudSettings> WhatsAppBotCloudSettings { get; set; }
+        public DbSet<WhatsAppProviderSettings> WhatsAppProviderSettings { get; set; }
         public DbSet<WhatsAppMessageQueue> WhatsAppMessageQueues { get; set; }
         public DbSet<WhatsAppMessageLog> WhatsAppMessageLogs { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)

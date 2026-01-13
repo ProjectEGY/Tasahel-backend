@@ -107,6 +107,8 @@ namespace PostexS
             // Wapilot WhatsApp Integration
             services.AddHttpClient();
             services.AddScoped<IWapilotService, WapilotService>();
+            services.AddScoped<IWhatsAppBotCloudService, WhatsAppBotCloudService>();
+            services.AddScoped<IWhatsAppProviderService, WhatsAppProviderService>();
             services.AddHostedService<WhatsAppQueueProcessor>();
 
             // Bind Firebase configuration from appsettings.json

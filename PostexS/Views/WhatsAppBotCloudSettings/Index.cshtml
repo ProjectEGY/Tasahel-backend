@@ -1,0 +1,323 @@
+@model PostexS.Models.Domain.WhatsAppBotCloudSettings
+@{
+    ViewData["Title"] = "اعدادات واتساب (WhatsApp Bot Cloud)";
+}
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-cloud"></i> @ViewData["Title"]</h3>
+    </div>
+    <div class="panel-body">
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible">
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                @TempData["Success"]
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible">
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                @TempData["Error"]
+            </div>
+        }
+
+        <!-- Settings Form -->
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title"><i class="fa fa-cogs"></i> اعدادات API</h4>
+            </div>
+            <div class="panel-body">
+                @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+
+                @using (Html.BeginForm("Index", "WhatsAppBotCloudSettings", FormMethod.Post, new { @class = "form-horizontal" }))
+                {
+                    @Html.AntiForgeryToken()
+                    @Html.HiddenFor(m => m.Id)
+                    @Html.HiddenFor(m => m.CreateOn)
+                    @Html.HiddenFor(m => m.IsDeleted)
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">Base URL</label>
+                                @Html.TextBoxFor(m => m.BaseUrl, new { @class = "form-control", placeholder = "https://whatsbotcloud.com/api/" })
+                                <small class="text-muted">رابط API الاساسي</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">Instance ID</label>
+                                @Html.TextBoxFor(m => m.InstanceId, new { @class = "form-control", placeholder = "instance3067" })
+                                <small class="text-muted">معرف الـ Instance الخاص بك</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">Access Token</label>
+                                @Html.TextBoxFor(m => m.AccessToken, new { @class = "form-control", placeholder = "ادخل الـ Access Token" })
+                                <small class="text-muted">رمز التوثيق الخاص بالـ API</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">الفاصل الزمني بين الرسائل (بالثواني)</label>
+                                @Html.TextBoxFor(m => m.MessageIntervalSeconds, new { @class = "form-control", type = "number", min = "5", max = "3600" })
+                                <small class="text-muted">الحد الادنى 5 ثواني - يفضل 30-60 ثانية لتجنب الحظر</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">حالة خدمة الارسال</label>
+                                @Html.HiddenFor(m => m.IsActive)
+                                <div style="margin-top: 5px;">
+                                    @if (Model.IsActive)
+                                    {
+                                        <button type="button" id="btnToggleService" class="btn btn-success btn-lg" data-active="true">
+                                            <i class="fa fa-power-off"></i> الخدمة مفعلة - اضغط للإيقاف
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" id="btnToggleService" class="btn btn-danger btn-lg" data-active="false">
+                                            <i class="fa fa-power-off"></i> الخدمة متوقفة - اضغط للتفعيل
+                                        </button>
+                                    }
+                                </div>
+                                <small class="text-muted">عند الإيقاف، لن يتم ارسال أي رسائل واتساب عند تقفيل الطلبات</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fa fa-save"></i> حفظ الاعدادات
+                        </button>
+                        <a href="@Url.Action("Index", "WapilotSettings")" class="btn btn-info btn-lg">
+                            <i class="fa fa-arrow-left"></i> العودة لإعدادات Wapilot
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Test Section -->
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title"><i class="fa fa-flask"></i> اختبار الارسال</h4>
+            </div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fa fa-paper-plane"></i> ارسال رسالة لرقم</h5>
+                        <div class="form-group">
+                            <label>رقم الهاتف (بدون +)</label>
+                            <input type="text" id="testPhoneNumber" class="form-control" placeholder="201012345678" />
+                            <small class="text-muted">سيتم ارسال الرسالة مباشرة للرقم</small>
+                        </div>
+                        <div class="form-group">
+                            <label>نص الرسالة</label>
+                            <textarea id="testMessage" class="form-control" rows="3" placeholder="رسالة تجريبية من تسهيل اكسبريس"></textarea>
+                        </div>
+                        <button type="button" id="btnSendTest" class="btn btn-primary">
+                            <i class="fa fa-paper-plane"></i> ارسال للرقم
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fa fa-users"></i> ارسال رسالة لجروب</h5>
+                        <div class="form-group">
+                            <label>Group ID (معرف الجروب)</label>
+                            <div class="input-group">
+                                <input type="text" id="testGroupId" class="form-control" placeholder="120363XXXXXXXXXX@@g.us" />
+                                <span class="input-group-btn">
+                                    <button type="button" id="btnLoadGroups" class="btn btn-info">
+                                        <i class="fa fa-refresh"></i> جلب الجروبات
+                                    </button>
+                                </span>
+                            </div>
+                            <div id="groupsDropdown" class="dropdown-menu" style="width: 100%; max-height: 300px; overflow-y: auto; display: none; position: absolute; z-index: 1000;"></div>
+                            <small class="text-muted">اضغط "جلب الجروبات" لعرض جميع الجروبات المتاحة، أو أدخل Group ID يدوياً</small>
+                        </div>
+                        <div class="form-group">
+                            <label>نص الرسالة</label>
+                            <textarea id="testGroupMessage" class="form-control" rows="3" placeholder="رسالة تجريبية للجروب"></textarea>
+                        </div>
+                        <button type="button" id="btnSendTestGroup" class="btn btn-success">
+                            <i class="fa fa-paper-plane"></i> ارسال للجروب
+                        </button>
+                    </div>
+                </div>
+                <div id="testResult" class="alert" style="display:none; margin-top: 15px;"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            // Toggle service on/off
+            $('#btnToggleService').click(function () {
+                var btn = $(this);
+                var isActive = btn.data('active');
+                var newState = !isActive;
+
+                // Update hidden field
+                $('#IsActive').val(newState.toString());
+
+                // Update button appearance
+                if (newState) {
+                    btn.removeClass('btn-danger').addClass('btn-success');
+                    btn.html('<i class="fa fa-power-off"></i> الخدمة مفعلة - اضغط للإيقاف');
+                } else {
+                    btn.removeClass('btn-success').addClass('btn-danger');
+                    btn.html('<i class="fa fa-power-off"></i> الخدمة متوقفة - اضغط للتفعيل');
+                }
+                btn.data('active', newState);
+            });
+
+            // Send test to phone
+            $('#btnSendTest').click(function () {
+                var phone = $('#testPhoneNumber').val();
+                var message = $('#testMessage').val();
+
+                if (!phone || !message) {
+                    showResult(false, 'برجاء ادخال رقم الهاتف والرسالة');
+                    return;
+                }
+
+                sendTest('@Url.Action("SendTestMessage")', { phoneNumber: phone, message: message }, $(this));
+            });
+
+            var allGroups = [];
+
+            // Load Groups
+            $('#btnLoadGroups').click(function () {
+                var btn = $(this);
+                var originalHtml = btn.html();
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الجلب...');
+
+                // WhatsApp Bot Cloud API doesn't need phone number - gets all groups
+                $.post('@Url.Action("GetGroups")', {}, function (response) {
+                    if (response.success && response.groups && response.groups.length > 0) {
+                        allGroups = response.groups;
+                        renderGroupsDropdown(allGroups);
+                        $('#groupsDropdown').show();
+                        showResult(true, response.message);
+                    } else {
+                        showResult(false, response.message || 'لم يتم العثور على جروبات');
+                        $('#groupsDropdown').hide();
+                    }
+                    btn.prop('disabled', false).html(originalHtml);
+                }).fail(function () {
+                    showResult(false, 'حدث خطأ أثناء جلب الجروبات');
+                    btn.prop('disabled', false).html(originalHtml);
+                });
+            });
+
+            // Search in groups
+            $('#testGroupId').on('input', function () {
+                var searchTerm = $(this).val().toLowerCase();
+                
+                // If it looks like a Group ID (contains @@g.us), allow manual entry
+                if (searchTerm.includes('@@g.us')) {
+                    $('#groupsDropdown').hide();
+                    return;
+                }
+
+                if (allGroups.length === 0) {
+                    return;
+                }
+
+                var filteredGroups = allGroups.filter(function (group) {
+                    return group.name && group.name.toLowerCase().includes(searchTerm);
+                });
+
+                if (filteredGroups.length > 0) {
+                    renderGroupsDropdown(filteredGroups);
+                    $('#groupsDropdown').show();
+                } else {
+                    $('#groupsDropdown').hide();
+                }
+            });
+
+            // Render groups dropdown
+            function renderGroupsDropdown(groups) {
+                var dropdown = $('#groupsDropdown');
+                dropdown.empty();
+
+                if (groups.length === 0) {
+                    dropdown.append('<div class="dropdown-item text-muted">لا توجد جروبات</div>');
+                    return;
+                }
+
+                groups.forEach(function (group) {
+                    var item = $('<a class="dropdown-item" href="#" style="cursor: pointer; padding: 10px;" data-group-id="' + group.id + '" data-group-name="' + (group.name || '') + '">' +
+                        '<strong>' + (group.name || 'بدون اسم') + '</strong><br>' +
+                        '<small class="text-muted">' + group.id + '</small>' +
+                        '</a>');
+                    
+                    item.click(function (e) {
+                        e.preventDefault();
+                        var groupId = $(this).data('group-id');
+                        var groupName = $(this).data('group-name');
+                        
+                        $('#testGroupId').val(groupId);
+                        $('#groupsDropdown').hide();
+                    });
+                    
+                    dropdown.append(item);
+                });
+            }
+
+            // Hide dropdown when clicking outside
+            $(document).click(function (e) {
+                if (!$(e.target).closest('#testGroupId, #groupsDropdown, #btnLoadGroups').length) {
+                    $('#groupsDropdown').hide();
+                }
+            });
+
+            // Send to group
+            $('#btnSendTestGroup').click(function () {
+                var groupId = $('#testGroupId').val().trim();
+                var message = $('#testGroupMessage').val();
+
+                if (!groupId || !message) {
+                    showResult(false, 'برجاء إدخال معرف الجروب والرسالة');
+                    return;
+                }
+
+                sendTest('@Url.Action("SendTestGroupMessage")', { groupId: groupId, message: message }, $(this));
+            });
+
+            function sendTest(url, data, btn) {
+                var originalHtml = btn.html();
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الارسال...');
+
+                $.post(url, data, function (response) {
+                    showResult(response.success, response.message + (response.duration ? ' (' + response.duration + 'ms)' : ''));
+                    btn.prop('disabled', false).html(originalHtml);
+                }).fail(function () {
+                    showResult(false, 'حدث خطأ اثناء الارسال');
+                    btn.prop('disabled', false).html(originalHtml);
+                });
+            }
+
+            function showResult(success, message) {
+                var resultDiv = $('#testResult');
+                resultDiv.removeClass('alert-success alert-danger');
+                resultDiv.addClass(success ? 'alert-success' : 'alert-danger');
+                resultDiv.html('<i class="fa fa-' + (success ? 'check' : 'times') + '"></i> ' + message).show();
+            }
+        });
+    </script>
+}

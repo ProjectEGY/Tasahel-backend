@@ -56,11 +56,12 @@ namespace PostexS.Controllers
         private readonly IGeneric<Notification> _notification;
         private IGeneric<DeviceTokens> _pushNotification;
         private readonly IWapilotService _wapilotService;
+        private readonly IWhatsAppBotCloudService _whatsAppBotCloudService;
 
         public UsersController(UserManager<ApplicationUser> userManger, IGeneric<ApplicationUser> users, IGeneric<OrderOperationHistory> histories,
             ICRUD<OrderOperationHistory> CRUDhistory, IGeneric<Order> orders, IGeneric<Branch> branch, RoleManager<IdentityRole> roleManager,
             IGeneric<Wallet> wallet, ICRUD<Order> CRUD, IWalletService walletService,
-            IOrderService orderService, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IGeneric<Location> locations, IGeneric<OrderNotes> orderNotes, IWebHostEnvironment webHostEnvironment, IWapilotService wapilotService)
+            IOrderService orderService, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IGeneric<Location> locations, IGeneric<OrderNotes> orderNotes, IWebHostEnvironment webHostEnvironment, IWapilotService wapilotService, IWhatsAppBotCloudService whatsAppBotCloudService)
         {
             _userManger = userManger;
             _user = users;
@@ -79,6 +80,7 @@ namespace PostexS.Controllers
             _notification = notification;
             _pushNotification = pushNotification;
             _wapilotService = wapilotService;
+            _whatsAppBotCloudService = whatsAppBotCloudService;
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin,TrackingAdmin")]
         public async Task<IActionResult> Index(string q, string? message, bool deleted = false, long BranchId = -1)
@@ -1385,6 +1387,26 @@ namespace PostexS.Controllers
             }
             return RedirectToAction(nameof(Index));
         }
+
+        // POST: Get Groups (no phone number needed - gets all groups)
+        [HttpPost]
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
+        public async Task<IActionResult> GetGroupsForPhone(string phoneNumber = null)
+        {
+            // Note: phoneNumber parameter kept for backward compatibility but not used
+            // WhatsApp Bot Cloud API gets all groups without needing phone number
+            var result = await _whatsAppBotCloudService.GetGroupsAsync();
+
+            return Json(new
+            {
+                success = result.Success,
+                groups = result.Groups.Select(g => new { id = g.GroupId, name = g.GroupName, description = g.Description }),
+                message = result.Success
+                    ? $"تم جلب {result.Groups.Count} جروب بنجاح"
+                    : $"فشل جلب الجروبات: {result.ErrorMessage}"
+            });
+        }
+
         [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
         public IActionResult AssignOrders(string id)
         {

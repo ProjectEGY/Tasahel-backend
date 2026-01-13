@@ -157,14 +157,16 @@
                     <label for="WhatsappGroupId" class="col-sm-5 control-label">جروب واتساب : </label>
                     <div class="col-sm-7">
                         <div class="input-group">
-                            <input asp-for="WhatsappGroupId" type="text" id="WhatsappGroupId" class="form-control" placeholder="120363XXXXXXXXXX@g.us" />
+                            <input asp-for="WhatsappGroupId" type="text" id="WhatsappGroupId" class="form-control" placeholder="120363XXXXXXXXXX@g.us" style="display: none;" />
+                            <input type="text" id="groupSearch" class="form-control" placeholder="ابحث عن الجروب أو أدخل Group ID يدوياً..." autocomplete="off" />
                             <span class="input-group-btn">
-                                <button type="button" class="btn btn-info" data-toggle="modal" data-target="#inviteLinkModal">
-                                    <i class="fa fa-link"></i>
+                                <button type="button" class="btn btn-info" id="btnLoadGroups">
+                                    <i class="fa fa-refresh"></i> جلب الجروبات
                                 </button>
                             </span>
                         </div>
-                        <small class="text-muted">معرف الجروب (ينتهي بـ @@g.us) - أو اضغط الزرار لإدخال لينك الدعوة</small>
+                        <div id="groupsDropdown" class="dropdown-menu" style="width: 100%; max-height: 300px; overflow-y: auto; display: none;"></div>
+                        <small class="text-muted">اضغط "جلب الجروبات" لعرض جميع الجروبات المتاحة، أو أدخل Group ID يدوياً</small>
                     </div>
                 </div>
             </div>
@@ -346,28 +348,99 @@
             }
         });
 
-        // Get Group ID from Invite Link
-        $('#btnGetGroupId').click(function () {
-            var inviteLink = $('#inviteLinkInput').val().trim();
-            if (!inviteLink) {
-                showInviteResult(false, 'برجاء إدخال لينك الدعوة');
-                return;
-            }
+        var allGroups = [];
+        var selectedGroupId = '@Model.WhatsappGroupId';
 
+        // Load Groups
+        $('#btnLoadGroups').click(function () {
             var btn = $(this);
             var originalHtml = btn.html();
             btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الجلب...');
 
-            // API removed - GetGroupIdFromInviteLink is no longer available
-            showInviteResult(false, 'هذه الميزة غير متاحة حالياً. يرجى إدخال Group ID يدوياً');
-            btn.prop('disabled', false).html(originalHtml);
+            // WhatsApp Bot Cloud API doesn't need phone number - gets all groups
+            $.post('@Url.Action("GetGroupsForPhone", "Users")', {}, function (response) {
+                if (response.success && response.groups && response.groups.length > 0) {
+                    allGroups = response.groups;
+                    renderGroupsDropdown(allGroups);
+                    $('#groupsDropdown').show();
+                } else {
+                    alert(response.message || 'لم يتم العثور على جروبات');
+                    $('#groupsDropdown').hide();
+                }
+                btn.prop('disabled', false).html(originalHtml);
+            }).fail(function () {
+                alert('حدث خطأ أثناء جلب الجروبات');
+                btn.prop('disabled', false).html(originalHtml);
+            });
         });
 
-        function showInviteResult(success, message) {
-            var resultDiv = $('#inviteLinkResult');
-            resultDiv.removeClass('alert-success alert-danger');
-            resultDiv.addClass(success ? 'alert-success' : 'alert-danger');
-            resultDiv.html('<i class="fa fa-' + (success ? 'check' : 'times') + '"></i> ' + message).show();
+        // Search in groups
+        $('#groupSearch').on('input', function () {
+            var searchTerm = $(this).val().toLowerCase();
+            
+            if (searchTerm.includes('@@g.us')) {
+                $('#WhatsappGroupId').val(searchTerm);
+                $('#groupsDropdown').hide();
+                return;
+            }
+
+            if (allGroups.length === 0) {
+                return;
+            }
+
+            var filteredGroups = allGroups.filter(function (group) {
+                return group.name && group.name.toLowerCase().includes(searchTerm);
+            });
+
+            if (filteredGroups.length > 0) {
+                renderGroupsDropdown(filteredGroups);
+                $('#groupsDropdown').show();
+            } else {
+                $('#groupsDropdown').hide();
+            }
+        });
+
+        // Render groups dropdown
+        function renderGroupsDropdown(groups) {
+            var dropdown = $('#groupsDropdown');
+            dropdown.empty();
+
+            if (groups.length === 0) {
+                dropdown.append('<div class="dropdown-item text-muted">لا توجد جروبات</div>');
+                return;
+            }
+
+            groups.forEach(function (group) {
+                var item = $('<a class="dropdown-item" href="#" data-group-id="' + group.id + '" data-group-name="' + (group.name || '') + '">' +
+                    '<strong>' + (group.name || 'بدون اسم') + '</strong><br>' +
+                    '<small class="text-muted">' + group.id + '</small>' +
+                    '</a>');
+                
+                item.click(function (e) {
+                    e.preventDefault();
+                    var groupId = $(this).data('group-id');
+                    var groupName = $(this).data('group-name');
+                    
+                    $('#WhatsappGroupId').val(groupId);
+                    $('#groupSearch').val(groupName + ' (' + groupId + ')');
+                    $('#groupsDropdown').hide();
+                    selectedGroupId = groupId;
+                });
+                
+                dropdown.append(item);
+            });
+        }
+
+        // Hide dropdown when clicking outside
+        $(document).click(function (e) {
+            if (!$(e.target).closest('#groupSearch, #groupsDropdown, #btnLoadGroups').length) {
+                $('#groupsDropdown').hide();
+            }
+        });
+
+        // Initialize with existing value
+        if (selectedGroupId) {
+            $('#groupSearch').val(selectedGroupId);
         }
     </script>
 }
