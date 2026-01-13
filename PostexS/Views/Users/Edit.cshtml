@@ -152,6 +152,22 @@
                     </div>
                 </div>
             </div>
+            <div class="col-lg-6 mb-10">
+                <div class="form-group">
+                    <label for="WhatsappGroupId" class="col-sm-5 control-label">جروب واتساب : </label>
+                    <div class="col-sm-7">
+                        <div class="input-group">
+                            <input asp-for="WhatsappGroupId" type="text" id="WhatsappGroupId" class="form-control" placeholder="120363XXXXXXXXXX@g.us" />
+                            <span class="input-group-btn">
+                                <button type="button" class="btn btn-info" data-toggle="modal" data-target="#inviteLinkModal">
+                                    <i class="fa fa-link"></i>
+                                </button>
+                            </span>
+                        </div>
+                        <small class="text-muted">معرف الجروب (ينتهي بـ @@g.us) - أو اضغط الزرار لإدخال لينك الدعوة</small>
+                    </div>
+                </div>
+            </div>
         }
         @if (Model.UserType == PostexS.Models.Enums.UserType.Driver)
         {
@@ -279,6 +295,32 @@
         return attribute != null ? attribute.Name : value.ToString();
     }
 }
+<!-- Modal for Invite Link -->
+<div class="modal fade" id="inviteLinkModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title"><i class="fa fa-link"></i> جلب معرف الجروب من لينك الدعوة</h4>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>لينك دعوة الجروب:</label>
+                    <input type="text" id="inviteLinkInput" class="form-control" placeholder="https://chat.whatsapp.com/ABC123..." />
+                    <small class="text-muted">الصق لينك الدعوة هنا (مثال: https://chat.whatsapp.com/J00XcsDj99ABU9ioGWAN4N)</small>
+                </div>
+                <div id="inviteLinkResult" class="alert" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">إلغاء</button>
+                <button type="button" id="btnGetGroupId" class="btn btn-primary">
+                    <i class="fa fa-search"></i> جلب معرف الجروب
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
@@ -303,5 +345,29 @@
                 selectNo();
             }
         });
+
+        // Get Group ID from Invite Link
+        $('#btnGetGroupId').click(function () {
+            var inviteLink = $('#inviteLinkInput').val().trim();
+            if (!inviteLink) {
+                showInviteResult(false, 'برجاء إدخال لينك الدعوة');
+                return;
+            }
+
+            var btn = $(this);
+            var originalHtml = btn.html();
+            btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الجلب...');
+
+            // API removed - GetGroupIdFromInviteLink is no longer available
+            showInviteResult(false, 'هذه الميزة غير متاحة حالياً. يرجى إدخال Group ID يدوياً');
+            btn.prop('disabled', false).html(originalHtml);
+        });
+
+        function showInviteResult(success, message) {
+            var resultDiv = $('#inviteLinkResult');
+            resultDiv.removeClass('alert-success alert-danger');
+            resultDiv.addClass(success ? 'alert-success' : 'alert-danger');
+            resultDiv.html('<i class="fa fa-' + (success ? 'check' : 'times') + '"></i> ' + message).show();
+        }
     </script>
 }

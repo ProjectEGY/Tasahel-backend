@@ -26,6 +26,7 @@ namespace PostexS.Models.Domain
         public double Wallet { get; set; }
         public double? DeliveryCost { get; set; }
         public string WhatsappPhone { get; set; }
+        public string? WhatsappGroupId { get; set; }
         public string? IdentityFrontPhoto { get; set; }
         public string? IdentityBackPhoto { get; set; }
         public string? RidingLecencePhoto { get; set; }

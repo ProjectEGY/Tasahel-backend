@@ -1,0 +1,174 @@
+@model PostexS.Models.ViewModels.WhatsAppLogsViewModel
+@{
+    ViewData["Title"] = "سجلات API";
+}
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-history"></i> @ViewData["Title"]</h3>
+    </div>
+    <div class="panel-body">
+
+        <!-- Navigation -->
+        <div class="btn-group" style="margin-bottom: 15px;">
+            <a href="@Url.Action("Index")" class="btn btn-info">
+                <i class="fa fa-cog"></i> الاعدادات
+            </a>
+            <a href="@Url.Action("Queue")" class="btn btn-default">
+                <i class="fa fa-list"></i> قائمة الانتظار
+            </a>
+        </div>
+
+        <!-- Filter -->
+        <div class="row" style="margin-bottom: 15px;">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-addon">عرض اخر</span>
+                    <select id="daysFilter" class="form-control">
+                        @if (Model.Days == 7)
+                        {
+                            <option value="7" selected>7 ايام</option>
+                        }
+                        else
+                        {
+                            <option value="7">7 ايام</option>
+                        }
+                        @if (Model.Days == 14)
+                        {
+                            <option value="14" selected>14 يوم</option>
+                        }
+                        else
+                        {
+                            <option value="14">14 يوم</option>
+                        }
+                        @if (Model.Days == 30)
+                        {
+                            <option value="30" selected>30 يوم</option>
+                        }
+                        else
+                        {
+                            <option value="30">30 يوم</option>
+                        }
+                    </select>
+                    <span class="input-group-btn">
+                        <button id="btnFilter" class="btn btn-primary">
+                            <i class="fa fa-filter"></i> تصفية
+                        </button>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Table -->
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered table-hover">
+                <thead>
+                    <tr class="bg-primary">
+                        <th style="width: 60px;">#</th>
+                        <th>كود الطلب</th>
+                        <th>الحالة</th>
+                        <th>كود الاستجابة</th>
+                        <th>المدة (ms)</th>
+                        <th>التاريخ</th>
+                        <th style="max-width: 250px;">الخطأ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Logs != null && Model.Logs.Any())
+                    {
+                        foreach (var log in Model.Logs)
+                        {
+                            <tr class="@(log.IsSuccess ? "" : "danger")">
+                                <td>@log.Id</td>
+                                <td>@(log.OrderCode ?? "-")</td>
+                                <td>
+                                    @if (log.IsSuccess)
+                                    {
+                                        <span class="label label-success"><i class="fa fa-check"></i> نجاح</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="label label-danger"><i class="fa fa-times"></i> فشل</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (log.ResponseStatusCode.HasValue)
+                                    {
+                                        <span class="label @(log.ResponseStatusCode >= 200 && log.ResponseStatusCode < 300 ? "label-success" : "label-danger")">
+                                            @log.ResponseStatusCode
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>@log.RequestDurationMs.ToString("N0")</td>
+                                <td>@log.RequestedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="@log.ErrorMessage">
+                                    @(string.IsNullOrEmpty(log.ErrorMessage) ? "-" : (log.ErrorMessage.Length > 40 ? log.ErrorMessage.Substring(0, 40) + "..." : log.ErrorMessage))
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">لا توجد سجلات</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="text-center">
+                <ul class="pagination">
+                    @if (Model.CurrentPage > 1)
+                    {
+                        <li>
+                            <a href="@Url.Action("Logs", new { page = Model.CurrentPage - 1, days = Model.Days })">
+                                <i class="fa fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    }
+
+                    @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); i++)
+                    {
+                        <li class="@(i == Model.CurrentPage ? "active" : "")">
+                            <a href="@Url.Action("Logs", new { page = i, days = Model.Days })">@i</a>
+                        </li>
+                    }
+
+                    @if (Model.CurrentPage < Model.TotalPages)
+                    {
+                        <li>
+                            <a href="@Url.Action("Logs", new { page = Model.CurrentPage + 1, days = Model.Days })">
+                                <i class="fa fa-chevron-left"></i>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('#btnFilter').click(function () {
+                var days = $('#daysFilter').val();
+                window.location.href = '@Url.Action("Logs")?days=' + days;
+            });
+
+            $('#daysFilter').change(function () {
+                var days = $(this).val();
+                window.location.href = '@Url.Action("Logs")?days=' + days;
+            });
+        });
+    </script>
+}

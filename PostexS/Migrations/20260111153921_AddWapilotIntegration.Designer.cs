@@ -3,15 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PostexS.Models.Data;
 
-namespace PostexS.Migrations
+namespace TasahelExpress.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260111153921_AddWapilotIntegration")]
+    partial class AddWapilotIntegration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -942,6 +944,10 @@ namespace PostexS.Migrations
                     b.Property<DateTime?>("DeletedOn")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("GroupChatId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("InstanceId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1181,9 +1187,6 @@ namespace PostexS.Migrations
 
                     b.Property<double>("Wallet")
                         .HasColumnType("float");
-
-                    b.Property<string>("WhatsappGroupId")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("WhatsappPhone")
                         .HasColumnType("nvarchar(max)");

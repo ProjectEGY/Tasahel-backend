@@ -1,0 +1,192 @@
+@model PostexS.Models.ViewModels.WhatsAppQueueViewModel
+@using PostexS.Models.Enums
+@{
+    ViewData["Title"] = "قائمة انتظار الرسائل";
+}
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-list"></i> @ViewData["Title"]</h3>
+    </div>
+    <div class="panel-body">
+
+        <!-- Statistics Cards -->
+        <div class="row" style="margin-bottom: 20px;">
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-info">
+                    <div class="panel-heading text-center">
+                        <i class="fa fa-clock-o fa-2x"></i>
+                        <h4>@(Model.Statistics?.PendingCount ?? 0)</h4>
+                        <small>في الانتظار</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-primary">
+                    <div class="panel-heading text-center">
+                        <i class="fa fa-spinner fa-2x"></i>
+                        <h4>@(Model.Statistics?.ProcessingCount ?? 0)</h4>
+                        <small>جاري المعالجة</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-success">
+                    <div class="panel-heading text-center">
+                        <i class="fa fa-check fa-2x"></i>
+                        <h4>@(Model.Statistics?.SentTodayCount ?? 0)</h4>
+                        <small>تم الارسال اليوم</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-danger">
+                    <div class="panel-heading text-center">
+                        <i class="fa fa-times fa-2x"></i>
+                        <h4>@(Model.Statistics?.FailedTodayCount ?? 0)</h4>
+                        <small>فشل اليوم</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="btn-group" style="margin-bottom: 15px;">
+            <a href="@Url.Action("Queue", new { status = "pending" })" class="btn @(Model.Status == "pending" ? "btn-primary" : "btn-default")">
+                <i class="fa fa-clock-o"></i> في الانتظار (@(Model.Statistics?.PendingCount ?? 0))
+            </a>
+            <a href="@Url.Action("Queue", new { status = "sent" })" class="btn @(Model.Status == "sent" ? "btn-success" : "btn-default")">
+                <i class="fa fa-check"></i> تم الارسال
+            </a>
+            <a href="@Url.Action("Queue", new { status = "failed" })" class="btn @(Model.Status == "failed" ? "btn-danger" : "btn-default")">
+                <i class="fa fa-times"></i> فشل
+            </a>
+            <a href="@Url.Action("Index")" class="btn btn-info">
+                <i class="fa fa-cog"></i> الاعدادات
+            </a>
+            <a href="@Url.Action("Logs")" class="btn btn-warning">
+                <i class="fa fa-history"></i> السجلات
+            </a>
+        </div>
+
+        <!-- Queue Table -->
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered table-hover">
+                <thead>
+                    <tr class="bg-primary">
+                        <th style="width: 60px;">#</th>
+                        <th>كود الطلب</th>
+                        <th>الراسل</th>
+                        <th style="max-width: 300px;">الرسالة</th>
+                        <th>الحالة</th>
+                        <th>تاريخ الانشاء</th>
+                        <th>تاريخ المعالجة</th>
+                        <th>المحاولات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.QueueItems != null && Model.QueueItems.Any())
+                    {
+                        foreach (var item in Model.QueueItems)
+                        {
+                            <tr class="@(item.Status == MessageQueueStatus.Failed ? "danger" : (item.Status == MessageQueueStatus.Processing ? "warning" : ""))">
+                                <td>@item.Id</td>
+                                <td>
+                                    @if (item.OrderId.HasValue)
+                                    {
+                                        <a href="@Url.Action("Details", "Orders", new { id = item.OrderId })">@item.OrderCode</a>
+                                    }
+                                    else
+                                    {
+                                        @item.OrderCode
+                                    }
+                                </td>
+                                <td>@(item.SenderName ?? "-")</td>
+                                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="@item.MessageContent">
+                                    @(item.MessageContent.Length > 50 ? item.MessageContent.Substring(0, 50) + "..." : item.MessageContent)
+                                </td>
+                                <td>
+                                    @switch (item.Status)
+                                    {
+                                        case MessageQueueStatus.Pending:
+                                            <span class="label label-default"><i class="fa fa-clock-o"></i> في الانتظار</span>
+                                            break;
+                                        case MessageQueueStatus.Processing:
+                                            <span class="label label-warning"><i class="fa fa-spinner fa-spin"></i> جاري المعالجة</span>
+                                            break;
+                                        case MessageQueueStatus.Sent:
+                                            <span class="label label-success"><i class="fa fa-check"></i> تم الارسال</span>
+                                            break;
+                                        case MessageQueueStatus.Failed:
+                                            <span class="label label-danger"><i class="fa fa-times"></i> فشل</span>
+                                            break;
+                                        case MessageQueueStatus.Cancelled:
+                                            <span class="label label-info"><i class="fa fa-ban"></i> ملغي</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>@item.CreateOn.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>@(item.ProcessedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                                <td>
+                                    @item.RetryCount / @item.MaxRetries
+                                    @if (!string.IsNullOrEmpty(item.ErrorMessage))
+                                    {
+                                        <i class="fa fa-info-circle text-danger" title="@item.ErrorMessage" data-toggle="tooltip"></i>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">لا توجد رسائل</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="text-center">
+                <ul class="pagination">
+                    @if (Model.CurrentPage > 1)
+                    {
+                        <li>
+                            <a href="@Url.Action("Queue", new { page = Model.CurrentPage - 1, status = Model.Status })">
+                                <i class="fa fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    }
+
+                    @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); i++)
+                    {
+                        <li class="@(i == Model.CurrentPage ? "active" : "")">
+                            <a href="@Url.Action("Queue", new { page = i, status = Model.Status })">@i</a>
+                        </li>
+                    }
+
+                    @if (Model.CurrentPage < Model.TotalPages)
+                    {
+                        <li>
+                            <a href="@Url.Action("Queue", new { page = Model.CurrentPage + 1, status = Model.Status })">
+                                <i class="fa fa-chevron-left"></i>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+    </script>
+}

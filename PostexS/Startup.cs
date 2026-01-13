@@ -104,6 +104,11 @@ namespace PostexS
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IWalletService, WalletService>();
 
+            // Wapilot WhatsApp Integration
+            services.AddHttpClient();
+            services.AddScoped<IWapilotService, WapilotService>();
+            services.AddHostedService<WhatsAppQueueProcessor>();
+
             // Bind Firebase configuration from appsettings.json
             var firebaseConfig = Configuration.GetSection("FireBase").Get<FirebaseConfig>();
 

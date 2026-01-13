@@ -1,0 +1,358 @@
+@model PostexS.Models.Domain.WapilotSettings
+@using PostexS.Models.ViewModels
+@{
+    ViewData["Title"] = "اعدادات واتساب (Wapilot)";
+    var stats = ViewBag.Statistics as QueueStatistics;
+}
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-cog"></i> @ViewData["Title"]</h3>
+    </div>
+    <div class="panel-body">
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible">
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                @TempData["Success"]
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible">
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                @TempData["Error"]
+            </div>
+        }
+
+        <!-- Statistics Cards -->
+        <div class="row" style="margin-bottom: 20px;">
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-info">
+                    <div class="panel-heading text-center">
+                        <i class="fa fa-clock-o fa-2x"></i>
+                        <h4>@(stats?.PendingCount ?? 0)</h4>
+                        <small>في الانتظار</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-success">
+                    <div class="panel-heading text-center">
+                        <i class="fa fa-check fa-2x"></i>
+                        <h4>@(stats?.SentTodayCount ?? 0)</h4>
+                        <small>تم الارسال اليوم</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-danger">
+                    <div class="panel-heading text-center">
+                        <i class="fa fa-times fa-2x"></i>
+                        <h4>@(stats?.FailedTodayCount ?? 0)</h4>
+                        <small>فشل اليوم</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="panel panel-warning">
+                    <div class="panel-heading text-center">
+                        <i class="fa fa-paper-plane fa-2x"></i>
+                        <h4>@(stats?.TotalSentCount ?? 0)</h4>
+                        <small>اجمالي المرسل</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Form -->
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title"><i class="fa fa-cogs"></i> اعدادات API</h4>
+            </div>
+            <div class="panel-body">
+                @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+
+                @using (Html.BeginForm("Index", "WapilotSettings", FormMethod.Post, new { @class = "form-horizontal" }))
+                {
+                    @Html.AntiForgeryToken()
+                    @Html.HiddenFor(m => m.Id)
+                    @Html.HiddenFor(m => m.CreateOn)
+                    @Html.HiddenFor(m => m.IsDeleted)
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">Base URL</label>
+                                @Html.TextBoxFor(m => m.BaseUrl, new { @class = "form-control", placeholder = "https://message-pro.com/api/v1/" })
+                                <small class="text-muted">رابط API الاساسي</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">Instance ID</label>
+                                @Html.TextBoxFor(m => m.InstanceId, new { @class = "form-control", placeholder = "instance3067" })
+                                <small class="text-muted">معرف الـ Instance الخاص بك</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">API Token</label>
+                                @Html.TextBoxFor(m => m.ApiToken, new { @class = "form-control", placeholder = "ادخل الـ Token" })
+                                <small class="text-muted">رمز التوثيق الخاص بالـ API</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">الفاصل الزمني بين الرسائل (بالثواني)</label>
+                                @Html.TextBoxFor(m => m.MessageIntervalSeconds, new { @class = "form-control", type = "number", min = "5", max = "3600" })
+                                <small class="text-muted">الحد الادنى 5 ثواني - يفضل 30-60 ثانية لتجنب الحظر</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">حالة خدمة الارسال</label>
+                                @Html.HiddenFor(m => m.IsActive)
+                                <div style="margin-top: 5px;">
+                                    @if (Model.IsActive)
+                                    {
+                                        <button type="button" id="btnToggleService" class="btn btn-success btn-lg" data-active="true">
+                                            <i class="fa fa-power-off"></i> الخدمة مفعلة - اضغط للإيقاف
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" id="btnToggleService" class="btn btn-danger btn-lg" data-active="false">
+                                            <i class="fa fa-power-off"></i> الخدمة متوقفة - اضغط للتفعيل
+                                        </button>
+                                    }
+                                </div>
+                                <small class="text-muted">عند الإيقاف، لن يتم ارسال أي رسائل واتساب عند تقفيل الطلبات</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fa fa-save"></i> حفظ الاعدادات
+                        </button>
+                        <a href="@Url.Action("Queue")" class="btn btn-info btn-lg">
+                            <i class="fa fa-list"></i> قائمة الانتظار
+                        </a>
+                        <a href="@Url.Action("Logs")" class="btn btn-warning btn-lg">
+                            <i class="fa fa-history"></i> السجلات
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Test Section -->
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title"><i class="fa fa-flask"></i> اختبار الارسال</h4>
+            </div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fa fa-paper-plane"></i> ارسال رسالة لرقم</h5>
+                        <div class="form-group">
+                            <label>رقم الهاتف (بدون +)</label>
+                            <input type="text" id="testPhoneNumber" class="form-control" placeholder="201012345678" />
+                            <small class="text-muted">سيتم ارسال الرسالة مباشرة للرقم</small>
+                        </div>
+                        <div class="form-group">
+                            <label>نص الرسالة</label>
+                            <textarea id="testMessage" class="form-control" rows="3" placeholder="رسالة تجريبية من تسهيل اكسبريس"></textarea>
+                        </div>
+                        <button type="button" id="btnSendTest" class="btn btn-primary">
+                            <i class="fa fa-paper-plane"></i> ارسال للرقم
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fa fa-users"></i> ارسال رسالة لجروب</h5>
+                        <div class="form-group">
+                            <label>Group ID (معرف الجروب)</label>
+                            <input type="text" id="testGroupId" class="form-control" placeholder="120363XXXXXXXXXX@@g.us" />
+                            <small class="text-muted">معرف الجروب ينتهي بـ @@g.us (مثال: 120363123456789@@g.us)</small>
+                        </div>
+                        <div class="form-group">
+                            <label>أو استخراج Chat ID من رقم الهاتف</label>
+                            <div class="input-group">
+                                <input type="text" id="testPhoneForChatId" class="form-control" placeholder="201012345678" />
+                                <span class="input-group-btn">
+                                    <button type="button" id="btnGetChatIdByPhone" class="btn btn-info">
+                                        <i class="fa fa-phone"></i> استخراج
+                                    </button>
+                                </span>
+                            </div>
+                            <small class="text-muted">يجلب Chat ID (جروب أو محادثة فردية) من رقم الهاتف</small>
+                        </div>
+                        <div class="form-group">
+                            <label>أو استخراج Chat ID من LID</label>
+                            <div class="input-group">
+                                <input type="text" id="testLidForChatId" class="form-control" placeholder="LID" />
+                                <span class="input-group-btn">
+                                    <button type="button" id="btnGetChatIdByLid" class="btn btn-info">
+                                        <i class="fa fa-id-card"></i> استخراج
+                                    </button>
+                                </span>
+                            </div>
+                            <small class="text-muted">يجلب Chat ID من Linked ID (LID)</small>
+                        </div>
+                        <div class="form-group">
+                            <label>نص الرسالة</label>
+                            <textarea id="testGroupMessage" class="form-control" rows="3" placeholder="رسالة تجريبية للجروب"></textarea>
+                        </div>
+                        <button type="button" id="btnSendTestGroup" class="btn btn-success">
+                            <i class="fa fa-paper-plane"></i> ارسال للجروب
+                        </button>
+                    </div>
+                </div>
+                <div id="testResult" class="alert" style="display:none; margin-top: 15px;"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            // Toggle service on/off
+            $('#btnToggleService').click(function () {
+                var btn = $(this);
+                var isActive = btn.data('active');
+                var newState = !isActive;
+
+                // Update hidden field
+                $('#IsActive').val(newState.toString());
+
+                // Update button appearance
+                if (newState) {
+                    btn.removeClass('btn-danger').addClass('btn-success');
+                    btn.html('<i class="fa fa-power-off"></i> الخدمة مفعلة - اضغط للإيقاف');
+                } else {
+                    btn.removeClass('btn-success').addClass('btn-danger');
+                    btn.html('<i class="fa fa-power-off"></i> الخدمة متوقفة - اضغط للتفعيل');
+                }
+                btn.data('active', newState);
+            });
+
+            // Send test to phone
+            $('#btnSendTest').click(function () {
+                var phone = $('#testPhoneNumber').val();
+                var message = $('#testMessage').val();
+
+                if (!phone || !message) {
+                    showResult(false, 'برجاء ادخال رقم الهاتف والرسالة');
+                    return;
+                }
+
+                sendTest('@Url.Action("SendTestMessage")', { phoneNumber: phone, message: message }, $(this));
+            });
+
+            // Get Chat ID by Phone
+            $('#btnGetChatIdByPhone').click(function () {
+                var phone = $('#testPhoneForChatId').val().trim();
+                var btn = $(this);
+
+                if (!phone) {
+                    showResult(false, 'برجاء إدخال رقم الهاتف');
+                    return;
+                }
+
+                var originalHtml = btn.html();
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الاستخراج...');
+
+                $.post('@Url.Action("GetChatIdByPhone")', { phoneNumber: phone }, function (response) {
+                    if (response.success) {
+                        $('#testGroupId').val(response.chatId);
+                        var typeText = response.isGroup ? ' (جروب)' : ' (محادثة فردية)';
+                        showResult(true, response.message + typeText);
+                    } else {
+                        showResult(false, response.message);
+                    }
+                    btn.prop('disabled', false).html(originalHtml);
+                }).fail(function () {
+                    showResult(false, 'حدث خطأ أثناء استخراج Chat ID');
+                    btn.prop('disabled', false).html(originalHtml);
+                });
+            });
+
+            // Get Chat ID by LID
+            $('#btnGetChatIdByLid').click(function () {
+                var lid = $('#testLidForChatId').val().trim();
+                var btn = $(this);
+
+                if (!lid) {
+                    showResult(false, 'برجاء إدخال LID');
+                    return;
+                }
+
+                var originalHtml = btn.html();
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الاستخراج...');
+
+                $.post('@Url.Action("GetChatIdByLid")', { lid: lid }, function (response) {
+                    if (response.success) {
+                        $('#testGroupId').val(response.chatId);
+                        var typeText = response.isGroup ? ' (جروب)' : ' (محادثة فردية)';
+                        showResult(true, response.message + typeText);
+                    } else {
+                        showResult(false, response.message);
+                    }
+                    btn.prop('disabled', false).html(originalHtml);
+                }).fail(function () {
+                    showResult(false, 'حدث خطأ أثناء استخراج Chat ID');
+                    btn.prop('disabled', false).html(originalHtml);
+                });
+            });
+
+            // Send to group
+            $('#btnSendTestGroup').click(function () {
+                var groupId = $('#testGroupId').val().trim();
+                var message = $('#testGroupMessage').val();
+
+                if (!groupId || !message) {
+                    showResult(false, 'برجاء إدخال معرف الجروب والرسالة');
+                    return;
+                }
+
+                // Validate group ID format
+                if (!groupId.endsWith('@@g.us')) {
+                    showResult(false, 'معرف الجروب يجب أن ينتهي بـ @@g.us');
+                    return;
+                }
+
+                sendTest('@Url.Action("SendTestToGroupById")', { groupId: groupId, message: message }, $(this));
+            });
+
+            function sendTest(url, data, btn) {
+                var originalHtml = btn.html();
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الارسال...');
+
+                $.post(url, data, function (response) {
+                    showResult(response.success, response.message + (response.duration ? ' (' + response.duration + 'ms)' : ''));
+                    btn.prop('disabled', false).html(originalHtml);
+                }).fail(function () {
+                    showResult(false, 'حدث خطأ اثناء الارسال');
+                    btn.prop('disabled', false).html(originalHtml);
+                });
+            }
+
+            function showResult(success, message) {
+                var resultDiv = $('#testResult');
+                resultDiv.removeClass('alert-success alert-danger');
+                resultDiv.addClass(success ? 'alert-success' : 'alert-danger');
+                resultDiv.html('<i class="fa fa-' + (success ? 'check' : 'times') + '"></i> ' + message).show();
+            }
+        });
+    </script>
+}

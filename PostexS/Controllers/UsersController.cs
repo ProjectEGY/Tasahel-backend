@@ -54,10 +54,13 @@ namespace PostexS.Controllers
         private readonly IGeneric<Models.Domain.Location> _locations;
         private readonly IGeneric<Branch> _branch;
         private readonly IGeneric<Notification> _notification;
-        private IGeneric<DeviceTokens> _pushNotification; public UsersController(UserManager<ApplicationUser> userManger, IGeneric<ApplicationUser> users, IGeneric<OrderOperationHistory> histories,
+        private IGeneric<DeviceTokens> _pushNotification;
+        private readonly IWapilotService _wapilotService;
+
+        public UsersController(UserManager<ApplicationUser> userManger, IGeneric<ApplicationUser> users, IGeneric<OrderOperationHistory> histories,
             ICRUD<OrderOperationHistory> CRUDhistory, IGeneric<Order> orders, IGeneric<Branch> branch, RoleManager<IdentityRole> roleManager,
             IGeneric<Wallet> wallet, ICRUD<Order> CRUD, IWalletService walletService,
-            IOrderService orderService, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IGeneric<Location> locations, IGeneric<OrderNotes> orderNotes, IWebHostEnvironment webHostEnvironment)
+            IOrderService orderService, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IGeneric<Location> locations, IGeneric<OrderNotes> orderNotes, IWebHostEnvironment webHostEnvironment, IWapilotService wapilotService)
         {
             _userManger = userManger;
             _user = users;
@@ -75,6 +78,7 @@ namespace PostexS.Controllers
             _locations = locations;
             _notification = notification;
             _pushNotification = pushNotification;
+            _wapilotService = wapilotService;
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin,TrackingAdmin")]
         public async Task<IActionResult> Index(string q, string? message, bool deleted = false, long BranchId = -1)
@@ -941,6 +945,18 @@ namespace PostexS.Controllers
                         wallet.AddedToAdminWallet = true;
                         await _wallet.Update(wallet);
                         scope.Complete();
+
+                        // Enqueue WhatsApp notifications for completed orders
+                        try
+                        {
+                            var completedOrders = _orders.Get(x => OrderId.Contains(x.Id)).ToList();
+                            await _wapilotService.EnqueueBulkOrderCompletionAsync(completedOrders, userid);
+                        }
+                        catch (Exception)
+                        {
+                            // Don't fail the operation if WhatsApp queueing fails
+                        }
+
                         return RedirectToAction(nameof(Index), new { q = "d" });
                     }
                     else
@@ -1054,6 +1070,17 @@ namespace PostexS.Controllers
                     await _user.Update(user);
 
                     scope.Complete();
+
+                    // Enqueue WhatsApp notifications for completed orders
+                    try
+                    {
+                        var completedOrders = _orders.Get(x => OrderId.Contains(x.Id)).ToList();
+                        await _wapilotService.EnqueueBulkOrderCompletionAsync(completedOrders, _userManger.GetUserId(User));
+                    }
+                    catch (Exception)
+                    {
+                        // Don't fail the operation if WhatsApp queueing fails
+                    }
 
                     return RedirectToAction(nameof(Index), new { q = "d" });
                 }
@@ -1312,7 +1339,10 @@ namespace PostexS.Controllers
             user.BranchId = model.BranchId;
 
             if (model.UserType == UserType.Client)
+            {
                 user.OrdersGeneralNote = model.OrdersGeneralNote;
+                user.WhatsappGroupId = model.WhatsappGroupId;
+            }
 
             var file = HttpContext.Request.Form.Files.GetFile("IdentityFrontPhoto");
             if (file != null)

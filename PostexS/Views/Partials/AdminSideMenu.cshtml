@@ -184,6 +184,14 @@
                     </a>
                 </li>
             }
+            @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
+            {
+                <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("wapilotsettings") ? "active" : "")">
+                    <a href="@Url.Action("Index", "WapilotSettings")">
+                        <i class="fa fa-whatsapp"></i> <span>اعدادات واتساب</span>
+                    </a>
+                </li>
+            }
 
         </ul>
     </section>
