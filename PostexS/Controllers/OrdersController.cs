@@ -1497,7 +1497,7 @@ namespace PostexS.Controllers
                                     }
                                     
                                     // Send WhatsApp message to sender's group when order is completed
-                                    await _wapilotService.EnqueueOrderStatusUpdateAsync(order, _userManger.GetUserId(User), "تم تقفيل الطلب");
+                                    //await _wapilotService.EnqueueOrderStatusUpdateAsync(order, _userManger.GetUserId(User), "تم تقفيل الطلب");
                                 }
                                 orders.Add(order.Id);
                             }

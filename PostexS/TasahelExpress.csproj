@@ -36,6 +36,7 @@
     <PackageReference Include="ZXing.Net" Version="0.16.9" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Properties\PublishProfiles\" />
     <Folder Include="wwwroot\DatabaseBackUp\" />
     <Folder Include="wwwroot\Files\" />
   </ItemGroup>

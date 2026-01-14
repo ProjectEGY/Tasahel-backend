@@ -197,31 +197,31 @@ namespace PostexS.Controllers.API
                 return StatusCode((int)HttpStatusCode.NotFound, baseResponse);
             }
         }
-        [HttpPut("UpdateLocation")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> UpdateLocation(UpdateUserLocation dto, string lang = "en")
-        {
-            var userId = User.Identity.Name;
-            if (userId != null)
-            {
-                var user = _user.Get(x => x.Id == userId).First();
+        //[HttpPut("UpdateLocation")]
+        //[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        //public async Task<IActionResult> UpdateLocation(UpdateUserLocation dto, string lang = "en")
+        //{
+        //    var userId = User.Identity.Name;
+        //    if (userId != null)
+        //    {
+        //        var user = _user.Get(x => x.Id == userId).First();
 
-                if (dto.Longitude.HasValue && dto.Latitude.HasValue)
-                {
-                    await UpdateLocationMethod(dto, user);
-                }
-                var userdto = _user.Get(x => x.Id == userId).First();
-                var response = new LoginDto(userdto);
-                baseResponse.Data = response;
+        //        if (dto.Longitude.HasValue && dto.Latitude.HasValue)
+        //        {
+        //            await UpdateLocationMethod(dto, user);
+        //        }
+        //        var userdto = _user.Get(x => x.Id == userId).First();
+        //        var response = new LoginDto(userdto);
+        //        baseResponse.Data = response;
 
-                return Ok(baseResponse);
-            }
-            else
-            {
-                baseResponse.ErrorCode = Errors.TheUserNotExistOrDeleted;
-                return StatusCode((int)HttpStatusCode.NotFound, baseResponse);
-            }
-        }
+        //        return Ok(baseResponse);
+        //    }
+        //    else
+        //    {
+        //        baseResponse.ErrorCode = Errors.TheUserNotExistOrDeleted;
+        //        return StatusCode((int)HttpStatusCode.NotFound, baseResponse);
+        //    }
+        //}
 
         [HttpPut("ChangePassword")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
