@@ -13,7 +13,8 @@ namespace PostexS.Interfaces
         IQueryable<T> GetAllAsIQueryable(
           Expression<Func<T, bool>> filter = null,
           Func<IQueryable<T>, IOrderedQueryable<T>> orderby = null,
-          string IncludeProperties = null);
+          string IncludeProperties = null,
+          bool asNoTracking = false);
         Task<T> GetSingle(Expression<Func<T, bool>> expression, string includeProperties = null);
         IEnumerable<T> Get(Expression<Func<T, bool>> expression);
         int GetCount(Expression<Func<T, bool>> expression);

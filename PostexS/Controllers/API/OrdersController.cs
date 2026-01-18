@@ -41,9 +41,10 @@ namespace PostexS.Controllers.API
         private readonly ICRUD<Order> _CRUD;
         private readonly IGeneric<Location> _locations;
         private readonly IWapilotService _wapilotService;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public OrdersController(IGeneric<Notification> notification, IGeneric<DeviceTokens> pushNotification, IGeneric<Order> order, IGeneric<ApplicationUser> user,
-            IGeneric<OrderNotes> orderNotes, IGeneric<Location> locations, IWebHostEnvironment webHostEnvironment, ICRUD<Order> CRUD, IGeneric<OrderOperationHistory> histories, IWapilotService wapilotService)
+            IGeneric<OrderNotes> orderNotes, IGeneric<Location> locations, IWebHostEnvironment webHostEnvironment, ICRUD<Order> CRUD, IGeneric<OrderOperationHistory> histories, IWapilotService wapilotService, IHttpClientFactory httpClientFactory)
         {
             _user = user;
             _order = order;
@@ -56,25 +57,32 @@ namespace PostexS.Controllers.API
             _Histories = histories;
             _webHostEnvironment = webHostEnvironment;
             _wapilotService = wapilotService;
+            _httpClientFactory = httpClientFactory;
         }
         [HttpPut("Finshed")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> Finshed([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude, DriverSubmitOrderDto model)
         {
-
             var userid = User.Identity.Name;
-            var UserData = _user.Get(x => x.Id == userid).First();
-            if (!await _order.IsExist(x => x.Id == model.OrderId && !x.IsDeleted))
+
+            // تحسين الأداء: جلب الطلب مع بيانات المندوب في استعلام واحد بدلاً من 4 استعلامات منفصلة
+            var order = await _order.GetSingle(
+                x => x.Id == model.OrderId && !x.IsDeleted,
+                includeProperties: "Delivery");
+
+            if (order == null)
             {
                 baseResponse.ErrorCode = Errors.TheOrderNotExistOrDeleted;
                 return StatusCode((int)HttpStatusCode.NotFound, baseResponse);
             }
-            if (!await _order.IsExist(x => x.Id == model.OrderId && x.DeliveryId == userid))
+
+            if (order.DeliveryId != userid)
             {
                 baseResponse.ErrorCode = Errors.ThisOrderAssignedToAnotherAgent;
                 return StatusCode((int)HttpStatusCode.NotFound, baseResponse);
             }
-            var order = (await _order.GetObj(x => x.Id == model.OrderId));
+
+            var UserData = order.Delivery; // استخدام البيانات المحملة مسبقاً
             //if (model.Image == null
             //    && (order.Status == OrderStatus.Returned
             //    || order.Status == OrderStatus.PartialDelivered
@@ -101,7 +109,7 @@ namespace PostexS.Controllers.API
                 //عشان نشيلها من اي تقفيله قبل كده
                 order.WalletId = null;
                 ///
-                var user = await _user.GetSingle(x => x.Id == order.DeliveryId);
+                var user = UserData; // استخدام البيانات المحملة مسبقاً بدلاً من استعلام جديد
                 switch (model.Status)
                 {
                     case OrderStatus.Delivered:
@@ -260,25 +268,54 @@ namespace PostexS.Controllers.API
                         break;
                 }
                 order.Returned_Image = Returned_Image == "" ? null : Returned_Image;
-                await SendNotify(order, user, model.Note, model.Image);
                 await _order.Update(order);
-                
-                // Send WhatsApp message to sender's group
-                var statusNote = $"تم تحديث حالة الطلب إلى: {GetStatusInArabic(model.Status)}";
-                if (!string.IsNullOrWhiteSpace(model.Note))
+
+                // تحسين الأداء: إرسال الإشعارات في الخلفية (Fire-and-forget) لتسريع الاستجابة
+                var orderNote = model.Note;
+                var orderImage = model.Image;
+                var orderStatus = model.Status;
+                var currentUserId = userid;
+
+                _ = Task.Run(async () =>
                 {
-                    statusNote += $"\nملاحظة: {model.Note}";
-                }
-                await _wapilotService.EnqueueOrderStatusUpdateAsync(order, userid, statusNote);
+                    try
+                    {
+                        await SendNotify(order, user, orderNote, orderImage);
+
+                        // Send WhatsApp message to sender's group
+                        var statusNote = $"تم تحديث حالة الطلب إلى: {GetStatusInArabic(orderStatus)}";
+                        if (!string.IsNullOrWhiteSpace(orderNote))
+                        {
+                            statusNote += $"\nملاحظة: {orderNote}";
+                        }
+                        await _wapilotService.EnqueueOrderStatusUpdateAsync(order, currentUserId, statusNote);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error but don't fail the request
+                        System.Diagnostics.Debug.WriteLine($"Error sending notifications: {ex.Message}");
+                    }
+                });
             }
+
+            // تحديث الموقع في الخلفية أيضاً
             if (latitude.HasValue && longitude.HasValue)
             {
-                UpdateUserLocation locationdto = new UpdateUserLocation()
+                var lat = latitude.Value;
+                var lng = longitude.Value;
+                _ = Task.Run(async () =>
                 {
-                    Longitude = longitude.Value,
-                    Latitude = latitude.Value,
-                };
-                await UpdateLocationMethod(locationdto, UserData);
+                    try
+                    {
+                        UpdateUserLocation locationdto = new UpdateUserLocation()
+                        {
+                            Longitude = lng,
+                            Latitude = lat,
+                        };
+                        await UpdateLocationMethod(locationdto, UserData);
+                    }
+                    catch { }
+                });
             }
             return Ok(baseResponse);
         }
@@ -432,8 +469,8 @@ namespace PostexS.Controllers.API
                     Width = 175
                 }
             };
-            var barcodeBitmap = barcodeWriter.Write(Code);
-            var ms = new MemoryStream();
+            using var barcodeBitmap = barcodeWriter.Write(Code);
+            using var ms = new MemoryStream();
             barcodeBitmap.Save(ms, ImageFormat.Png);
             var barcodeImage = ms.ToArray();
             return barcodeImage;
@@ -481,33 +518,31 @@ namespace PostexS.Controllers.API
 
             string url = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={latitude},{longitude}&key={apiKey}&language={language}";
 
-            using (HttpClient client = new HttpClient())
+            var client = _httpClientFactory.CreateClient();
+            using var response = await client.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+
+            string responseBody = await response.Content.ReadAsStringAsync();
+            JObject json = JObject.Parse(responseBody);
+
+            // Check if the status returned is OK
+            string status = json["status"]?.ToString();
+            if (status != "OK")
             {
-                HttpResponseMessage response = await client.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-
-                string responseBody = await response.Content.ReadAsStringAsync();
-                JObject json = JObject.Parse(responseBody);
-
-                // Check if the status returned is OK
-                string status = json["status"]?.ToString();
-                if (status != "OK")
-                {
-                    return "Address not found";
-                }
-
-                // Retrieve the formatted address in Arabic if available
-                var results = json["results"];
-                if (results == null || results.Count() == 0)
-                {
-                    return "Address not found";
-                }
-
-
-                // If no detailed address found, return the first formatted_address
-                string fallbackAddress = results[1]["formatted_address"]?.ToString();
-                return fallbackAddress ?? "Address not found";
+                return "Address not found";
             }
+
+            // Retrieve the formatted address in Arabic if available
+            var results = json["results"];
+            if (results == null || results.Count() == 0)
+            {
+                return "Address not found";
+            }
+
+
+            // If no detailed address found, return the first formatted_address
+            string fallbackAddress = results[1]["formatted_address"]?.ToString();
+            return fallbackAddress ?? "Address not found";
         }
 
     }

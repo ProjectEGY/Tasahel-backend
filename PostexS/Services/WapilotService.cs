@@ -404,7 +404,7 @@ namespace PostexS.Services
 
                 _logger.LogInformation("Sending WhatsApp message to {ChatId} via {Url}", chatId, url);
 
-                var formContent = new MultipartFormDataContent();
+                using var formContent = new MultipartFormDataContent();
                 formContent.Add(new StringContent(message), "text");
                 formContent.Add(new StringContent(chatId), "chat_id");
                 formContent.Add(new StringContent(settings.ApiToken), "token");
@@ -412,7 +412,7 @@ namespace PostexS.Services
 
                 client.DefaultRequestHeaders.Add("token", settings.ApiToken);
 
-                var response = await client.PostAsync(url, formContent);
+                using var response = await client.PostAsync(url, formContent);
                 stopwatch.Stop();
 
                 result.StatusCode = (int)response.StatusCode;
@@ -465,14 +465,14 @@ namespace PostexS.Services
                 // Format phone number (remove + if present)
                 var formattedPhone = clientPhone.TrimStart('+');
 
-                var formContent = new MultipartFormDataContent();
+                using var formContent = new MultipartFormDataContent();
                 formContent.Add(new StringContent(groupName), "subject");
                 formContent.Add(new StringContent(formattedPhone), "participants");
                 formContent.Add(new StringContent(settings.ApiToken), "token");
 
                 client.DefaultRequestHeaders.Add("token", settings.ApiToken);
 
-                var response = await client.PostAsync(url, formContent);
+                using var response = await client.PostAsync(url, formContent);
 
                 result.StatusCode = (int)response.StatusCode;
                 result.ResponseBody = await response.Content.ReadAsStringAsync();
@@ -536,13 +536,13 @@ namespace PostexS.Services
 
                 _logger.LogInformation("Looking up Chat ID by phone: {Phone} via {Url}", formattedPhone, url);
 
-                var formContent = new MultipartFormDataContent();
+                using var formContent = new MultipartFormDataContent();
                 formContent.Add(new StringContent(formattedPhone), "phone");
                 formContent.Add(new StringContent(settings.ApiToken), "token");
 
                 client.DefaultRequestHeaders.Add("token", settings.ApiToken);
 
-                var response = await client.PostAsync(url, formContent);
+                using var response = await client.PostAsync(url, formContent);
 
                 result.StatusCode = (int)response.StatusCode;
                 result.ResponseBody = await response.Content.ReadAsStringAsync();
@@ -626,13 +626,13 @@ namespace PostexS.Services
 
                 _logger.LogInformation("Looking up Chat ID by LID: {Lid} via {Url}", lid, url);
 
-                var formContent = new MultipartFormDataContent();
+                using var formContent = new MultipartFormDataContent();
                 formContent.Add(new StringContent(lid), "lid");
                 formContent.Add(new StringContent(settings.ApiToken), "token");
 
                 client.DefaultRequestHeaders.Add("token", settings.ApiToken);
 
-                var response = await client.PostAsync(url, formContent);
+                using var response = await client.PostAsync(url, formContent);
 
                 result.StatusCode = (int)response.StatusCode;
                 result.ResponseBody = await response.Content.ReadAsStringAsync();
@@ -786,29 +786,52 @@ namespace PostexS.Services
         public async Task<bool> CleanupOldLogsAsync(int daysToKeep = 30)
         {
             var cutoffDate = DateTime.UtcNow.AddDays(-daysToKeep);
+            const int batchSize = 500;
 
-            // Delete old logs
-            var oldLogs = await _context.WhatsAppMessageLogs
-                .Where(l => l.CreateOn < cutoffDate)
-                .ToListAsync();
-
-            if (oldLogs.Any())
+            // Delete old logs in batches to avoid loading all into memory
+            int deletedLogs;
+            do
             {
-                _context.WhatsAppMessageLogs.RemoveRange(oldLogs);
-            }
+                var oldLogIds = await _context.WhatsAppMessageLogs
+                    .Where(l => l.CreateOn < cutoffDate)
+                    .Select(l => l.Id)
+                    .Take(batchSize)
+                    .ToListAsync();
 
-            // Also clean up old sent/failed queue items
-            var oldQueueItems = await _context.WhatsAppMessageQueues
-                .Where(q => q.ProcessedAt != null && q.ProcessedAt < cutoffDate)
-                .Where(q => q.Status == MessageQueueStatus.Sent || q.Status == MessageQueueStatus.Failed)
-                .ToListAsync();
+                deletedLogs = oldLogIds.Count;
+                if (deletedLogs > 0)
+                {
+                    var logsToDelete = await _context.WhatsAppMessageLogs
+                        .Where(l => oldLogIds.Contains(l.Id))
+                        .ToListAsync();
+                    _context.WhatsAppMessageLogs.RemoveRange(logsToDelete);
+                    await _context.SaveChangesAsync();
+                }
+            } while (deletedLogs == batchSize);
 
-            if (oldQueueItems.Any())
+            // Also clean up old sent/failed queue items in batches
+            int deletedQueueItems;
+            do
             {
-                _context.WhatsAppMessageQueues.RemoveRange(oldQueueItems);
-            }
+                var oldQueueIds = await _context.WhatsAppMessageQueues
+                    .Where(q => q.ProcessedAt != null && q.ProcessedAt < cutoffDate)
+                    .Where(q => q.Status == MessageQueueStatus.Sent || q.Status == MessageQueueStatus.Failed)
+                    .Select(q => q.Id)
+                    .Take(batchSize)
+                    .ToListAsync();
 
-            return await _context.SaveChangesAsync() >= 0;
+                deletedQueueItems = oldQueueIds.Count;
+                if (deletedQueueItems > 0)
+                {
+                    var queueItemsToDelete = await _context.WhatsAppMessageQueues
+                        .Where(q => oldQueueIds.Contains(q.Id))
+                        .ToListAsync();
+                    _context.WhatsAppMessageQueues.RemoveRange(queueItemsToDelete);
+                    await _context.SaveChangesAsync();
+                }
+            } while (deletedQueueItems == batchSize);
+
+            return true;
         }
 
         #endregion

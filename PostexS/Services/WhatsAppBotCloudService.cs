@@ -90,7 +90,7 @@ namespace PostexS.Services
 
                 _logger.LogInformation("Getting groups via {Url}", url);
 
-                var response = await client.GetAsync(url);
+                using var response = await client.GetAsync(url);
 
                 result.StatusCode = (int)response.StatusCode;
                 result.ResponseBody = await response.Content.ReadAsStringAsync();
@@ -232,13 +232,13 @@ namespace PostexS.Services
                     access_token = settings.AccessToken
                 };
 
-                var jsonContent = new StringContent(
+                using var jsonContent = new StringContent(
                     System.Text.Json.JsonSerializer.Serialize(jsonBody),
                     System.Text.Encoding.UTF8,
                     "application/json"
                 );
 
-                var response = await client.PostAsync(url, jsonContent);
+                using var response = await client.PostAsync(url, jsonContent);
                 stopwatch.Stop();
 
                 result.StatusCode = (int)response.StatusCode;
@@ -294,13 +294,13 @@ namespace PostexS.Services
                     access_token = settings.AccessToken
                 };
 
-                var jsonContent = new StringContent(
+                using var jsonContent = new StringContent(
                     System.Text.Json.JsonSerializer.Serialize(jsonBody),
                     System.Text.Encoding.UTF8,
                     "application/json"
                 );
 
-                var response = await client.PostAsync(url, jsonContent);
+                using var response = await client.PostAsync(url, jsonContent);
                 stopwatch.Stop();
 
                 result.StatusCode = (int)response.StatusCode;

@@ -1509,7 +1509,7 @@ namespace PostexS.Controllers
                 ViewBag.User = SubAdminUser;
                 history = _orderService.GetOrdersHistory(x => !x.IsDeleted && x.Finish_UserId == SubAdminUser.Id);
                 ViewBag.history = history;
-                return View(GetPagedListItems("", pageNumber, pageSize, SubAdminUser.Id, BranchId).Result);
+                return View(await GetPagedListItems("", pageNumber, pageSize, SubAdminUser.Id, BranchId));
             }
             if (!await _user.IsExist(x => x.Id == id))
             {
@@ -1517,7 +1517,7 @@ namespace PostexS.Controllers
             }
             var user = _user.Get(x => x.Id == id).First();
             ViewBag.User = user;
-            return View(GetPagedListItems("", pageNumber, pageSize, user.Id, BranchId).Result);
+            return View(await GetPagedListItems("", pageNumber, pageSize, user.Id, BranchId));
 
         }
 
@@ -1638,7 +1638,7 @@ namespace PostexS.Controllers
             ViewBag.User = SubAdminUser;
             var history = _orderService.GetOrdersHistory(x => !x.IsDeleted && x.Finish_UserId == SubAdminUser.Id);
             ViewBag.history = history;
-            return View(GetPagedListItems("", pageNumber, pageSize, SubAdminUser.Id, BranchId).Result);
+            return View(await GetPagedListItems("", pageNumber, pageSize, SubAdminUser.Id, BranchId));
 
         }
         [Authorize(Roles = "Admin,TrustAdmin")]
@@ -2208,8 +2208,8 @@ namespace PostexS.Controllers
                     Width = 175
                 }
             };
-            var barcodeBitmap = barcodeWriter.Write(Code);
-            var ms = new MemoryStream();
+            using var barcodeBitmap = barcodeWriter.Write(Code);
+            using var ms = new MemoryStream();
             barcodeBitmap.Save(ms, ImageFormat.Png);
             var barcodeImage = ms.ToArray();
             return barcodeImage;
@@ -2257,19 +2257,19 @@ namespace PostexS.Controllers
                 pageNumber, pageSize);
         }
 
-        public IActionResult GetItems(string searchStr, string q, long BranchId = -1, int pageNumber = 1,
+        public async Task<IActionResult> GetItems(string searchStr, string q, long BranchId = -1, int pageNumber = 1,
             int pageSize = 10)
         {
             return PartialView("_TableList",
-                GetPagedListItems(searchStr, pageNumber, pageSize, q, BranchId).Result.ToList());
+                (await GetPagedListItems(searchStr, pageNumber, pageSize, q, BranchId)).ToList());
         }
 
 
-        public IActionResult GetPagination(string searchStr, string q, long BranchId = -1, int pageNumber = 1,
+        public async Task<IActionResult> GetPagination(string searchStr, string q, long BranchId = -1, int pageNumber = 1,
             int pageSize = 10)
         {
             var model = PagedList<Wallet>.GetPaginationObject(
-                GetPagedListItems(searchStr, pageNumber, pageSize, q, BranchId).Result);
+                await GetPagedListItems(searchStr, pageNumber, pageSize, q, BranchId));
             model.GetItemsUrl = "/Users/GetItems";
             model.GetPaginationUrl = "/Users/GetPagination";
             return PartialView("_Pagination2", model);

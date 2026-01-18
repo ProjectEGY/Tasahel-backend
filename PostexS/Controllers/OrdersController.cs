@@ -63,9 +63,10 @@ namespace PostexS.Controllers
         private readonly IGeneric<Notification> _notification;
         private IGeneric<DeviceTokens> _pushNotification;
         private readonly IWapilotService _wapilotService;
+        private readonly IHttpClientFactory _httpClientFactory;
         public OrdersController(IGeneric<ApplicationUser> users, IGeneric<Order> orders, IGeneric<OrderOperationHistory> histories
             , ICRUD<Order> CRUD, ICRUD<OrderOperationHistory> CRUDhistory, IGeneric<OrderNotes> notes, IGeneric<Branch> branch,
-            IOrderService orderService, IGeneric<OrderTransferrHistory> TransferHistories, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IWebHostEnvironment webHostEnvironment, UserManager<ApplicationUser> userManger, IGeneric<OrderNotes> OrderNotes, IGeneric<Wallet> wallet, IWapilotService wapilotService)
+            IOrderService orderService, IGeneric<OrderTransferrHistory> TransferHistories, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IWebHostEnvironment webHostEnvironment, UserManager<ApplicationUser> userManger, IGeneric<OrderNotes> OrderNotes, IGeneric<Wallet> wallet, IWapilotService wapilotService, IHttpClientFactory httpClientFactory)
         {
             _orderService = orderService;
             _users = users;
@@ -84,6 +85,7 @@ namespace PostexS.Controllers
             _notification = notification;
             _pushNotification = pushNotification;
             _wapilotService = wapilotService;
+            _httpClientFactory = httpClientFactory;
         }
 
         [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin,TrackingAdmin")]
@@ -227,7 +229,7 @@ namespace PostexS.Controllers
             ViewBag.BranchId = BranchId;
             ViewBag.q = q;
 
-            return View(GetPagedListItems("", pageNumber, pageSize, q, BranchId).Result);
+            return View(await GetPagedListItems("", pageNumber, pageSize, q, BranchId));
         }
 
         [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin,TrackingAdmin")]
@@ -898,21 +900,19 @@ namespace PostexS.Controllers
                 Converters = { new FlexibleDateTimeConverter() }
             };
 
-            using (var client = new HttpClient())
+            var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Add("CompanyID", "180109");
+            client.DefaultRequestHeaders.Add("AccessToken", "44FFBD0A-99FD-4935-9BEB-379B0BA840DA");
+
+            using var response = await client.PostAsJsonAsync(apiUrl, requestData);
+
+            if (response.IsSuccessStatusCode)
             {
-                client.DefaultRequestHeaders.Add("CompanyID", "180109");
-                client.DefaultRequestHeaders.Add("AccessToken", "44FFBD0A-99FD-4935-9BEB-379B0BA840DA");
-
-                var response = await client.PostAsJsonAsync(apiUrl, requestData);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var result = await response.Content.ReadFromJsonAsync<ApiResponse>(options);
-                    return result?.Shipments ?? new List<Shipment>();
-                }
-
-                return new List<Shipment>();
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse>(options);
+                return result?.Shipments ?? new List<Shipment>();
             }
+
+            return new List<Shipment>();
         }
 
         #endregion
@@ -920,7 +920,7 @@ namespace PostexS.Controllers
 
         #region Archive
         [Authorize(Roles = "Admin,TrustAdmin,Accountant")]
-        public IActionResult Archive(string? AccountantId, DateTime? FilterTime, DateTime? FilterTimeTo, int pageNumber = 1, int pageSize = 50)
+        public async Task<IActionResult> Archive(string? AccountantId, DateTime? FilterTime, DateTime? FilterTimeTo, int pageNumber = 1, int pageSize = 50)
         {
             ViewBag.AccountantId = "0";
             if (User.IsInRole("Accountant"))
@@ -928,7 +928,7 @@ namespace PostexS.Controllers
                 AccountantId = _userManger.GetUserId(User);
                 ViewBag.AccountantId = AccountantId;
             }
-            return View(getorders("", pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId).Result);
+            return View(await getorders("", pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId));
             // var temp = await PagedList<Wallet>.CreateAsync(archive, pageNumber, pageSize).Result;
             //return View(archive);
         }
@@ -970,7 +970,7 @@ namespace PostexS.Controllers
                 _wallet.GetAllAsIQueryable(filter, orderBy, "ActualUser,Orders,Complete_User")
                 , pageNumber, pageSize);
         }
-        public IActionResult GetItemsArchive(string searchStr, DateTime? FilterTime, DateTime? FilterTimeTo, string? AccountantId, int pageNumber = 1,
+        public async Task<IActionResult> GetItemsArchive(string searchStr, DateTime? FilterTime, DateTime? FilterTimeTo, string? AccountantId, int pageNumber = 1,
           int pageSize = 50)
         {
             ViewBag.searchStr = searchStr;
@@ -981,17 +981,17 @@ namespace PostexS.Controllers
             {
                 AccountantId = _userManger.GetUserId(User);
             }
-            var archive = getorders(searchStr, pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId).Result.ToList();
-            for (int i = 0; i < archive.Count(); i++)
+            var archive = (await getorders(searchStr, pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId)).ToList();
+            foreach (var item in archive)
             {
-                archive.ElementAt(i).Orders = new List<Order>();
-                archive.ElementAt(i).Orders = _orders.Get(x => x.CompletedId == archive.ElementAt(i).Id).ToList();
+                item.Orders = new List<Order>();
+                item.Orders = _orders.Get(x => x.CompletedId == item.Id).ToList();
             }
             return PartialView("_TableListArchive",
                 archive);
         }
 
-        public IActionResult GetPaginationArchive(string? AccountantId, string searchStr, DateTime? FilterTime, DateTime? FilterTimeTo, int pageNumber = 1,
+        public async Task<IActionResult> GetPaginationArchive(string? AccountantId, string searchStr, DateTime? FilterTime, DateTime? FilterTimeTo, int pageNumber = 1,
             int pageSize = 50)
         {
             if (User.IsInRole("Accountant"))
@@ -999,7 +999,7 @@ namespace PostexS.Controllers
                 AccountantId = _userManger.GetUserId(User);
             }
             var model = PagedList<Wallet>.GetPaginationObject(
-                getorders(searchStr, pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId).Result);
+                await getorders(searchStr, pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId));
             model.GetItemsUrl = "/Orders/GetItemsArchive";
             model.GetPaginationUrl = "/Orders/GetPaginationArchive";
             return PartialView("_Pagination3", model);
@@ -1008,7 +1008,7 @@ namespace PostexS.Controllers
 
         #region Archive Returned
         [Authorize(Roles = "Admin,TrustAdmin,Accountant")]
-        public IActionResult ArchiveReturned(string? AccountantId, DateTime? FilterTime, DateTime? FilterTimeTo, int pageNumber = 1, int pageSize = 50)
+        public async Task<IActionResult> ArchiveReturned(string? AccountantId, DateTime? FilterTime, DateTime? FilterTimeTo, int pageNumber = 1, int pageSize = 50)
         {
             ViewBag.AccountantId = "0";
             if (User.IsInRole("Accountant"))
@@ -1017,7 +1017,7 @@ namespace PostexS.Controllers
                 ViewBag.AccountantId = AccountantId;
             }
             ViewBag.Users = _users.Get(x => !x.IsDeleted && x.UserType == UserType.Accountant).ToList();
-            return View(getReturnedorders("", pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId).Result);
+            return View(await getReturnedorders("", pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId));
         }
         public async Task<PagedList<Wallet>> getReturnedorders(string searchStr, int pageNumber, int pageSize,
             DateTime? FilterTime, DateTime? FilterTimeTo, string? AccountantId)
@@ -1057,7 +1057,7 @@ namespace PostexS.Controllers
                 _wallet.GetAllAsIQueryable(filter, orderBy, "ActualUser,Orders,Complete_User")
                 , pageNumber, pageSize);
         }
-        public IActionResult GetItemsArchiveReturned(string searchStr, DateTime? FilterTime, DateTime? FilterTimeTo, string? AccountantId, int pageNumber = 1,
+        public async Task<IActionResult> GetItemsArchiveReturned(string searchStr, DateTime? FilterTime, DateTime? FilterTimeTo, string? AccountantId, int pageNumber = 1,
           int pageSize = 50)
         {
             ViewBag.searchStr = searchStr;
@@ -1068,17 +1068,17 @@ namespace PostexS.Controllers
             {
                 AccountantId = _userManger.GetUserId(User);
             }
-            var archive = getReturnedorders(searchStr, pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId).Result.ToList();
-            for (int i = 0; i < archive.Count(); i++)
+            var archive = (await getReturnedorders(searchStr, pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId)).ToList();
+            foreach (var item in archive)
             {
-                archive.ElementAt(i).Orders = new List<Order>();
-                archive.ElementAt(i).Orders = _orders.Get(x => x.CompletedId == archive.ElementAt(i).Id).ToList();
+                item.Orders = new List<Order>();
+                item.Orders = _orders.Get(x => x.CompletedId == item.Id).ToList();
             }
             return PartialView("_TableListArchiveReturned",
                 archive);
         }
 
-        public IActionResult GetPaginationArchiveReturned(string? AccountantId, string searchStr, DateTime? FilterTime, DateTime? FilterTimeTo, int pageNumber = 1,
+        public async Task<IActionResult> GetPaginationArchiveReturned(string? AccountantId, string searchStr, DateTime? FilterTime, DateTime? FilterTimeTo, int pageNumber = 1,
             int pageSize = 50)
         {
             if (User.IsInRole("Accountant"))
@@ -1086,7 +1086,7 @@ namespace PostexS.Controllers
                 AccountantId = _userManger.GetUserId(User);
             }
             var model = PagedList<Wallet>.GetPaginationObject(
-                getorders(searchStr, pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId).Result);
+                await getReturnedorders(searchStr, pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId));
             model.GetItemsUrl = "/Orders/GetItemsArchiveReturned";
             model.GetPaginationUrl = "/Orders/GetPaginationArchiveReturned";
             return PartialView("_Pagination3", model);
@@ -2854,25 +2854,18 @@ namespace PostexS.Controllers
 
         public async Task<IActionResult> FinishOrder(DriverSubmitOrderDto model)
         {
+            // تحسين الأداء: جلب الطلب مع بيانات المندوب في استعلام واحد بدلاً من 3 استعلامات منفصلة
+            var order = await _orders.GetSingle(
+                x => x.Id == model.OrderId && !x.IsDeleted,
+                includeProperties: "Delivery");
 
-            if (!await _orders.IsExist(x => x.Id == model.OrderId && !x.IsDeleted))
+            if (order == null)
             {
                 return BadRequest("لا يوجد طلب ");
             }
+
             var image = HttpContext.Request.Form.Files.FirstOrDefault(f => f.Name == "OrderImage");
 
-            var order = (await _orders.GetObj(x => x.Id == model.OrderId));
-            //if (image == null
-            //   && (model.Status == OrderStatus.Returned
-            //   || model.Status == OrderStatus.PartialDelivered
-            //   || model.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender
-            //   || model.Status == OrderStatus.Returned_And_Paid_DeliveryCost
-            //   || model.Status == OrderStatus.Delivered_With_Edit_Price
-            //   ))
-            //{
-            //    return RedirectToAction(nameof(PrintClientOrders), new { Id = order.DeliveryId, message = "يجب ادراج صورة للطلب في حاله تعديل السعر وفي حاجه المرتجع" });
-            //    //return BadRequest("يجب ادراج صورة للطلب في حاله تعديل السعر وفي حاجه المرتجع");
-            //}
             string Returned_Image = "";
             if (image != null)
             {
@@ -2882,7 +2875,7 @@ namespace PostexS.Controllers
             order.WalletId = null;
             ///
 
-            var user = await _users.GetSingle(x => x.Id == order.DeliveryId);
+            var user = order.Delivery; // استخدام البيانات المحملة مسبقاً بدلاً من استعلام جديد
             switch (model.Status)
             {
                 case OrderStatus.Delivered:
@@ -3042,17 +3035,36 @@ namespace PostexS.Controllers
             order.Returned_Image = Returned_Image == "" ? null : Returned_Image;
 
             await _orders.Update(order);
-            await SendNotify(order, user, model.Note, order.Returned_Image);
-            
-            // Send WhatsApp message to sender's group
-            var statusNote = $"تم تحديث حالة الطلب إلى: {GetStatusInArabic(model.Status)}";
-            if (!string.IsNullOrWhiteSpace(model.Note))
+
+            // تحسين الأداء: إرسال الإشعارات في الخلفية (Fire-and-forget) لتسريع الاستجابة
+            var deliveryId = order.DeliveryId;
+            var orderNote = model.Note;
+            var returnedImage = order.Returned_Image;
+            var orderStatus = model.Status;
+            var currentUserId = _userManger.GetUserId(User);
+
+            _ = Task.Run(async () =>
             {
-                statusNote += $"\nملاحظة: {model.Note}";
-            }
-            await _wapilotService.EnqueueOrderStatusUpdateAsync(order, _userManger.GetUserId(User), statusNote);
-            
-            return RedirectToAction(nameof(PrintClientOrders), new { Id = order.DeliveryId, message = "تم تنفيذ العملية بنجاح" });
+                try
+                {
+                    await SendNotify(order, user, orderNote, returnedImage);
+
+                    // Send WhatsApp message to sender's group
+                    var statusNote = $"تم تحديث حالة الطلب إلى: {GetStatusInArabic(orderStatus)}";
+                    if (!string.IsNullOrWhiteSpace(orderNote))
+                    {
+                        statusNote += $"\nملاحظة: {orderNote}";
+                    }
+                    await _wapilotService.EnqueueOrderStatusUpdateAsync(order, currentUserId, statusNote);
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't fail the request
+                    System.Diagnostics.Debug.WriteLine($"Error sending notifications: {ex.Message}");
+                }
+            });
+
+            return RedirectToAction(nameof(PrintClientOrders), new { Id = deliveryId, message = "تم تنفيذ العملية بنجاح" });
         }
         
         private string GetStatusInArabic(OrderStatus status)
@@ -3201,8 +3213,8 @@ namespace PostexS.Controllers
                     Width = 175
                 }
             };
-            var barcodeBitmap = barcodeWriter.Write(Code);
-            var ms = new MemoryStream();
+            using var barcodeBitmap = barcodeWriter.Write(Code);
+            using var ms = new MemoryStream();
             barcodeBitmap.Save(ms, ImageFormat.Png);
             var barcodeImage = ms.ToArray();
             return barcodeImage;
@@ -3449,19 +3461,19 @@ namespace PostexS.Controllers
                 pageNumber, pageSize);
         }
 
-        public IActionResult GetItems(string searchStr, string q, long BranchId = -1, int pageNumber = 1,
+        public async Task<IActionResult> GetItems(string searchStr, string q, long BranchId = -1, int pageNumber = 1,
             int pageSize = 50)
         {
             return PartialView("_TableList",
-                GetPagedListItems(searchStr, pageNumber, pageSize, q, BranchId).Result.ToList());
+                (await GetPagedListItems(searchStr, pageNumber, pageSize, q, BranchId)).ToList());
         }
 
 
-        public IActionResult GetPagination(string searchStr, string q, long BranchId = -1, int pageNumber = 1,
+        public async Task<IActionResult> GetPagination(string searchStr, string q, long BranchId = -1, int pageNumber = 1,
             int pageSize = 50)
         {
             var model = PagedList<Order>.GetPaginationObject(
-                GetPagedListItems(searchStr, pageNumber, pageSize, q, BranchId).Result);
+                await GetPagedListItems(searchStr, pageNumber, pageSize, q, BranchId));
             model.GetItemsUrl = "/Orders/GetItems";
             model.GetPaginationUrl = "/Orders/GetPagination";
             return PartialView("_Pagination", model);

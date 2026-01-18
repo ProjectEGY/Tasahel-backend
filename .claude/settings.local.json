@@ -4,7 +4,9 @@
       "Bash(xargs ls:*)",
       "Bash(dotnet build:*)",
       "Bash(dotnet ef migrations:*)",
-      "Bash(dotnet ef database update:*)"
+      "Bash(dotnet ef database update:*)",
+      "Bash(findstr:*)",
+      "Bash(Select-String -Pattern \"error\")"
     ]
   }
 }

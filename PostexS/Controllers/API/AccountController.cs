@@ -39,8 +39,10 @@ namespace PostexS.Controllers.API
         private readonly IConfiguration _configuration;
         private readonly IGeneric<Order> _orders;
         private readonly IGeneric<Location> _locations;
+        private readonly IHttpClientFactory _httpClientFactory;
         public AccountController(UserManager<ApplicationUser> userManager, IGeneric<ApplicationUser> user
-            , IConfiguration configuration, IGeneric<Location> locations, IGeneric<Order> orders)
+            , IConfiguration configuration, IGeneric<Location> locations, IGeneric<Order> orders,
+            IHttpClientFactory httpClientFactory)
         {
             _userManager = userManager;
             _user = user;
@@ -48,6 +50,7 @@ namespace PostexS.Controllers.API
             _configuration = configuration;
             _orders = orders;
             _locations = locations;
+            _httpClientFactory = httpClientFactory;
         }
         [HttpPost("Login")]
         public async Task<IActionResult> Login(SubmitLoginDto model, [FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude, string lang = "en")
@@ -276,7 +279,7 @@ namespace PostexS.Controllers.API
         {
             //int size = 15;
             var userid = User.Identity.Name;
-            var user = _userManager.FindByIdAsync(userid).Result;
+            var user = await _userManager.FindByIdAsync(userid);
             var orders = new List<Order>();
             if (user != null)
             {
@@ -334,7 +337,7 @@ namespace PostexS.Controllers.API
         {
             int size = 15;
             var userid = User.Identity.Name;
-            var user = _userManager.FindByIdAsync(userid).Result;
+            var user = await _userManager.FindByIdAsync(userid);
             var orders = new List<Order>();
             if (user != null)
             {
@@ -399,7 +402,7 @@ namespace PostexS.Controllers.API
         public async Task<IActionResult> Statistics([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude)
         {
             var userid = User.Identity.Name;
-            var user = _userManager.FindByIdAsync(userid).Result;
+            var user = await _userManager.FindByIdAsync(userid);
             StatisticsDto dto = new StatisticsDto();
             dto.Name = user.Name;
             if (user != null)
@@ -505,33 +508,31 @@ namespace PostexS.Controllers.API
 
             string url = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={latitude},{longitude}&key={apiKey}&language={language}";
 
-            using (HttpClient client = new HttpClient())
+            var client = _httpClientFactory.CreateClient();
+            using var response = await client.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+
+            string responseBody = await response.Content.ReadAsStringAsync();
+            JObject json = JObject.Parse(responseBody);
+
+            // Check if the status returned is OK
+            string status = json["status"]?.ToString();
+            if (status != "OK")
             {
-                HttpResponseMessage response = await client.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-
-                string responseBody = await response.Content.ReadAsStringAsync();
-                JObject json = JObject.Parse(responseBody);
-
-                // Check if the status returned is OK
-                string status = json["status"]?.ToString();
-                if (status != "OK")
-                {
-                    return "Address not found";
-                }
-
-                // Retrieve the formatted address in Arabic if available
-                var results = json["results"];
-                if (results == null || results.Count() == 0)
-                {
-                    return "Address not found";
-                }
-
-
-                // If no detailed address found, return the first formatted_address
-                string fallbackAddress = results[1]["formatted_address"]?.ToString();
-                return fallbackAddress ?? "Address not found";
+                return "Address not found";
             }
+
+            // Retrieve the formatted address in Arabic if available
+            var results = json["results"];
+            if (results == null || results.Count() == 0)
+            {
+                return "Address not found";
+            }
+
+
+            // If no detailed address found, return the first formatted_address
+            string fallbackAddress = results[1]["formatted_address"]?.ToString();
+            return fallbackAddress ?? "Address not found";
         }
 
     }

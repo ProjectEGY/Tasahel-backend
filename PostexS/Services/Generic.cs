@@ -29,9 +29,16 @@ namespace PostexS.Services
             _context.Set<T>().Remove(obj);
             return await Save();
         }
-        public IQueryable<T> GetAllAsIQueryable(Expression<Func<T, bool>> filter = null, Func<IQueryable<T>, IOrderedQueryable<T>> orderby = null, string IncludeProperties = null)
+        public IQueryable<T> GetAllAsIQueryable(Expression<Func<T, bool>> filter = null, Func<IQueryable<T>, IOrderedQueryable<T>> orderby = null, string IncludeProperties = null, bool asNoTracking = false)
         {
             IQueryable<T> query = _context.Set<T>();
+
+            // Use AsNoTracking for read-only queries to reduce memory usage
+            if (asNoTracking)
+            {
+                query = query.AsNoTracking();
+            }
+
             if (filter != null)
             {
                 query = query.Where(filter);
@@ -49,7 +56,6 @@ namespace PostexS.Services
             {
                 return orderby(query);
             }
-            //.AsNoTracking()
             return query;
         }
         public async Task<T> GetSingle(

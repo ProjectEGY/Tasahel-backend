@@ -29,13 +29,15 @@ namespace PostexS.Controllers.API
         private readonly IGeneric<DeviceTokens> _pushNotification;
         private readonly IGeneric<ApplicationUser> _user;
         private readonly IGeneric<Location> _locations;
+        private readonly IHttpClientFactory _httpClientFactory;
         private BaseResponse baseResponse;
-        public NotificationController(IGeneric<Notification> notification, IGeneric<ApplicationUser> user, IGeneric<Location> locations, IGeneric<DeviceTokens> pushNotification)
+        public NotificationController(IGeneric<Notification> notification, IGeneric<ApplicationUser> user, IGeneric<Location> locations, IGeneric<DeviceTokens> pushNotification, IHttpClientFactory httpClientFactory)
         {
             _notification = notification;
             _pushNotification = pushNotification;
             _locations = locations;
             _user = user;
+            _httpClientFactory = httpClientFactory;
             baseResponse = new BaseResponse();
         }
         [HttpPost("PushToken")]
@@ -166,33 +168,31 @@ namespace PostexS.Controllers.API
 
             string url = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={latitude},{longitude}&key={apiKey}&language={language}";
 
-            using (HttpClient client = new HttpClient())
+            var client = _httpClientFactory.CreateClient();
+            using var response = await client.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+
+            string responseBody = await response.Content.ReadAsStringAsync();
+            JObject json = JObject.Parse(responseBody);
+
+            // Check if the status returned is OK
+            string status = json["status"]?.ToString();
+            if (status != "OK")
             {
-                HttpResponseMessage response = await client.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-
-                string responseBody = await response.Content.ReadAsStringAsync();
-                JObject json = JObject.Parse(responseBody);
-
-                // Check if the status returned is OK
-                string status = json["status"]?.ToString();
-                if (status != "OK")
-                {
-                    return "Address not found";
-                }
-
-                // Retrieve the formatted address in Arabic if available
-                var results = json["results"];
-                if (results == null || results.Count() == 0)
-                {
-                    return "Address not found";
-                }
-
-
-                // If no detailed address found, return the first formatted_address
-                string fallbackAddress = results[1]["formatted_address"]?.ToString();
-                return fallbackAddress ?? "Address not found";
+                return "Address not found";
             }
+
+            // Retrieve the formatted address in Arabic if available
+            var results = json["results"];
+            if (results == null || results.Count() == 0)
+            {
+                return "Address not found";
+            }
+
+
+            // If no detailed address found, return the first formatted_address
+            string fallbackAddress = results[1]["formatted_address"]?.ToString();
+            return fallbackAddress ?? "Address not found";
         }
 
     }
