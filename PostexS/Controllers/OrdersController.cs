@@ -40,6 +40,7 @@ using System.Threading;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace PostexS.Controllers
 {
@@ -64,9 +65,10 @@ namespace PostexS.Controllers
         private IGeneric<DeviceTokens> _pushNotification;
         private readonly IWapilotService _wapilotService;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
         public OrdersController(IGeneric<ApplicationUser> users, IGeneric<Order> orders, IGeneric<OrderOperationHistory> histories
             , ICRUD<Order> CRUD, ICRUD<OrderOperationHistory> CRUDhistory, IGeneric<OrderNotes> notes, IGeneric<Branch> branch,
-            IOrderService orderService, IGeneric<OrderTransferrHistory> TransferHistories, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IWebHostEnvironment webHostEnvironment, UserManager<ApplicationUser> userManger, IGeneric<OrderNotes> OrderNotes, IGeneric<Wallet> wallet, IWapilotService wapilotService, IHttpClientFactory httpClientFactory)
+            IOrderService orderService, IGeneric<OrderTransferrHistory> TransferHistories, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IWebHostEnvironment webHostEnvironment, UserManager<ApplicationUser> userManger, IGeneric<OrderNotes> OrderNotes, IGeneric<Wallet> wallet, IWapilotService wapilotService, IHttpClientFactory httpClientFactory, IServiceScopeFactory serviceScopeFactory)
         {
             _orderService = orderService;
             _users = users;
@@ -86,6 +88,7 @@ namespace PostexS.Controllers
             _pushNotification = pushNotification;
             _wapilotService = wapilotService;
             _httpClientFactory = httpClientFactory;
+            _serviceScopeFactory = serviceScopeFactory;
         }
 
         [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin,TrackingAdmin")]
@@ -3042,25 +3045,39 @@ namespace PostexS.Controllers
             var returnedImage = order.Returned_Image;
             var orderStatus = model.Status;
             var currentUserId = _userManger.GetUserId(User);
+            var orderId = order.Id;
 
+            // WhatsApp notification - separate Task with its own scope
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await SendNotify(order, user, orderNote, returnedImage);
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    var wapilotService = scope.ServiceProvider.GetRequiredService<IWapilotService>();
 
-                    // Send WhatsApp message to sender's group
                     var statusNote = $"تم تحديث حالة الطلب إلى: {GetStatusInArabic(orderStatus)}";
                     if (!string.IsNullOrWhiteSpace(orderNote))
                     {
                         statusNote += $"\nملاحظة: {orderNote}";
                     }
-                    await _wapilotService.EnqueueOrderStatusUpdateAsync(order, currentUserId, statusNote);
+                    await wapilotService.EnqueueOrderStatusUpdateByIdAsync(orderId, currentUserId, statusNote);
                 }
                 catch (Exception ex)
                 {
-                    // Log error but don't fail the request
-                    System.Diagnostics.Debug.WriteLine($"Error sending notifications: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"WhatsApp Error: {ex.Message}");
+                }
+            });
+
+            // Push notification - separate Task
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await SendNotify(order, user, orderNote, returnedImage);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Push Error: {ex.Message}");
                 }
             });
 

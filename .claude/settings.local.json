@@ -7,7 +7,9 @@
       "Bash(dotnet ef database update:*)",
       "Bash(findstr:*)",
       "Bash(Select-String -Pattern \"error\")",
-      "Bash(dotnet add:*)"
+      "Bash(dotnet add:*)",
+      "Bash(taskkill:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

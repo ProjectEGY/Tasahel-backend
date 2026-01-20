@@ -33,4 +33,10 @@ namespace PostexS.Models.Dtos
         public string NewNote { get; set; }
         public long OrderId { get; set; }
     }
+
+    public class TestWhatsAppDto
+    {
+        public long OrderId { get; set; }
+        public string Message { get; set; }
+    }
 }

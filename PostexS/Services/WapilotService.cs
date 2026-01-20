@@ -161,7 +161,7 @@ namespace PostexS.Services
 
             // Get active provider
             var activeProvider = await _providerService.GetActiveProviderAsync();
-            
+
             // Get client's WhatsApp group - must have a group to send
             string chatId = null;
             string senderName = order.Client?.Name ?? order.ClientName;
@@ -182,9 +182,35 @@ namespace PostexS.Services
 
             // Skip if no chat ID is available (client must have a group)
             if (string.IsNullOrEmpty(chatId))
+            {
+                await LogRequestAsync(new WhatsAppMessageLog
+                {
+                    RequestUrl = "EnqueueOrderStatusUpdateAsync",
+                    RequestBody = $"OrderId: {order.Id}, ClientId: {order.ClientId}, Provider: {activeProvider}",
+                    ResponseBody = "No WhatsApp Group ID found for client - skipping",
+                    ResponseStatusCode = 0,
+                    IsSuccess = false,
+                    RequestDurationMs = 0,
+                    RequestedAt = DateTime.UtcNow,
+                    CreateOn = DateTime.UtcNow
+                });
                 return false;
+            }
 
             var message = FormatOrderStatusUpdateMessage(order, statusChangeNote);
+
+            // Log the attempt
+            await LogRequestAsync(new WhatsAppMessageLog
+            {
+                RequestUrl = "EnqueueOrderStatusUpdateAsync",
+                RequestBody = $"OrderId: {order.Id}, ChatId: {chatId}, Provider: {activeProvider}",
+                ResponseBody = "Attempting to send message...",
+                ResponseStatusCode = 0,
+                IsSuccess = true,
+                RequestDurationMs = 0,
+                RequestedAt = DateTime.UtcNow,
+                CreateOn = DateTime.UtcNow
+            });
 
             // Use WhatsApp Bot Cloud if it's the active provider
             if (activeProvider == WhatsAppProvider.WhatsAppBotCloud)
@@ -195,6 +221,20 @@ namespace PostexS.Services
                     // Send directly via WhatsApp Bot Cloud (for group messages)
                     var result = await _whatsAppBotCloudService.SendGroupMessageAsync(chatId, message);
                     return result.Success;
+                }
+                else
+                {
+                    await LogRequestAsync(new WhatsAppMessageLog
+                    {
+                        RequestUrl = "EnqueueOrderStatusUpdateAsync",
+                        RequestBody = $"OrderId: {order.Id}, Provider: WhatsAppBotCloud",
+                        ResponseBody = $"WhatsApp Bot Cloud is not active. Settings null: {botCloudSettings == null}, IsActive: {botCloudSettings?.IsActive}",
+                        ResponseStatusCode = 0,
+                        IsSuccess = false,
+                        RequestDurationMs = 0,
+                        RequestedAt = DateTime.UtcNow,
+                        CreateOn = DateTime.UtcNow
+                    });
                 }
             }
 
@@ -208,6 +248,53 @@ namespace PostexS.Services
                 order.ClientId,
                 senderName
             );
+        }
+
+        public async Task<bool> EnqueueOrderStatusUpdateByIdAsync(long orderId, string updatedBy, string statusChangeNote = "")
+        {
+            try
+            {
+                // Load order fresh with all related entities
+                var order = await _context.Orders
+                    .Include(o => o.Client)
+                    .Include(o => o.Branch)
+                    .Include(o => o.Delivery)
+                        .ThenInclude(d => d != null ? d.Branch : null)
+                    .FirstOrDefaultAsync(o => o.Id == orderId);
+
+                if (order == null)
+                {
+                    await LogRequestAsync(new WhatsAppMessageLog
+                    {
+                        RequestUrl = "EnqueueOrderStatusUpdateByIdAsync",
+                        RequestBody = $"OrderId: {orderId}",
+                        ResponseBody = "Order not found",
+                        ResponseStatusCode = 404,
+                        IsSuccess = false,
+                        RequestDurationMs = 0,
+                        RequestedAt = DateTime.UtcNow,
+                        CreateOn = DateTime.UtcNow
+                    });
+                    return false;
+                }
+
+                return await EnqueueOrderStatusUpdateAsync(order, updatedBy, statusChangeNote);
+            }
+            catch (Exception ex)
+            {
+                await LogRequestAsync(new WhatsAppMessageLog
+                {
+                    RequestUrl = "EnqueueOrderStatusUpdateByIdAsync",
+                    RequestBody = $"OrderId: {orderId}, Error: {ex.Message}",
+                    ResponseBody = ex.StackTrace,
+                    ResponseStatusCode = 500,
+                    IsSuccess = false,
+                    RequestDurationMs = 0,
+                    RequestedAt = DateTime.UtcNow,
+                    CreateOn = DateTime.UtcNow
+                });
+                throw;
+            }
         }
 
         public async Task<bool> EnqueueBulkOrderCompletionAsync(IEnumerable<Order> orders, string createdBy)

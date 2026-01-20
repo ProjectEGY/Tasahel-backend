@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using PostexS.Interfaces;
 using PostexS.Models.Domain;
 using PostexS.Models.Enums;
@@ -18,17 +19,23 @@ namespace PostexS.Controllers
         private readonly IWhatsAppBotCloudService _whatsAppBotCloudService;
         private readonly IWhatsAppProviderService _providerService;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly IGeneric<Order> _orders;
 
         public WapilotSettingsController(
             IWapilotService wapilotService,
             IWhatsAppBotCloudService whatsAppBotCloudService,
             IWhatsAppProviderService providerService,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            IServiceScopeFactory serviceScopeFactory,
+            IGeneric<Order> orders)
         {
             _wapilotService = wapilotService;
             _whatsAppBotCloudService = whatsAppBotCloudService;
             _providerService = providerService;
             _userManager = userManager;
+            _serviceScopeFactory = serviceScopeFactory;
+            _orders = orders;
         }
 
         // GET: Settings page
@@ -289,6 +296,69 @@ namespace PostexS.Controllers
                 response = result.ResponseBody,
                 statusCode = result.StatusCode
             });
+        }
+
+        // POST: Test Background WhatsApp Send to Phone (simulates background task pattern)
+        [HttpPost]
+        public IActionResult TestBackgroundSendToPhone(string phoneNumber, string message)
+        {
+            if (string.IsNullOrEmpty(phoneNumber) || string.IsNullOrEmpty(message))
+            {
+                return Json(new { success = false, message = "برجاء إدخال رقم الهاتف والرسالة" });
+            }
+
+            // Fire-and-forget with scoped services (same pattern as order completion)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    var botCloudService = scope.ServiceProvider.GetRequiredService<IWhatsAppBotCloudService>();
+
+                    // Send test message using scoped service (WhatsApp Bot Cloud)
+                    await botCloudService.SendMessageAsync(phoneNumber, message);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Test Background WhatsApp Error: {ex.Message}");
+                }
+            });
+
+            return Json(new { success = true, message = "تم إرسال الرسالة في الخلفية - تحقق من السجلات" });
+        }
+
+        // POST: Test Background WhatsApp Send to Group (simulates background task pattern)
+        [HttpPost]
+        public IActionResult TestBackgroundSendToGroup(string groupId, string message)
+        {
+            if (string.IsNullOrEmpty(groupId) || string.IsNullOrEmpty(message))
+            {
+                return Json(new { success = false, message = "برجاء إدخال معرف الجروب والرسالة" });
+            }
+
+            if (!groupId.EndsWith("@g.us"))
+            {
+                return Json(new { success = false, message = "معرف الجروب يجب أن ينتهي بـ @g.us" });
+            }
+
+            // Fire-and-forget with scoped services (same pattern as order completion)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    var botCloudService = scope.ServiceProvider.GetRequiredService<IWhatsAppBotCloudService>();
+
+                    // Send message to group using scoped service (WhatsApp Bot Cloud)
+                    await botCloudService.SendGroupMessageAsync(groupId, message);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Test Background WhatsApp Group Error: {ex.Message}");
+                }
+            });
+
+            return Json(new { success = true, message = "تم إرسال الرسالة للجروب في الخلفية - تحقق من السجلات" });
         }
 
         // GET: Logs view

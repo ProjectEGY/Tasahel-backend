@@ -51,6 +51,7 @@ namespace PostexS.Interfaces
         
         // Order Status Update Notifications
         Task<bool> EnqueueOrderStatusUpdateAsync(Order order, string updatedBy, string statusChangeNote = "");
+        Task<bool> EnqueueOrderStatusUpdateByIdAsync(long orderId, string updatedBy, string statusChangeNote = "");
     }
 
     public class WapilotSendResult

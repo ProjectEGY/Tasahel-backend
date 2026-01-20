@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 using PostexS.Helper;
 using PostexS.Interfaces;
@@ -42,9 +43,10 @@ namespace PostexS.Controllers.API
         private readonly IGeneric<Location> _locations;
         private readonly IWapilotService _wapilotService;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
 
         public OrdersController(IGeneric<Notification> notification, IGeneric<DeviceTokens> pushNotification, IGeneric<Order> order, IGeneric<ApplicationUser> user,
-            IGeneric<OrderNotes> orderNotes, IGeneric<Location> locations, IWebHostEnvironment webHostEnvironment, ICRUD<Order> CRUD, IGeneric<OrderOperationHistory> histories, IWapilotService wapilotService, IHttpClientFactory httpClientFactory)
+            IGeneric<OrderNotes> orderNotes, IGeneric<Location> locations, IWebHostEnvironment webHostEnvironment, ICRUD<Order> CRUD, IGeneric<OrderOperationHistory> histories, IWapilotService wapilotService, IHttpClientFactory httpClientFactory, IServiceScopeFactory serviceScopeFactory)
         {
             _user = user;
             _order = order;
@@ -58,6 +60,7 @@ namespace PostexS.Controllers.API
             _webHostEnvironment = webHostEnvironment;
             _wapilotService = wapilotService;
             _httpClientFactory = httpClientFactory;
+            _serviceScopeFactory = serviceScopeFactory;
         }
         [HttpPut("Finshed")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
@@ -275,25 +278,39 @@ namespace PostexS.Controllers.API
                 var orderImage = model.Image;
                 var orderStatus = model.Status;
                 var currentUserId = userid;
+                var orderId = order.Id;
 
+                // WhatsApp notification - separate Task with its own scope
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        await SendNotify(order, user, orderNote, orderImage);
+                        using var scope = _serviceScopeFactory.CreateScope();
+                        var wapilotService = scope.ServiceProvider.GetRequiredService<IWapilotService>();
 
-                        // Send WhatsApp message to sender's group
                         var statusNote = $"تم تحديث حالة الطلب إلى: {GetStatusInArabic(orderStatus)}";
                         if (!string.IsNullOrWhiteSpace(orderNote))
                         {
                             statusNote += $"\nملاحظة: {orderNote}";
                         }
-                        await _wapilotService.EnqueueOrderStatusUpdateAsync(order, currentUserId, statusNote);
+                        await wapilotService.EnqueueOrderStatusUpdateByIdAsync(orderId, currentUserId, statusNote);
                     }
                     catch (Exception ex)
                     {
-                        // Log error but don't fail the request
-                        System.Diagnostics.Debug.WriteLine($"Error sending notifications: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"WhatsApp Error: {ex.Message}");
+                    }
+                });
+
+                // Push notification - separate Task
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SendNotify(order, user, orderNote, orderImage);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Push Error: {ex.Message}");
                     }
                 });
             }
@@ -319,7 +336,46 @@ namespace PostexS.Controllers.API
             }
             return Ok(baseResponse);
         }
-        
+
+        /// <summary>
+        /// Test endpoint to verify WhatsApp background sending with scoped services
+        /// </summary>
+        [HttpPost("TestWhatsAppBackgroundSend")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> TestWhatsAppBackgroundSend([FromBody] TestWhatsAppDto model)
+        {
+            var currentUserId = User.Identity.Name;
+
+            // Get the order
+            var order = await _order.GetSingle(x => x.Id == model.OrderId && !x.IsDeleted);
+            if (order == null)
+            {
+                return NotFound(new { success = false, message = "الطلب غير موجود" });
+            }
+
+            var orderId = order.Id;
+            var testMessage = model.Message ?? "رسالة تجريبية من زرار التست";
+
+            // Test: Fire-and-forget with scoped services (same pattern as Finshed endpoint)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    var wapilotService = scope.ServiceProvider.GetRequiredService<IWapilotService>();
+
+                    var statusNote = $"🧪 تست الإرسال في الخلفية\n{testMessage}";
+                    await wapilotService.EnqueueOrderStatusUpdateByIdAsync(orderId, currentUserId, statusNote);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Test WhatsApp Error: {ex.Message}");
+                }
+            });
+
+            return Ok(new { success = true, message = "تم إرسال الرسالة في الخلفية - تحقق من السجلات" });
+        }
+
         private string GetStatusInArabic(OrderStatus status)
         {
             return status switch
