@@ -1,0 +1,1287 @@
+@model PostexS.Models.Domain.ApplicationUser
+@{
+    ViewData["Title"] = "API Documentation";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tasahel Express - API Documentation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --primary: #2d2862;
+            --primary-light: #4a4494;
+            --accent: #fd5c28;
+            --accent-hover: #e54d1c;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --dark: #1f2937;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-800);
+            line-height: 1.6;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--primary);
+            color: white;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: white;
+        }
+
+        .sidebar-logo img {
+            height: 40px;
+        }
+
+        .sidebar-logo span {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .sidebar-nav {
+            padding: 16px 0;
+        }
+
+        .nav-section {
+            padding: 8px 24px;
+            margin-top: 16px;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 8px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 24px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-left-color: var(--accent);
+            text-decoration: none;
+        }
+
+        .nav-link i {
+            width: 18px;
+            text-align: center;
+        }
+
+        .method-badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: auto;
+        }
+
+        .method-get { background: #10b981; color: white; }
+        .method-post { background: #3b82f6; color: white; }
+        .method-put { background: #f59e0b; color: white; }
+        .method-delete { background: #ef4444; color: white; }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+        }
+
+        .top-bar {
+            background: white;
+            padding: 16px 32px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .top-bar-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .top-bar-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-custom {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary-custom {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary-custom:hover {
+            background: var(--accent-hover);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-outline-custom {
+            background: white;
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+
+        .btn-outline-custom:hover {
+            background: var(--gray-100);
+            color: var(--gray-800);
+            text-decoration: none;
+        }
+
+        .content-wrapper {
+            padding: 32px;
+            max-width: 1200px;
+        }
+
+        /* Section Cards */
+        .doc-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .section-subtitle {
+            color: var(--gray-600);
+            font-size: 15px;
+        }
+
+        .section-body {
+            padding: 24px;
+        }
+
+        /* API Endpoint Card */
+        .endpoint-card {
+            border: 1px solid var(--gray-200);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .endpoint-header {
+            padding: 16px 20px;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .endpoint-method {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .endpoint-path {
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
+            color: var(--gray-800);
+            font-weight: 500;
+        }
+
+        .endpoint-desc {
+            margin-left: auto;
+            color: var(--gray-600);
+            font-size: 14px;
+        }
+
+        .endpoint-body {
+            padding: 20px;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--gray-800);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+
+        .code-header {
+            background: var(--gray-700);
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-title {
+            color: var(--gray-300);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: var(--gray-400);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .copy-btn:hover {
+            background: var(--gray-600);
+            color: white;
+        }
+
+        .code-content {
+            padding: 16px;
+            overflow-x: auto;
+        }
+
+        .code-content pre {
+            margin: 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            color: #e5e7eb;
+            line-height: 1.6;
+        }
+
+        .code-content .string { color: #a5d6ff; }
+        .code-content .number { color: #79c0ff; }
+        .code-content .key { color: #7ee787; }
+        .code-content .comment { color: #8b949e; }
+
+        /* Parameter Tables */
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+
+        .param-table th {
+            background: var(--gray-100);
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--gray-600);
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .param-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 14px;
+        }
+
+        .param-name {
+            font-family: 'Fira Code', monospace;
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        .param-type {
+            font-size: 12px;
+            color: var(--gray-600);
+            background: var(--gray-100);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .param-required {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .required { background: #fef2f2; color: #dc2626; }
+        .optional { background: #f0fdf4; color: #16a34a; }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status-placed { background: #dbeafe; color: #1d4ed8; }
+        .status-assigned { background: #fef3c7; color: #d97706; }
+        .status-delivered { background: #d1fae5; color: #059669; }
+        .status-returned { background: #fee2e2; color: #dc2626; }
+
+        /* Auth Section */
+        .auth-box {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            border-radius: 12px;
+            padding: 24px;
+            color: white;
+            margin-bottom: 24px;
+        }
+
+        .auth-box h4 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .auth-box p {
+            opacity: 0.9;
+            margin-bottom: 16px;
+        }
+
+        .auth-example {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+        }
+
+        /* Quick Start Steps */
+        .steps {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .step {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .step-content h5 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .step-content p {
+            color: var(--gray-600);
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @@media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .mobile-toggle {
+                display: block !important;
+            }
+        }
+
+        .mobile-toggle {
+            display: none;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        /* Tabs */
+        .response-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tab-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--gray-300);
+            background: white;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Alert */
+        .alert-custom {
+            padding: 16px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .alert-info {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+        }
+
+        .alert-warning {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #92400e;
+        }
+
+        .alert-custom i {
+            font-size: 18px;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="sidebar-logo">
+                <img src="/content/images/tasahelexpress.png" alt="Tasahel Express" onerror="this.style.display='none'" />
+                <span>Tasahel API</span>
+            </a>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#overview" class="nav-link active">
+                <i class="fas fa-home"></i> Overview
+            </a>
+            <a href="#authentication" class="nav-link">
+                <i class="fas fa-key"></i> Authentication
+            </a>
+            <a href="#quickstart" class="nav-link">
+                <i class="fas fa-rocket"></i> Quick Start
+            </a>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Endpoints</div>
+            </div>
+
+            <a href="#create-order" class="nav-link">
+                <i class="fas fa-plus-circle"></i> Create Order
+                <span class="method-badge method-post">POST</span>
+            </a>
+            <a href="#search-orders" class="nav-link">
+                <i class="fas fa-search"></i> Search Orders
+                <span class="method-badge method-get">GET</span>
+            </a>
+            <a href="#get-order" class="nav-link">
+                <i class="fas fa-file-alt"></i> Get Order by Code
+                <span class="method-badge method-get">GET</span>
+            </a>
+            <a href="#bulk-status" class="nav-link">
+                <i class="fas fa-list-ul"></i> Bulk Status
+                <span class="method-badge method-post">POST</span>
+            </a>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Reference</div>
+            </div>
+
+            <a href="#status-codes" class="nav-link">
+                <i class="fas fa-info-circle"></i> Order Statuses
+            </a>
+            <a href="#errors" class="nav-link">
+                <i class="fas fa-exclamation-triangle"></i> Error Codes
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="top-bar">
+            <button class="mobile-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="top-bar-title">API Documentation</div>
+            <div class="top-bar-actions">
+                <a href="/swagger" target="_blank" class="btn-custom btn-outline-custom">
+                    <i class="fas fa-external-link-alt"></i> Swagger UI
+                </a>
+                <a href="/Tasahel-Sender-API.postman_collection.json" download class="btn-custom btn-primary-custom">
+                    <i class="fas fa-download"></i> Postman Collection
+                </a>
+            </div>
+        </div>
+
+        <div class="content-wrapper">
+            <!-- Overview Section -->
+            <section id="overview" class="doc-section">
+                <div class="section-header">
+                    <h1 class="section-title">Tasahel Express Sender API</h1>
+                    <p class="section-subtitle">Integrate your system with Tasahel Express to create and track delivery orders programmatically.</p>
+                </div>
+                <div class="section-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <h5><i class="fas fa-server text-primary mr-2"></i> Base URL</h5>
+                            <div class="code-block">
+                                <div class="code-content">
+                                    <pre>https://tasahel-eg.com/api/</pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <h5><i class="fas fa-code text-primary mr-2"></i> Response Format</h5>
+                            <div class="code-block">
+                                <div class="code-content">
+                                    <pre>Content-Type: application/json</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert-custom alert-info">
+                        <i class="fas fa-lightbulb"></i>
+                        <div>
+                            <strong>Need help?</strong> Check out our <a href="/swagger" target="_blank">interactive Swagger documentation</a> to test API calls directly in your browser.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Authentication Section -->
+            <section id="authentication" class="doc-section">
+                <div class="section-header">
+                    <h2 class="section-title"><i class="fas fa-key mr-2"></i> Authentication</h2>
+                    <p class="section-subtitle">All API requests require authentication using your API keys in HTTP Headers.</p>
+                </div>
+                <div class="section-body">
+                    <div class="auth-box">
+                        <h4><i class="fas fa-shield-alt mr-2"></i> API Key Authentication (Headers)</h4>
+                        <p>Include your API keys as HTTP Headers in every request for secure authentication.</p>
+                        <div class="auth-example">
+                            <span style="color: #7ee787;">X-Public-Key:</span> your_public_key<br/>
+                            <span style="color: #7ee787;">X-Private-Key:</span> your_private_key
+                        </div>
+                    </div>
+
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Header</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="param-name">X-Public-Key</span></td>
+                                <td><span class="param-type">string</span></td>
+                                <td><span class="param-required required">Required</span></td>
+                                <td>Your unique public API key (same as your User ID)</td>
+                            </tr>
+                            <tr>
+                                <td><span class="param-name">X-Private-Key</span></td>
+                                <td><span class="param-type">string</span></td>
+                                <td><span class="param-required required">Required</span></td>
+                                <td>Your secret private API key (keep confidential)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="alert-custom alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>Security Warning:</strong> Never share your PrivateKey. Keep it secure and don't expose it in client-side code. Using Headers is more secure than query parameters as they are not logged in server access logs.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Start Section -->
+            <section id="quickstart" class="doc-section">
+                <div class="section-header">
+                    <h2 class="section-title"><i class="fas fa-rocket mr-2"></i> Quick Start</h2>
+                    <p class="section-subtitle">Get up and running in minutes with these simple steps.</p>
+                </div>
+                <div class="section-body">
+                    <div class="steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h5>Get Your API Keys</h5>
+                                <p>Visit the <a href="/developer/api-keys">Developer Portal</a> to generate your PublicKey and PrivateKey.</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h5>Create Your First Order</h5>
+                                <p>Use the POST /api/Sender/orders endpoint with your credentials and order details.</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h5>Track Your Orders</h5>
+                                <p>Use the GET /api/Sender/orders endpoints to search and track your orders.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Create Order Endpoint -->
+            <section id="create-order" class="doc-section">
+                <div class="section-header">
+                    <h2 class="section-title">Create New Order</h2>
+                    <p class="section-subtitle">Create a new delivery order in the system.</p>
+                </div>
+                <div class="section-body">
+                    <div class="endpoint-card">
+                        <div class="endpoint-header">
+                            <span class="endpoint-method method-post">POST</span>
+                            <span class="endpoint-path">/api/Sender/orders</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <h6 class="mb-3"><i class="fas fa-paper-plane mr-2"></i> Request Body</h6>
+                            <table class="param-table">
+                                <thead>
+                                    <tr>
+                                        <th>Field</th>
+                                        <th>Type</th>
+                                        <th>Required</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="param-name">ClientName</span></td>
+                                        <td><span class="param-type">string</span></td>
+                                        <td><span class="param-required required">Required</span></td>
+                                        <td>Receiver's full name</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="param-name">ClientPhone</span></td>
+                                        <td><span class="param-type">string</span></td>
+                                        <td><span class="param-required required">Required</span></td>
+                                        <td>Receiver's phone number</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="param-name">ClientCity</span></td>
+                                        <td><span class="param-type">string</span></td>
+                                        <td><span class="param-required required">Required</span></td>
+                                        <td>Delivery city</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="param-name">Address</span></td>
+                                        <td><span class="param-type">string</span></td>
+                                        <td><span class="param-required required">Required</span></td>
+                                        <td>Full delivery address</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="param-name">Cost</span></td>
+                                        <td><span class="param-type">number</span></td>
+                                        <td><span class="param-required required">Required</span></td>
+                                        <td>Order value (COD amount)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="param-name">DeliveryFees</span></td>
+                                        <td><span class="param-type">number</span></td>
+                                        <td><span class="param-required required">Required</span></td>
+                                        <td>Shipping fees</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="param-name">ClientCode</span></td>
+                                        <td><span class="param-type">string</span></td>
+                                        <td><span class="param-required optional">Optional</span></td>
+                                        <td>Your internal reference code</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="param-name">Notes</span></td>
+                                        <td><span class="param-type">string</span></td>
+                                        <td><span class="param-required optional">Optional</span></td>
+                                        <td>Delivery instructions</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example Request</span>
+                                    <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copy</button>
+                                </div>
+                                <div class="code-content">
+<pre>{
+  <span class="key">"ClientName"</span>: <span class="string">"Ahmed Mohamed"</span>,
+  <span class="key">"ClientPhone"</span>: <span class="string">"01012345678"</span>,
+  <span class="key">"ClientCity"</span>: <span class="string">"Cairo"</span>,
+  <span class="key">"Address"</span>: <span class="string">"123 Tahrir Square, Downtown"</span>,
+  <span class="key">"Cost"</span>: <span class="number">250.00</span>,
+  <span class="key">"DeliveryFees"</span>: <span class="number">30.00</span>,
+  <span class="key">"ClientCode"</span>: <span class="string">"ORD-12345"</span>,
+  <span class="key">"Notes"</span>: <span class="string">"Call before delivery"</span>
+}</pre>
+                                </div>
+                            </div>
+
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example Response</span>
+                                </div>
+                                <div class="code-content">
+<pre>{
+  <span class="key">"errorCode"</span>: <span class="number">0</span>,
+  <span class="key">"errorMessage"</span>: <span class="string">null</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"orderCode"</span>: <span class="string">"Tas12345"</span>,
+    <span class="key">"receiverName"</span>: <span class="string">"Ahmed Mohamed"</span>,
+    <span class="key">"receiverPhone"</span>: <span class="string">"01012345678"</span>,
+    <span class="key">"city"</span>: <span class="string">"Cairo"</span>,
+    <span class="key">"address"</span>: <span class="string">"123 Tahrir Square, Downtown"</span>,
+    <span class="key">"cost"</span>: <span class="number">250.00</span>,
+    <span class="key">"deliveryFees"</span>: <span class="number">30.00</span>,
+    <span class="key">"totalCost"</span>: <span class="number">280.00</span>,
+    <span class="key">"status"</span>: <span class="number">0</span>,
+    <span class="key">"statusArabic"</span>: <span class="string">"جديد"</span>,
+    <span class="key">"createdOn"</span>: <span class="string">"2026-01-20T14:30:00"</span>
+  }
+}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Search Orders Endpoint -->
+            <section id="search-orders" class="doc-section">
+                <div class="section-header">
+                    <h2 class="section-title">Search Orders</h2>
+                    <p class="section-subtitle">Search and filter your orders with pagination support.</p>
+                </div>
+                <div class="section-body">
+                    <div class="endpoint-card">
+                        <div class="endpoint-header">
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-path">/api/Sender/orders</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <h6 class="mb-3"><i class="fas fa-filter mr-2"></i> Query Parameters</h6>
+                            <table class="param-table">
+                                <thead>
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th>Type</th>
+                                        <th>Required</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="param-name">search</span></td>
+                                        <td><span class="param-type">string</span></td>
+                                        <td><span class="param-required optional">Optional</span></td>
+                                        <td>Search by receiver name, order code, or phone</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="param-name">status</span></td>
+                                        <td><span class="param-type">integer</span></td>
+                                        <td><span class="param-required optional">Optional</span></td>
+                                        <td>Filter by order status (see status codes)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="param-name">pageNumber</span></td>
+                                        <td><span class="param-type">integer</span></td>
+                                        <td><span class="param-required optional">Optional</span></td>
+                                        <td>Page number (default: 1)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="param-name">pageSize</span></td>
+                                        <td><span class="param-type">integer</span></td>
+                                        <td><span class="param-required optional">Optional</span></td>
+                                        <td>Items per page (default: 10, max: 50)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example Request (with Headers)</span>
+                                </div>
+                                <div class="code-content">
+<pre>GET /api/Sender/orders?search=Ahmed&status=2&pageNumber=1&pageSize=10
+<span class="key">Headers:</span>
+  <span class="string">X-Public-Key:</span> your_public_key
+  <span class="string">X-Private-Key:</span> your_private_key</pre>
+                                </div>
+                            </div>
+
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example Response</span>
+                                </div>
+                                <div class="code-content">
+<pre>{
+  <span class="key">"errorCode"</span>: <span class="number">0</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"items"</span>: [
+      {
+        <span class="key">"orderCode"</span>: <span class="string">"Tas12345"</span>,
+        <span class="key">"receiverName"</span>: <span class="string">"Ahmed Mohamed"</span>,
+        <span class="key">"receiverPhone"</span>: <span class="string">"01012345678"</span>,
+        <span class="key">"city"</span>: <span class="string">"Cairo"</span>,
+        <span class="key">"address"</span>: <span class="string">"123 Tahrir Square"</span>,
+        <span class="key">"cost"</span>: <span class="number">250.00</span>,
+        <span class="key">"deliveryFees"</span>: <span class="number">30.00</span>,
+        <span class="key">"totalCost"</span>: <span class="number">280.00</span>,
+        <span class="key">"status"</span>: <span class="number">2</span>,
+        <span class="key">"statusArabic"</span>: <span class="string">"تم التوصيل"</span>,
+        <span class="key">"deliveryAgentName"</span>: <span class="string">"Mohamed Ali"</span>,
+        <span class="key">"deliveryAgentPhone"</span>: <span class="string">"01098765432"</span>
+      }
+    ],
+    <span class="key">"pageNumber"</span>: <span class="number">1</span>,
+    <span class="key">"pageSize"</span>: <span class="number">10</span>,
+    <span class="key">"totalCount"</span>: <span class="number">45</span>,
+    <span class="key">"totalPages"</span>: <span class="number">5</span>,
+    <span class="key">"hasPreviousPage"</span>: <span class="number">false</span>,
+    <span class="key">"hasNextPage"</span>: <span class="number">true</span>
+  }
+}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Get Order by Code -->
+            <section id="get-order" class="doc-section">
+                <div class="section-header">
+                    <h2 class="section-title">Get Order by Code</h2>
+                    <p class="section-subtitle">Retrieve detailed information about a specific order using its code.</p>
+                </div>
+                <div class="section-body">
+                    <div class="endpoint-card">
+                        <div class="endpoint-header">
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-path">/api/Sender/orders/{code}</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <h6 class="mb-3"><i class="fas fa-link mr-2"></i> Path Parameters</h6>
+                            <table class="param-table">
+                                <thead>
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th>Type</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="param-name">code</span></td>
+                                        <td><span class="param-type">string</span></td>
+                                        <td>The order tracking code (e.g., Tas12345)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example Request (with Headers)</span>
+                                </div>
+                                <div class="code-content">
+<pre>GET /api/Sender/orders/Tas12345
+<span class="key">Headers:</span>
+  <span class="string">X-Public-Key:</span> your_public_key
+  <span class="string">X-Private-Key:</span> your_private_key</pre>
+                                </div>
+                            </div>
+
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example Response</span>
+                                </div>
+                                <div class="code-content">
+<pre>{
+  <span class="key">"errorCode"</span>: <span class="number">0</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"orderCode"</span>: <span class="string">"Tas12345"</span>,
+    <span class="key">"receiverName"</span>: <span class="string">"أحمد محمد"</span>,
+    <span class="key">"receiverPhone"</span>: <span class="string">"01012345678"</span>,
+    <span class="key">"city"</span>: <span class="string">"القاهرة"</span>,
+    <span class="key">"address"</span>: <span class="string">"المعادي - شارع 9"</span>,
+    <span class="key">"cost"</span>: <span class="number">150.00</span>,
+    <span class="key">"deliveryFees"</span>: <span class="number">30.00</span>,
+    <span class="key">"totalCost"</span>: <span class="number">180.00</span>,
+    <span class="key">"status"</span>: <span class="number">2</span>,
+    <span class="key">"statusArabic"</span>: <span class="string">"تم التوصيل"</span>,
+    <span class="key">"deliveryAgentName"</span>: <span class="string">"محمد علي"</span>,
+    <span class="key">"deliveryAgentPhone"</span>: <span class="string">"01098765432"</span>
+  }
+}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bulk Status -->
+            <section id="bulk-status" class="doc-section">
+                <div class="section-header">
+                    <h2 class="section-title">Bulk Order Status</h2>
+                    <p class="section-subtitle">Get the status of multiple orders in a single request.</p>
+                </div>
+                <div class="section-body">
+                    <div class="endpoint-card">
+                        <div class="endpoint-header">
+                            <span class="endpoint-method method-post">POST</span>
+                            <span class="endpoint-path">/api/Sender/orders/status</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <h6 class="mb-3"><i class="fas fa-paper-plane mr-2"></i> Request Body</h6>
+                            <table class="param-table">
+                                <thead>
+                                    <tr>
+                                        <th>Field</th>
+                                        <th>Type</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="param-name">OrderCodes</span></td>
+                                        <td><span class="param-type">string[]</span></td>
+                                        <td>Array of order codes to check (max 100)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example Request</span>
+                                </div>
+                                <div class="code-content">
+<pre>{
+  <span class="key">"OrderCodes"</span>: [<span class="string">"Tas12345"</span>, <span class="string">"Tas12346"</span>, <span class="string">"Tas12347"</span>]
+}</pre>
+                                </div>
+                            </div>
+
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example Response</span>
+                                </div>
+                                <div class="code-content">
+<pre>{
+  <span class="key">"errorCode"</span>: <span class="number">0</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"found"</span>: <span class="number">3</span>,
+    <span class="key">"requested"</span>: <span class="number">3</span>,
+    <span class="key">"orders"</span>: [
+      {
+        <span class="key">"orderCode"</span>: <span class="string">"Tas12345"</span>,
+        <span class="key">"status"</span>: <span class="number">2</span>,
+        <span class="key">"statusArabic"</span>: <span class="string">"تم التوصيل"</span>,
+        <span class="key">"lastUpdated"</span>: <span class="string">"2026-01-20T14:30:00"</span>
+      }
+    ]
+  }
+}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Status Codes -->
+            <section id="status-codes" class="doc-section">
+                <div class="section-header">
+                    <h2 class="section-title"><i class="fas fa-info-circle mr-2"></i> Order Status Codes</h2>
+                    <p class="section-subtitle">Reference for all possible order status values.</p>
+                </div>
+                <div class="section-body">
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Status</th>
+                                <th>Arabic</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="param-name">0</span></td>
+                                <td><span class="status-badge status-placed">Placed</span></td>
+                                <td>جديد</td>
+                                <td>Order created, pending pickup</td>
+                            </tr>
+                            <tr>
+                                <td><span class="param-name">1</span></td>
+                                <td><span class="status-badge status-assigned">Assigned</span></td>
+                                <td>جارى التوصيل</td>
+                                <td>Assigned to delivery agent</td>
+                            </tr>
+                            <tr>
+                                <td><span class="param-name">2</span></td>
+                                <td><span class="status-badge status-delivered">Delivered</span></td>
+                                <td>تم التوصيل</td>
+                                <td>Successfully delivered</td>
+                            </tr>
+                            <tr>
+                                <td><span class="param-name">3</span></td>
+                                <td><span class="status-badge status-assigned">Waiting</span></td>
+                                <td>مؤجل</td>
+                                <td>Delivery postponed</td>
+                            </tr>
+                            <tr>
+                                <td><span class="param-name">7</span></td>
+                                <td><span class="status-badge status-delivered">Partial Delivered</span></td>
+                                <td>تم التوصيل جزئي</td>
+                                <td>Partially delivered</td>
+                            </tr>
+                            <tr>
+                                <td><span class="param-name">8</span></td>
+                                <td><span class="status-badge status-returned">Returned</span></td>
+                                <td>مرتجع كامل</td>
+                                <td>Order fully returned</td>
+                            </tr>
+                            <tr>
+                                <td><span class="param-name">10</span></td>
+                                <td><span class="status-badge status-delivered">Delivered with Edit</span></td>
+                                <td>تم التوصيل مع تعديل السعر</td>
+                                <td>Delivered with price adjustment</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Error Codes -->
+            <section id="errors" class="doc-section">
+                <div class="section-header">
+                    <h2 class="section-title"><i class="fas fa-exclamation-triangle mr-2"></i> Error Codes</h2>
+                    <p class="section-subtitle">Common error responses and their meanings.</p>
+                </div>
+                <div class="section-body">
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>HTTP Code</th>
+                                <th>Error</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="param-type">400</span></td>
+                                <td>PublicKeyIsRequired</td>
+                                <td>Missing PublicKey parameter</td>
+                            </tr>
+                            <tr>
+                                <td><span class="param-type">400</span></td>
+                                <td>PrivateKeyIsRequired</td>
+                                <td>Missing PrivateKey parameter</td>
+                            </tr>
+                            <tr>
+                                <td><span class="param-type">401</span></td>
+                                <td>InvalidCredentials</td>
+                                <td>Invalid PublicKey or PrivateKey</td>
+                            </tr>
+                            <tr>
+                                <td><span class="param-type">404</span></td>
+                                <td>OrderNotFound</td>
+                                <td>Order not found or doesn't belong to you</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Error Response Format</span>
+                        </div>
+                        <div class="code-content">
+<pre>{
+  <span class="key">"errorCode"</span>: <span class="number">6</span>,
+  <span class="key">"errorMessage"</span>: <span class="string">"Invalid API credentials"</span>,
+  <span class="key">"data"</span>: <span class="number">null</span>
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        function copyCode(btn) {
+            const codeBlock = btn.closest('.code-block');
+            const code = codeBlock.querySelector('pre').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                }, 2000);
+            });
+        }
+
+        // Smooth scroll for sidebar links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                if (href.startsWith('#')) {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        // Update active state
+                        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                        this.classList.add('active');
+                        // Close sidebar on mobile
+                        if (window.innerWidth < 992) {
+                            document.getElementById('sidebar').classList.remove('open');
+                        }
+                    }
+                }
+            });
+        });
+
+        // Update active nav on scroll
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('section[id]');
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

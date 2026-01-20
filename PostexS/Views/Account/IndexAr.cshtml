@@ -1,210 +1,688 @@
-﻿@model PostexS.Models.Domain.ApplicationUser
+@model PostexS.Models.Domain.ApplicationUser
 @{
-    ViewData["Title"] = "API Keys";
+    ViewData["Title"] = "مفاتيح API";
+    Layout = null;
 }
-<style>
-
-    /* Styling the card */
-    .card {
-        border-radius: 15px;
-        border: none;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        background-color: #ffffff;
-        position: relative;
-        padding: 10px;
-    }
-
-    /* Styling the card header and logo */
-    .card-header {
-        background-color: #ddd;
-        color: #2d2862;
-        border-radius: 15px;
-        padding: 0px 20px 0px 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between; /* Space between logo, title, and language switch */
-        position: relative;
-    }
-
-    .header-content {
-        display: flex;
-        align-items: center;
-        width: 100%; /* Ensure header-content takes full width */
-        direction: rtl; /* Right-to-left direction */
-    }
-
-    .logo-container {
-        flex: 1;
-        display: flex;
-        justify-content: center; /* Center logo */
-    }
-
-    .card-header img {
-        max-height: 15ch;
-    }
-
-    .language-switch {
-        margin-right: 0; /* Push language switch to the right (RTL layout) */
-    }
-
-        .language-switch .btn {
-            font-size: 14px;
-            padding: 7px 15px;
-            color: #fff;
-            background-color: #2d2862;
-            border: none;
-            transition: background-color 0.3s ease-in-out;
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>تساهل إكسبريس - مفاتيح API</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --primary: #2d2862;
+            --primary-light: #4a4494;
+            --accent: #fd5c28;
+            --accent-hover: #e54d1c;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1f2937;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
         }
 
-            .language-switch .btn:hover {
-                background-color: #fd5c28;
-            }
-
-    /* Alert box styling */
-    .alert-custom {
-        background-color: #e2f3ec;
-        border-radius: 15px;
-        padding: 20px;
-        font-size: 17px;
-        border: 1px solid #d1e7dd;
-        margin: 15px 0;
-    }
-
-        .alert-custom .alert-heading {
-            font-size: 18px;
-            margin-bottom: 15px;
-            font-weight: bold;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        .alert-custom .alert-content p {
-            margin-bottom: 10px;
-            line-height: 1.5;
+        body {
+            font-family: 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
         }
 
-        .alert-custom .form-group {
-            margin-bottom: 15px;
+        .container-custom {
+            max-width: 1000px;
+            margin: 0 auto;
         }
 
-    /* Table styling */
-    .table-responsive {
-        margin-top: 20px;
-    }
-
-    table {
-        width: 100%;
-        margin-bottom: 1rem;
-        background-color: transparent;
-    }
-
-        table th, table td {
-            padding: 15px;
+        /* Header */
+        .page-header {
             text-align: center;
-            border-top: 1px solid #dee2e6;
+            margin-bottom: 40px;
+            color: white;
         }
 
-    thead th {
-        background-color: #343a40;
-        color: #fff;
-    }
-
-    .badge-success {
-        background-color: #28a745;
-    }
-
-    /* Button styling */
-    .btn-outline-info {
-        color: #f89d13;
-        border-color: #f89d13;
-    }
-
-        .btn-outline-info:hover {
-            background-color: #fd5c28;
-            color: #fff;
+        .page-header img {
+            height: 60px;
+            margin-bottom: 16px;
         }
-</style>
 
-<!-- Card -->
-<div class="card shadow-lg mt-5" dir="rtl">
-    <div class="card-header">
-        <div class="header-content">
-            <!-- Language Switch Button on the Left -->
-            <div class="language-switch">
-                <a href="@Url.Action("IndexEn", "Account")" class="btn">English</a>
-            </div>
-            <!-- Centered Logo -->
-            <div class="logo-container">
-                <img src="~/content/images/tasahelexpress.png" alt="Postex Logo" />
-            </div>
-            <!-- Title on the Right -->
-            <h3 class="mb-0 mt-0 text-right"><i class="fa fa-fw fa-key"></i> مفاتيح API</h3>
+        .page-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
 
-        </div>
+        .page-header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .lang-switch {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+
+        .lang-switch a {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .lang-switch a:hover {
+            background: rgba(255,255,255,0.3);
+            color: white;
+            text-decoration: none;
+        }
+
+        /* Main Card */
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+        }
+
+        .card-section {
+            padding: 32px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .card-section:last-child {
+            border-bottom: none;
+        }
+
+        .section-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .section-subtitle {
+            color: var(--gray-600);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        /* API Keys Display */
+        .keys-container {
+            background: var(--gray-50);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .key-item {
+            margin-bottom: 20px;
+        }
+
+        .key-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .key-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gray-600);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .key-value {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .key-input {
+            flex: 1;
+            background: white;
+            border: 1px solid var(--gray-300);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
+            color: var(--gray-800);
+            direction: ltr;
+            text-align: left;
+        }
+
+        .copy-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: var(--primary-light);
+        }
+
+        .key-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .status-badge i {
+            font-size: 10px;
+        }
+
+        .update-date {
+            color: var(--gray-600);
+            font-size: 13px;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn-custom {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary-custom {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary-custom:hover {
+            background: var(--accent-hover);
+            color: white;
+            text-decoration: none;
+            transform: translateY(-2px);
+        }
+
+        .btn-success-custom {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success-custom:hover {
+            background: #059669;
+            color: white;
+            text-decoration: none;
+            transform: translateY(-2px);
+        }
+
+        .btn-outline-custom {
+            background: white;
+            color: var(--gray-700);
+            border: 2px solid var(--gray-300);
+        }
+
+        .btn-outline-custom:hover {
+            background: var(--gray-100);
+            color: var(--gray-800);
+            text-decoration: none;
+            border-color: var(--gray-400);
+        }
+
+        /* Quick Links */
+        .quick-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .quick-link {
+            background: var(--gray-50);
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 20px;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .quick-link:hover {
+            border-color: var(--primary);
+            background: white;
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            text-decoration: none;
+        }
+
+        .quick-link-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+
+        .quick-link-content h5 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 4px;
+        }
+
+        .quick-link-content p {
+            font-size: 12px;
+            color: var(--gray-600);
+            margin: 0;
+        }
+
+        /* API Table */
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .api-table th {
+            background: var(--gray-100);
+            padding: 14px 16px;
+            text-align: right;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--gray-600);
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .api-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 14px;
+        }
+
+        .api-table tr:hover {
+            background: var(--gray-50);
+        }
+
+        .method-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .method-get { background: #d1fae5; color: #059669; }
+        .method-post { background: #dbeafe; color: #1d4ed8; }
+
+        .endpoint-code {
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            color: var(--primary);
+            background: var(--gray-100);
+            padding: 4px 8px;
+            border-radius: 4px;
+            direction: ltr;
+            display: inline-block;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .empty-state-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--gray-100);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 32px;
+            color: var(--gray-400);
+        }
+
+        .empty-state h4 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            color: var(--gray-600);
+            margin-bottom: 20px;
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: var(--dark);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .toast-notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-notification i {
+            color: var(--success);
+        }
+
+        /* Footer */
+        .page-footer {
+            text-align: center;
+            margin-top: 30px;
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+        }
+
+        .page-footer a {
+            color: white;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="lang-switch">
+        <a href="@Url.Action("Index", "Account")">
+            <i class="fas fa-globe"></i> English
+        </a>
     </div>
 
-    <div class="card-body">
-        <div class="alert alert-custom mt-4" role="alert">
-            <div class="alert-content">
-                <p><strong>URL-endpoint:</strong> <span id="currentDomain" class="text-success" style="color: cornflowerblue;"></span>/api/</p>
-                <p><strong>API-CreateOrder:</strong> <a href="https://red-crescent-864158.postman.co/workspace/My-Workspace~47e31ebf-d4d7-4fd7-8031-7491c9710b7e/request/11873279-45021e9a-9850-44bc-915c-747bcee7c88d?ctx=documentation" target="_blank" class="text-success" style="color: cornflowerblue;">API Create Order [Postman]</a></p>
-                <hr>
-                @using (Html.BeginForm("DownloadFile", "Account", FormMethod.Get))
-                {
-                    <div class="form-group">
-                        <label class="font-weight-bold">تحميل مجموعة Postman</label>
-                        <button type="submit" id="downloadButton" class="btn btn-outline-info btn-sm">
-                            <i class="fa fa-download"></i> تحميل
-                        </button>
-                    </div>
-                }
-                <p class="mt-3">يتم التحقق من طلبات API الخاصة بك باستخدام مفتاح API للحساب. إذا لم تقم بتضمين مفتاحك عند إجراء طلب API أو استخدمت مفتاحًا غير صحيح، فسوف نعيد خطأ.</p>
-            </div>
+    <div class="container-custom">
+        <!-- Header -->
+        <div class="page-header">
+            <img src="/content/images/tasahelexpress.png" alt="تساهل إكسبريس" onerror="this.style.display='none'" />
+            <h1><i class="fas fa-key"></i> مفاتيح API</h1>
+            <p>إدارة بيانات الاعتماد الخاصة بك للتكامل مع النظام</p>
         </div>
 
-        <!-- Table -->
-        <div class="table-responsive mt-5">
-            @if (Model.APIkeys_UpdateOn != null)
-            {
-                <table class="table table-bordered table-hover">
-                    <thead class="thead-dark">
+        <!-- Main Card -->
+        <div class="main-card">
+            <!-- API Keys Section -->
+            <div class="card-section">
+                <div class="section-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h2 class="section-title">بيانات الاعتماد الخاصة بك</h2>
+                <p class="section-subtitle">استخدم هذه المفاتيح للمصادقة على طلبات API الخاصة بك. حافظ على سرية المفتاح الخاص.</p>
+
+                @if (Model.APIkeys_UpdateOn != null)
+                {
+                    <div class="keys-container">
+                        <div class="key-item">
+                            <div class="key-label">
+                                <i class="fas fa-user"></i> المفتاح العام (Public Key)
+                            </div>
+                            <div class="key-value">
+                                <input type="text" class="key-input" value="@Model.PublicKey" id="publicKey" readonly />
+                                <button class="copy-btn" onclick="copyToClipboard('publicKey')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="key-item">
+                            <div class="key-label">
+                                <i class="fas fa-lock"></i> المفتاح الخاص (سري)
+                            </div>
+                            <div class="key-value">
+                                <input type="password" class="key-input" value="@Model.PrivateKey" id="privateKey" readonly />
+                                <button class="copy-btn" onclick="togglePassword('privateKey', this)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="copy-btn" onclick="copyToClipboard('privateKey')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="key-meta">
+                            <span class="status-badge">
+                                <i class="fas fa-circle"></i> مفعّل
+                            </span>
+                            <span class="update-date">
+                                <i class="fas fa-clock"></i> آخر تحديث: @Model.APIkeys_UpdateOn.Value.ToString("dd MMMM yyyy") الساعة @Model.APIkeys_UpdateOn.Value.ToShortTimeString()
+                            </span>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <a href="@Url.Action("UpdateApiKeys", "Account", new { lang = "ar" })" class="btn-custom btn-success-custom">
+                            <i class="fas fa-sync-alt"></i> إعادة توليد المفاتيح
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-key"></i>
+                        </div>
+                        <h4>لم يتم إنشاء مفاتيح API</h4>
+                        <p>قم بإنشاء مفاتيح API الخاصة بك للبدء في التكامل مع تساهل إكسبريس.</p>
+                        <a href="@Url.Action("UpdateApiKeys", "Account", new { lang = "ar" })" class="btn-custom btn-primary-custom">
+                            <i class="fas fa-plus"></i> إنشاء مفاتيح API
+                        </a>
+                    </div>
+                }
+            </div>
+
+            <!-- Quick Links Section -->
+            <div class="card-section">
+                <div class="section-icon">
+                    <i class="fas fa-rocket"></i>
+                </div>
+                <h2 class="section-title">موارد المطورين</h2>
+                <p class="section-subtitle">كل ما تحتاجه للتكامل مع API الخاص بنا.</p>
+
+                <div class="quick-links">
+                    <a href="@Url.Action("Documentation", "Account")" class="quick-link" target="_blank">
+                        <div class="quick-link-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div class="quick-link-content">
+                            <h5>التوثيق</h5>
+                            <p>مرجع API الكامل</p>
+                        </div>
+                    </a>
+                    <a href="/swagger" class="quick-link" target="_blank">
+                        <div class="quick-link-icon">
+                            <i class="fas fa-code"></i>
+                        </div>
+                        <div class="quick-link-content">
+                            <h5>Swagger UI</h5>
+                            <p>اختبار تفاعلي للـ API</p>
+                        </div>
+                    </a>
+                    <a href="/Tasahel-Sender-API.postman_collection.json" class="quick-link" download>
+                        <div class="quick-link-icon">
+                            <i class="fas fa-download"></i>
+                        </div>
+                        <div class="quick-link-content">
+                            <h5>Postman Collection</h5>
+                            <p>أمثلة جاهزة للاستخدام</p>
+                        </div>
+                    </a>
+                    <a href="/swagger/v1/swagger.json" class="quick-link" download="Tasahel-API-Swagger.json">
+                        <div class="quick-link-icon">
+                            <i class="fas fa-file-code"></i>
+                        </div>
+                        <div class="quick-link-content">
+                            <h5>OpenAPI Spec</h5>
+                            <p>ملف Swagger JSON</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Available APIs Section -->
+            <div class="card-section">
+                <div class="section-icon">
+                    <i class="fas fa-plug"></i>
+                </div>
+                <h2 class="section-title">الـ Endpoints المتاحة</h2>
+                <p class="section-subtitle">جميع نقاط النهاية المتاحة للتكامل.</p>
+
+                <table class="api-table">
+                    <thead>
                         <tr>
-                            <th>المفتاح العام</th>
-                            <th>المفتاح الخاص<br />(حافظ عليه سريًا)</th>
-                            <th>الحالة</th>
-                            <th>تحديث في</th>
-                            <th></th>
+                            <th>الطريقة</th>
+                            <th>Endpoint</th>
+                            <th>الوصف</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>@Model.PublicKey</td>
-                            <td>@Model.PrivateKey</td>
-                            <td><span class="badge badge-success">مفعل</span></td>
-                            <td>
-                                @Model.APIkeys_UpdateOn.Value.ToString("MMMM dd, yyyy")<br />
-                                @Model.APIkeys_UpdateOn.Value.ToShortTimeString()
-                            </td>
-                            <td>
-                                <a asp-action="UpdateApiKeys" asp-controller="Account" asp-route-lang="ar" class="btn btn-success btn-sm">تحديث</a>
-                            </td>
+                            <td><span class="method-badge method-post">POST</span></td>
+                            <td><code class="endpoint-code">/api/Orders/NewOrder</code></td>
+                            <td>إنشاء طلب توصيل جديد</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-badge method-get">GET</span></td>
+                            <td><code class="endpoint-code">/api/Sender/orders</code></td>
+                            <td>البحث وعرض الطلبات</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-badge method-get">GET</span></td>
+                            <td><code class="endpoint-code">/api/Sender/orders/{id}</code></td>
+                            <td>تفاصيل طلب بالـ ID</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-badge method-get">GET</span></td>
+                            <td><code class="endpoint-code">/api/Sender/orders/track/{code}</code></td>
+                            <td>تتبع الطلب بالكود</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-badge method-post">POST</span></td>
+                            <td><code class="endpoint-code">/api/Sender/orders/status</code></td>
+                            <td>حالة عدة طلبات</td>
                         </tr>
                     </tbody>
                 </table>
-            }
-            else
-            {
-                <a asp-action="UpdateApiKeys" asp-controller="Account" asp-route-lang="ar" class="btn btn-primary btn-sm">إنشاء جديد</a>
-            }
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="page-footer">
+            <p>تحتاج مساعدة؟ راجع <a href="@Url.Action("Documentation", "Account")" target="_blank">التوثيق</a> أو تواصل مع الدعم.</p>
         </div>
     </div>
-</div>
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+    <!-- Toast Notification -->
+    <div class="toast-notification" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">تم النسخ!</span>
+    </div>
+
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            var currentDomain = window.location.hostname;
-            document.getElementById("currentDomain").textContent = currentDomain;
-        });
+        function copyToClipboard(inputId) {
+            const input = document.getElementById(inputId);
+            const originalType = input.type;
+            input.type = 'text';
+            input.select();
+            document.execCommand('copy');
+            input.type = originalType;
+            showToast('تم النسخ إلى الحافظة!');
+        }
+
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
     </script>
-}
+</body>
+</html>

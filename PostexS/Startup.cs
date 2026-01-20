@@ -24,6 +24,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using PostexS.Models;
+using Microsoft.OpenApi.Models;
 
 namespace PostexS
 {
@@ -131,6 +132,78 @@ namespace PostexS
             // Register Firebase Messaging as a singleton if needed
             services.AddSingleton(FirebaseMessaging.DefaultInstance);
 
+            // Swagger Configuration - Show only Sender APIs
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "Tasahel Express - Sender API",
+                    Version = "v1",
+                    Description = "API للراسلين (Senders) لإدارة وتتبع الطلبات - Authentication: استخدم X-Public-Key و X-Private-Key في Headers",
+                    Contact = new OpenApiContact
+                    {
+                        Name = "Tasahel Express Support",
+                        Url = new Uri("https://tasahel-eg.com")
+                    }
+                });
+
+                // Filter to show only Sender APIs
+                c.DocInclusionPredicate((docName, apiDesc) =>
+                {
+                    var controllerName = apiDesc.ActionDescriptor.RouteValues["controller"];
+
+                    // Include only SenderController endpoints
+                    return controllerName == "Sender";
+                });
+
+                // Resolve conflicting actions and schema IDs
+                c.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
+                c.CustomSchemaIds(type => type.FullName);
+
+                // Add API Key security definitions - Two separate headers
+                c.AddSecurityDefinition("X-Public-Key", new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.ApiKey,
+                    In = ParameterLocation.Header,
+                    Name = "X-Public-Key",
+                    Description = "المفتاح العام (Public Key) - احصل عليه من /developer/api-keys"
+                });
+
+                c.AddSecurityDefinition("X-Private-Key", new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.ApiKey,
+                    In = ParameterLocation.Header,
+                    Name = "X-Private-Key",
+                    Description = "المفتاح الخاص (Private Key) - احصل عليه من /developer/api-keys"
+                });
+
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "X-Public-Key"
+                            }
+                        },
+                        new string[] {}
+                    },
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "X-Private-Key"
+                            }
+                        },
+                        new string[] {}
+                    }
+                });
+            });
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -148,6 +221,19 @@ namespace PostexS
             }
             app.UseHttpsRedirection();
             app.UseStaticFiles();
+
+            // Swagger UI - Enable in all environments
+            app.UseSwagger(c =>
+            {
+                c.SerializeAsV2 = false;
+                c.RouteTemplate = "swagger/{documentName}/swagger.json";
+            });
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("./v1/swagger.json", "Tasahel Sender API v1");
+                c.RoutePrefix = "swagger";
+                c.DocumentTitle = "Tasahel Express - Sender API";
+            });
 
             app.UseRouting();
             app.UseAuthentication();

@@ -381,23 +381,35 @@ namespace PostexS.Controllers.API
             return true;
         }
 
+        // [DEPRECATED] - تم نقل هذا الـ endpoint إلى SenderController
+        // استخدم POST /api/Sender/orders بدلاً منه
+        // Use POST /api/Sender/orders instead
+        /*
         [HttpPost("NewOrder")]
         [AllowAnonymous]
-        public async Task<IActionResult> NewOrder(string PublicKey, string PrivateKey, OrderVM model)
+        public async Task<IActionResult> NewOrder([FromQuery] string PublicKey, [FromQuery] string PrivateKey, OrderVM model)
         {
-            if (PublicKey == null)
+            // Support both Headers and Query Parameters for backwards compatibility
+            // Headers take priority over Query Parameters
+            var headerPublicKey = Request.Headers["X-Public-Key"].FirstOrDefault();
+            var headerPrivateKey = Request.Headers["X-Private-Key"].FirstOrDefault();
+
+            var finalPublicKey = !string.IsNullOrEmpty(headerPublicKey) ? headerPublicKey : PublicKey;
+            var finalPrivateKey = !string.IsNullOrEmpty(headerPrivateKey) ? headerPrivateKey : PrivateKey;
+
+            if (finalPublicKey == null)
             {
-                baseResponse.ErrorMessage = "Public Key Is Required";
+                baseResponse.ErrorMessage = "Public Key Is Required (use X-Public-Key header or PublicKey query parameter)";
                 baseResponse.ErrorCode = Errors.PublicKeyIsRequired;
                 return StatusCode((int)HttpStatusCode.BadRequest, baseResponse);
             }
-            if (PrivateKey == null)
+            if (finalPrivateKey == null)
             {
-                baseResponse.ErrorMessage = "Private Key Is Required";
+                baseResponse.ErrorMessage = "Private Key Is Required (use X-Private-Key header or PrivateKey query parameter)";
                 baseResponse.ErrorCode = Errors.PrivateKeyIsRequired;
                 return StatusCode((int)HttpStatusCode.BadRequest, baseResponse);
             }
-            var user = await _user.GetObj(x => x.PublicKey == PublicKey && x.PrivateKey == PrivateKey);
+            var user = await _user.GetObj(x => x.PublicKey == finalPublicKey && x.PrivateKey == finalPrivateKey && !x.IsDeleted);
             if (user == null)
             {
                 baseResponse.ErrorMessage = "Private Key is Wrong Or Public Key Is Wrong";
@@ -440,7 +452,7 @@ namespace PostexS.Controllers.API
             order.OrderOperationHistoryId = history.Id;
 
             //string datetoday = DateTime.Now.ToString("ddMMyyyy");
-            order.Code = "Tas" + /*datetoday +*/ order.Id.ToString();
+            order.Code = "Tas" + order.Id.ToString();
             order.BarcodeImage = getBarcode(order.Code);
 
             if (!await _order.Update(order))
@@ -457,6 +469,7 @@ namespace PostexS.Controllers.API
 
             return Ok(baseResponse);
         }
+        */
         public byte[] getBarcode(string Code)
         {
             //            id += 1000;

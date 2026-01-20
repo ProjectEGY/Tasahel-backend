@@ -1,0 +1,203 @@
+{
+	"info": {
+		"_postman_id": "tasahel-sender-api-2026",
+		"name": "Tasahel Express - Sender API",
+		"description": "API للراسلين (Senders) لإدارة وتتبع الطلبات في نظام تساهل إكسبريس\n\n## المصادقة (Authentication)\nجميع الطلبات تتطلب API Keys في الـ Headers:\n- `X-Public-Key`: المفتاح العام\n- `X-Private-Key`: المفتاح الخاص\n\n## الحصول على المفاتيح\nيمكنك الحصول على المفاتيح من داشبورد الراسل > Developer Options > API Keys",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://tasahel-eg.com",
+			"type": "string"
+		},
+		{
+			"key": "PublicKey",
+			"value": "",
+			"type": "string",
+			"description": "API Public Key - أدخل المفتاح العام هنا"
+		},
+		{
+			"key": "PrivateKey",
+			"value": "",
+			"type": "string",
+			"description": "API Private Key - أدخل المفتاح الخاص هنا"
+		}
+	],
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{
+				"key": "key",
+				"value": "X-Public-Key",
+				"type": "string"
+			},
+			{
+				"key": "value",
+				"value": "{{PublicKey}}",
+				"type": "string"
+			},
+			{
+				"key": "in",
+				"value": "header",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Orders",
+			"description": "إدارة وتتبع الطلبات",
+			"item": [
+				{
+					"name": "Create New Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Public-Key",
+								"value": "{{PublicKey}}",
+								"description": "API Public Key - المفتاح العام"
+							},
+							{
+								"key": "X-Private-Key",
+								"value": "{{PrivateKey}}",
+								"description": "API Private Key - المفتاح الخاص"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ClientName\": \"اسم المستلم\",\n    \"ClientCode\": \"كود المستلم (اختياري)\",\n    \"ClientPhone\": \"01012345678\",\n    \"ClientCity\": \"القاهرة\",\n    \"Address\": \"العنوان الكامل\",\n    \"Cost\": 100.00,\n    \"DeliveryFees\": 30.00,\n    \"Notes\": \"ملاحظات (اختياري)\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/Sender/orders",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "Sender", "orders"]
+						},
+						"description": "إنشاء طلب جديد\n\n### Headers (المصادقة)\n| Header | Required | Description |\n|--------|----------|-------------|\n| X-Public-Key | Yes | المفتاح العام |\n| X-Private-Key | Yes | المفتاح الخاص |\n\n### Request Body\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| ClientName | string | Yes | اسم المستلم |\n| ClientPhone | string | Yes | رقم هاتف المستلم |\n| ClientCity | string | Yes | المدينة |\n| Address | string | Yes | العنوان الكامل |\n| Cost | number | Yes | قيمة الطلب |\n| DeliveryFees | number | Yes | رسوم التوصيل |\n| ClientCode | string | No | كود المستلم |\n| Notes | string | No | ملاحظات |"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Orders",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Public-Key",
+								"value": "{{PublicKey}}",
+								"description": "API Public Key - المفتاح العام"
+							},
+							{
+								"key": "X-Private-Key",
+								"value": "{{PrivateKey}}",
+								"description": "API Private Key - المفتاح الخاص"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Sender/orders?search=&status=&pageNumber=1&pageSize=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "Sender", "orders"],
+							"query": [
+								{
+									"key": "search",
+									"value": "",
+									"description": "Optional - Search by receiver name, order code, or phone"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Optional - Filter by status (0=Placed, 1=Assigned, 2=Delivered, etc.)"
+								},
+								{
+									"key": "pageNumber",
+									"value": "1",
+									"description": "Page number (default: 1)"
+								},
+								{
+									"key": "pageSize",
+									"value": "10",
+									"description": "Items per page (default: 10, max: 50)"
+								}
+							]
+						},
+						"description": "البحث في الطلبات مع الصفحات\n\n### Headers (المصادقة)\n| Header | Required | Description |\n|--------|----------|-------------|\n| X-Public-Key | Yes | المفتاح العام |\n| X-Private-Key | Yes | المفتاح الخاص |\n\n### Query Parameters\n| Param | Type | Required | Description |\n|-------|------|----------|-------------|\n| search | string | No | البحث باسم المستلم أو كود الطلب أو رقم الهاتف |\n| status | int | No | فلترة بالحالة |\n| pageNumber | int | No | رقم الصفحة (default: 1) |\n| pageSize | int | No | عدد العناصر بالصفحة (default: 10, max: 50) |\n\n### Order Status Values\n| Value | Status | Arabic |\n|-------|--------|--------|\n| 0 | Placed | جديد |\n| 1 | Assigned | جارى التوصيل |\n| 2 | Delivered | تم التوصيل |\n| 3 | Waiting | مؤجل |\n| 4 | Rejected | مرفوض |\n| 8 | Returned | مرتجع كامل |"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by Code",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Public-Key",
+								"value": "{{PublicKey}}",
+								"description": "API Public Key - المفتاح العام"
+							},
+							{
+								"key": "X-Private-Key",
+								"value": "{{PrivateKey}}",
+								"description": "API Private Key - المفتاح الخاص"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Sender/orders/Tas12345",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "Sender", "orders", "Tas12345"]
+						},
+						"description": "الحصول على تفاصيل طلب واحد بالكود\n\n### Headers (المصادقة)\n| Header | Required | Description |\n|--------|----------|-------------|\n| X-Public-Key | Yes | المفتاح العام |\n| X-Private-Key | Yes | المفتاح الخاص |\n\n### Path Parameters\n| Param | Type | Description |\n|-------|------|-------------|\n| code | string | كود الطلب (مثل Tas12345) |"
+					},
+					"response": []
+				},
+				{
+					"name": "Bulk Order Status",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Public-Key",
+								"value": "{{PublicKey}}",
+								"description": "API Public Key - المفتاح العام"
+							},
+							{
+								"key": "X-Private-Key",
+								"value": "{{PrivateKey}}",
+								"description": "API Private Key - المفتاح الخاص"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"OrderCodes\": [\"Tas100\", \"Tas101\", \"Tas102\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/Sender/orders/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "Sender", "orders", "status"]
+						},
+						"description": "الحصول على حالة عدة طلبات دفعة واحدة\n\n### Headers (المصادقة)\n| Header | Required | Description |\n|--------|----------|-------------|\n| X-Public-Key | Yes | المفتاح العام |\n| X-Private-Key | Yes | المفتاح الخاص |\n\n### Request Body\n| Field | Type | Description |\n|-------|------|-------------|\n| OrderCodes | array of string | قائمة بأكواد الطلبات |\n\n**ملاحظة:** الحد الأقصى 100 طلب في الطلب الواحد."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

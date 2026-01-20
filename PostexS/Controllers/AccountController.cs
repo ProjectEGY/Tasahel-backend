@@ -51,6 +51,20 @@ namespace PostexS.Controllers
             var user = await _user.GetObj(x => x.Id == _userManager.GetUserId(User));
             return View(user);
         }
+
+        [AllowAnonymous]
+        [Route("developer/documentation")]
+        public async Task<IActionResult> Documentation()
+        {
+            // If user is logged in, get their data, otherwise pass null
+            ApplicationUser user = null;
+            if (User.Identity.IsAuthenticated)
+            {
+                user = await _user.GetObj(x => x.Id == _userManager.GetUserId(User));
+            }
+            return View(user);
+        }
+
         [Authorize(Roles = "Client")]
         public async Task<IActionResult> UpdateApiKeys(string lang = "ar")
         {
