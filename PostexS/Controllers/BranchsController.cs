@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using PostexS.Helper;
 using PostexS.Interfaces;
 using PostexS.Models.Domain;
+using PostexS.Models.Dtos;
 using PostexS.Models.Enums;
 using PostexS.Services;
 using System;
@@ -770,7 +771,78 @@ namespace PostexS.Controllers
             return RedirectToAction(nameof(AcceptSwitchReturnedOrders), new { id = BranchId });
 
         }
-        #endregion 
+        #endregion
+
+        #region  محافظ الفروع
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> BranchesWallets()
+        {
+            var GeneralAdmin = await _user.GetObj(x => x.Id == _userManger.GetUserId(User));
+            if (true)
+            {
+                var branches = _branch.Get(x => !x.IsDeleted).ToList();
+                var AllAdmins = _user.Get(x => (x.UserType == UserType.HighAdmin || x.UserType == UserType.Accountant ||
+                    x.UserType == UserType.LowAdmin) && !x.IsDeleted && !x.Branch.IsDeleted && x.Id != GeneralAdmin.Id).ToList();
+
+                List<BranchWalletsDTO> Dto = new List<BranchWalletsDTO>();
+
+                foreach (var branch in branches)
+                {
+                    var accounts = AllAdmins
+                        .Where(x => x.BranchId == branch.Id)
+                        .Select(x => new BranchAccountDTO
+                        {
+                            Id = x.Id,
+                            AccountName = x.Name,
+                            Eamil = x.Email,
+                            Wallet = x.Wallet,
+                            UserType = x.UserType
+                        }).ToList();
+
+                    Dto.Add(new BranchWalletsDTO
+                    {
+                        BranchId = branch.Id,
+                        BranchName = branch.Name,
+                        BranchAddress = branch.Address,
+                        Accounts = accounts,
+                        WalletsSummation = accounts.Sum(a => a.Wallet)
+                    });
+                }
+                return View(Dto);
+            }
+            return RedirectToAction(nameof(Index));
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        public async Task<JsonResult> GetBranchSettlement(long branchId)
+        {
+            var settlementData = _orderService
+                .GetList(x => x.OrderCompleted == OrderCompleted.NOK &&
+                              x.Status != OrderStatus.Completed &&
+                              x.Status != OrderStatus.Returned &&
+                              x.Status != OrderStatus.PartialReturned &&
+                              x.Finished &&
+                              !x.IsDeleted &&
+                              x.Client.BranchId == branchId)
+                .Select(x => new
+                {
+                    ArrivedCost = (decimal)x.ArrivedCost,
+                    DeliveryFees = (decimal)x.DeliveryFees
+                })
+                .AsEnumerable()
+                .Aggregate(new { ArrivedCosts = 0M, DeliveryFees = 0M }, (acc, order) => new
+                {
+                    ArrivedCosts = acc.ArrivedCosts + order.ArrivedCost,
+                    DeliveryFees = acc.DeliveryFees + order.DeliveryFees
+                });
+
+            var clientsCosts = settlementData.ArrivedCosts - settlementData.DeliveryFees;
+
+            return Json(clientsCosts.ToString());
+        }
+
+        #endregion
 
         #region notifivcations
         private async Task<bool> SendNotify(long BranchId, bool returned = false)

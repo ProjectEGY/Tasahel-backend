@@ -1,0 +1,114 @@
+@model List<PostexS.Models.Dtos.BranchWalletsDTO>
+@{
+    ViewData["Title"] = "محافظ الفروع";
+}
+<link href="~/css/brancheswallets.css" rel="stylesheet" />
+<div class="container mt-5">
+    <div class="container mt-5">
+        <div class="summary-section mb-4">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="financial-card p-4 rounded shadow">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="financial-item">
+                                <i class="fa fa-wallet text-success mr-2"> </i>
+                                <strong class="text-secondary">مجموع المحافظ لجميع الفروع : </strong>
+                                <span class="money text-success" id="total-wallet-summation">جنيه</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="financial-card p-4 rounded shadow">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="financial-item">
+                                <i class="fa fa-exchange-alt text-warning mr-2"> </i>
+                                <strong class="text-warning">مجموع المطلوب سداده : </strong>
+                                <span class="money text-warning" id="total-settlement">جنيه</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="financial-card p-4 rounded shadow">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="financial-item">
+                                <i class="fa fa-chart-line text-danger mr-2"> </i>
+                                <strong class="text-danger">الوضع المالي الإجمالي : </strong>
+                                <span class="money text-danger" id="total-financial-status">جنيه</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        @foreach (var branch in Model)
+        {
+            <div class="col-md-4">
+                <div class="branch-card" data-branch-id="@branch.BranchId">
+                    <div class="branch-card-header">
+                        <i class="fa fa-wallet"></i> @branch.BranchName<br />@branch.BranchAddress
+                    </div>
+                    <div class="branch-card-body">
+                        <div class="financial-card p-4 rounded shadow">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="financial-item">
+                                    <i class="fa fa-wallet text-success mr-2"> <strong class="text-secondary"> إجمالي المحافظ : </strong> </i>
+
+                                    <span class="money text-success" id="wallet-summation-@branch.BranchId">
+                                         @* <i class="fa fa-money-bill-wave"> </i> *@
+                                        @branch.WalletsSummation جنيه
+                                    </span>
+                                </div>
+                                <div class="financial-item">
+                                    <i class="fa fa-exchange-alt text-warning mr-2"> </i>
+                                    <strong class="text-warning">المبالغ المستحقه للراسلين : </strong>
+                                    <span class="money text-warning" id="settlement-@branch.BranchId">
+                                        <div class="loader" id="loader-@branch.BranchId"> </div>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-center mt-3">
+                                <div class="financial-status-container text-center">
+                                    <i class="fa fa-chart-line text-danger mr-2"> </i>
+                                    <span class="financial-status" id="financial-status-@branch.BranchId"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="branch-info mb-4">
+                            <h5 class="text-primary"><i class="fa fa-users"> </i> الحسابات :</h5>
+                            <ul class="list-group">
+                                @foreach (var account in branch.Accounts)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="branch-name">@account.AccountName</span>
+                                            <span class="badge
+                                                @(account.UserType == PostexS.Models.Enums.UserType.LowAdmin ? "bg-warning text-dark" :
+                                                  account.UserType == PostexS.Models.Enums.UserType.HighAdmin ? "bg-orange text-white" :
+                                                  account.UserType == PostexS.Models.Enums.UserType.Admin ? "bg-danger text-white" :
+                                                  account.UserType == PostexS.Models.Enums.UserType.Accountant ? "bg-primary text-white" : "bg-secondary text-white") ml-2">
+                                                @(account.UserType == PostexS.Models.Enums.UserType.LowAdmin ? "مشرف" :
+                                                    account.UserType == PostexS.Models.Enums.UserType.HighAdmin ? "مشرف مميز" :
+                                                    account.UserType == PostexS.Models.Enums.UserType.Admin ? "مسؤول" : "محاسب")
+                                            </span>
+                                        </div>
+                                        <span class="money text-success">
+                                            <i class="fa fa-wallet"></i> @account.Wallet جنيه
+                                        </span>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script src="~/js/brancheswallets.js"></script>

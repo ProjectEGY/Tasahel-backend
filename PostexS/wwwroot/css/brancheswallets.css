@@ -1,0 +1,219 @@
+/* تحسين تصميم البطاقات */
+.branch-card {
+    border-radius: 20px;
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background-color: #ffffff;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    height: 100%;
+}
+
+    .branch-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+    }
+
+.branch-card-header {
+    background: linear-gradient(45deg, #007bff, #6610f2);
+    color: white;
+    font-size: 1.8rem;
+    font-weight: bold;
+    text-align: center;
+    padding: 15px;
+    flex-shrink: 0;
+}
+
+.branch-card-body {
+    padding: 20px;
+    font-size: 1.2rem;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.branch-info {
+    margin-bottom: 15px;
+}
+
+.branch-name {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #0056b3;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+    .branch-name:hover {
+        color: #6610f2;
+        transform: scale(1.1);
+    }
+
+.money {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #28a745;
+}
+
+.settlement-btn {
+    padding: 10px 25px;
+    font-size: 1rem;
+    border-radius: 30px;
+    transition: all 0.3s ease;
+}
+
+    .settlement-btn:hover {
+        background-color: #007bff;
+        color: #fff;
+        box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+    }
+
+.financial-card {
+    background: linear-gradient(135deg, #f8f9fa, #ffffff);
+    border-radius: 12px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    flex-grow: 1;
+}
+
+    .financial-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    }
+
+.financial-item {
+    display: flex;
+    align-items: center;
+    font-size: 1.3rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    background-color: #f1f3f5;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+    .financial-item:hover {
+        background-color: #e9ecef;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        color: #007bff;
+        transform: scale(1.05);
+    }
+
+    .financial-item i {
+        font-size: 1.5rem;
+    }
+
+.money {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+.loader {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.financial-status-container {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #dc3545;
+    margin-top: 20px;
+    background-color: #f8d7da;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+    .financial-status-container i {
+        font-size: 1.5rem;
+        color: #dc3545;
+    }
+
+/* تحسين تصميم السطر الواحد من الأعمدة */
+.container .row {
+    display: flex;
+    flex-wrap: wrap; /* لضمان التوزيع الصحيح عند الانتقال للصف التالي */
+}
+
+.col-md-4 {
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 33%; /* كل عمود يأخذ 33% من العرض */
+    margin-bottom: 20px;
+}
+
+.branch-card {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* يملأ المساحة المتاحة */
+    height: 100%; /* لضمان أن العناصر تأخذ نفس الارتفاع */
+}
+
+.branch-card-header {
+    flex-shrink: 0; /* يمنع الانكماش عند تحديد ارتفاع ثابت */
+}
+
+.branch-card-body {
+    flex-grow: 1; /* يملأ المساحة المتبقية */
+    display: flex;
+    flex-direction: column;
+}
+
+.summary-section .financial-card {
+    background: linear-gradient(135deg, #f1f3f5, #ffffff);
+    border-radius: 12px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+    .summary-section .financial-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    }
+
+.summary-section .financial-item {
+    display: flex;
+    align-items: center;
+    font-size: 1.3rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+    .summary-section .financial-item:hover {
+        background-color: #e9ecef;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        color: #007bff;
+        transform: scale(1.05);
+    }

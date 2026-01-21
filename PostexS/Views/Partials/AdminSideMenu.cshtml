@@ -183,6 +183,11 @@
                         <i class="fa fa-coins"></i> <span>محظفة الادمن</span>
                     </a>
                 </li>
+                <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("brancheswallets") ? "active" : "")">
+                    <a href="@Url.Action("BranchesWallets", "Branchs")">
+                        <i class="fa fa-coins"></i> <span>محافظ الفروع</span>
+                    </a>
+                </li>
             }
             @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
             {

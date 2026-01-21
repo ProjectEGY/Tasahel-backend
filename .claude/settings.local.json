@@ -9,7 +9,8 @@
       "Bash(Select-String -Pattern \"error\")",
       "Bash(dotnet add:*)",
       "Bash(taskkill:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(dir \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\MohammedSharabash\\\\Elamr-express-backend-\" /s /b /ad)"
     ]
   }
 }
