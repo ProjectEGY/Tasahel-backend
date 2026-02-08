@@ -7,6 +7,7 @@ namespace PostexS.Models.ViewModels
     {
         public WapilotSettings WapilotSettings { get; set; } = new WapilotSettings();
         public WhatsAppBotCloudSettings WhatsAppBotCloudSettings { get; set; } = new WhatsAppBotCloudSettings();
+        public WhaStackSettings WhaStackSettings { get; set; } = new WhaStackSettings();
         public WhatsAppProviderSettings ProviderSettings { get; set; } = new WhatsAppProviderSettings();
         public QueueStatistics Statistics { get; set; }
         public WhatsAppProvider ActiveProvider { get; set; } = WhatsAppProvider.Wapilot;

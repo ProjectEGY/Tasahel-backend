@@ -17,6 +17,7 @@ namespace PostexS.Controllers
     {
         private readonly IWapilotService _wapilotService;
         private readonly IWhatsAppBotCloudService _whatsAppBotCloudService;
+        private readonly IWhaStackService _whaStackService;
         private readonly IWhatsAppProviderService _providerService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -25,6 +26,7 @@ namespace PostexS.Controllers
         public WapilotSettingsController(
             IWapilotService wapilotService,
             IWhatsAppBotCloudService whatsAppBotCloudService,
+            IWhaStackService whaStackService,
             IWhatsAppProviderService providerService,
             UserManager<ApplicationUser> userManager,
             IServiceScopeFactory serviceScopeFactory,
@@ -32,6 +34,7 @@ namespace PostexS.Controllers
         {
             _wapilotService = wapilotService;
             _whatsAppBotCloudService = whatsAppBotCloudService;
+            _whaStackService = whaStackService;
             _providerService = providerService;
             _userManager = userManager;
             _serviceScopeFactory = serviceScopeFactory;
@@ -43,6 +46,7 @@ namespace PostexS.Controllers
         {
             var wapilotSettings = await _wapilotService.GetSettingsAsync();
             var whatsAppBotCloudSettings = await _whatsAppBotCloudService.GetSettingsAsync();
+            var whaStackSettings = await _whaStackService.GetSettingsAsync();
             var stats = await _wapilotService.GetQueueStatisticsAsync();
             var providerSettings = await _providerService.GetProviderSettingsAsync();
 
@@ -50,6 +54,7 @@ namespace PostexS.Controllers
             {
                 WapilotSettings = wapilotSettings,
                 WhatsAppBotCloudSettings = whatsAppBotCloudSettings,
+                WhaStackSettings = whaStackSettings,
                 ProviderSettings = providerSettings,
                 Statistics = stats,
                 ActiveProvider = providerSettings.ActiveProvider
@@ -66,12 +71,26 @@ namespace PostexS.Controllers
             var userId = _userManager.GetUserId(User);
             bool result = false;
 
+            // Clear ModelState and validate only the specific provider settings
+            ModelState.Clear();
+
             if (providerType == "Wapilot")
             {
-                if (!TryValidateModel(viewModel.WapilotSettings))
+                // Validate only Wapilot settings
+                if (string.IsNullOrWhiteSpace(viewModel.WapilotSettings?.InstanceId))
+                {
+                    ModelState.AddModelError("WapilotSettings.InstanceId", "The Instance ID field is required.");
+                }
+                if (string.IsNullOrWhiteSpace(viewModel.WapilotSettings?.ApiToken))
+                {
+                    ModelState.AddModelError("WapilotSettings.ApiToken", "The API Token field is required.");
+                }
+
+                if (!ModelState.IsValid)
                 {
                     var stats = await _wapilotService.GetQueueStatisticsAsync();
                     var providerSettings = await _providerService.GetProviderSettingsAsync();
+                    viewModel.WhatsAppBotCloudSettings = await _whatsAppBotCloudService.GetSettingsAsync();
                     viewModel.Statistics = stats;
                     viewModel.ProviderSettings = providerSettings;
                     viewModel.ActiveProvider = providerSettings.ActiveProvider;
@@ -82,10 +101,21 @@ namespace PostexS.Controllers
             }
             else if (providerType == "WhatsAppBotCloud")
             {
-                if (!TryValidateModel(viewModel.WhatsAppBotCloudSettings))
+                // Validate only WhatsAppBotCloud settings
+                if (string.IsNullOrWhiteSpace(viewModel.WhatsAppBotCloudSettings?.InstanceId))
+                {
+                    ModelState.AddModelError("WhatsAppBotCloudSettings.InstanceId", "The Instance ID field is required.");
+                }
+                if (string.IsNullOrWhiteSpace(viewModel.WhatsAppBotCloudSettings?.AccessToken))
+                {
+                    ModelState.AddModelError("WhatsAppBotCloudSettings.AccessToken", "The Access Token field is required.");
+                }
+
+                if (!ModelState.IsValid)
                 {
                     var stats = await _wapilotService.GetQueueStatisticsAsync();
                     var providerSettings = await _providerService.GetProviderSettingsAsync();
+                    viewModel.WapilotSettings = await _wapilotService.GetSettingsAsync();
                     viewModel.Statistics = stats;
                     viewModel.ProviderSettings = providerSettings;
                     viewModel.ActiveProvider = providerSettings.ActiveProvider;
@@ -94,7 +124,32 @@ namespace PostexS.Controllers
 
                 result = await _whatsAppBotCloudService.UpdateSettingsAsync(viewModel.WhatsAppBotCloudSettings, userId);
             }
+            else if (providerType == "WhaStack")
+            {
+                // Validate only WhaStack settings
+                if (string.IsNullOrWhiteSpace(viewModel.WhaStackSettings?.SessionId))
+                {
+                    ModelState.AddModelError("WhaStackSettings.SessionId", "The Session ID field is required.");
+                }
+                if (string.IsNullOrWhiteSpace(viewModel.WhaStackSettings?.ApiKey))
+                {
+                    ModelState.AddModelError("WhaStackSettings.ApiKey", "The API Key field is required.");
+                }
 
+                if (!ModelState.IsValid)
+                {
+                    var stats = await _wapilotService.GetQueueStatisticsAsync();
+                    var providerSettings = await _providerService.GetProviderSettingsAsync();
+                    viewModel.WapilotSettings = await _wapilotService.GetSettingsAsync();
+                    viewModel.WhatsAppBotCloudSettings = await _whatsAppBotCloudService.GetSettingsAsync();
+                    viewModel.Statistics = stats;
+                    viewModel.ProviderSettings = providerSettings;
+                    viewModel.ActiveProvider = providerSettings.ActiveProvider;
+                    return View(viewModel);
+                }
+
+                result = await _whaStackService.UpdateSettingsAsync(viewModel.WhaStackSettings, userId);
+            }
             if (result)
             {
                 TempData["Success"] = "تم حفظ الاعدادات بنجاح";
@@ -456,6 +511,61 @@ namespace PostexS.Controllers
 
             var result = await _whatsAppBotCloudService.SendGroupMessageAsync(groupId, message);
 
+          return Json(new
+            {
+                success = result.Success,
+                message = result.Success ? "تم ارسال الرسالة للجروب بنجاح" : $"فشل ارسال الرسالة: {result.ErrorMessage}",
+                response = result.ResponseBody,
+                statusCode = result.StatusCode,
+                duration = result.DurationMs
+            });
+        }
+
+        #region WhaStack Actions
+
+        // POST: Send test message via WhaStack
+        [HttpPost]
+        public async Task<IActionResult> SendTestMessageWhaStack(string phoneNumber, string message)
+        {
+            var settings = await _whaStackService.GetSettingsAsync();
+            if (!settings.IsActive)
+            {
+                return Json(new { success = false, message = "خدمة الارسال متوقفة. قم بتفعيلها أولاً من الاعدادات" });
+            }
+
+            if (string.IsNullOrEmpty(phoneNumber) || string.IsNullOrEmpty(message))
+            {
+                return Json(new { success = false, message = "برجاء ادخال رقم الهاتف والرسالة" });
+            }
+
+            var result = await _whaStackService.SendMessageAsync(phoneNumber, message);
+
+            return Json(new
+            {
+                success = result.Success,
+                message = result.Success ? "تم ارسال الرسالة بنجاح" : $"فشل ارسال الرسالة: {result.ErrorMessage}",
+                response = result.ResponseBody,
+                statusCode = result.StatusCode,
+                duration = result.DurationMs
+            });
+        }
+
+        // POST: Send test group message via WhaStack
+        [HttpPost]
+        public async Task<IActionResult> SendTestGroupMessageWhaStack(string groupId, string message)
+        {
+            var settings = await _whaStackService.GetSettingsAsync();
+            if (!settings.IsActive)
+            {
+                return Json(new { success = false, message = "خدمة الارسال متوقفة. قم بتفعيلها أولاً من الاعدادات" });
+            }
+
+            if (string.IsNullOrEmpty(groupId) || string.IsNullOrEmpty(message))
+            {
+                return Json(new { success = false, message = "برجاء إدخال معرف الجروب والرسالة" });
+            }
+
+            var result = await _whaStackService.SendGroupMessageAsync(groupId, message);
             return Json(new
             {
                 success = result.Success,
@@ -465,5 +575,68 @@ namespace PostexS.Controllers
                 duration = result.DurationMs
             });
         }
+
+        // POST: Get Groups for WhaStack
+        [HttpPost]
+        public async Task<IActionResult> GetGroupsForWhaStack()
+        {
+            var result = await _whaStackService.GetGroupsAsync();
+
+            return Json(new
+            {
+                success = result.Success,
+                groups = result.Groups.Select(g => new { id = g.GroupId, name = g.GroupName, description = g.Description }),
+                message = result.Success
+                    ? $"تم جلب {result.Groups.Count} جروب بنجاح"
+                    : $"فشل جلب الجروبات: {result.ErrorMessage}",
+                response = result.ResponseBody,
+                statusCode = result.StatusCode
+            });
+        }
+
+        // POST: Get WhaStack Sessions
+        [HttpPost]
+        public async Task<IActionResult> GetWhaStackSessions()
+        {
+            var result = await _whaStackService.GetSessionsAsync();
+
+            return Json(new
+            {
+                success = result.Success,
+                sessions = result.Sessions.Select(s => new
+                {
+                    sessionId = s.SessionId,
+                    name = s.Name,
+                    status = s.Status,
+                    phoneNumber = s.PhoneNumber
+                }),
+                message = result.Success
+                    ? $"تم جلب {result.Sessions.Count} جلسة بنجاح"
+                    : $"فشل جلب الجلسات: {result.ErrorMessage}",
+                response = result.ResponseBody,
+                statusCode = result.StatusCode
+            });
+        }
+
+        // POST: Get WhaStack Quota
+        [HttpPost]
+        public async Task<IActionResult> GetWhaStackQuota()
+        {
+            var result = await _whaStackService.GetQuotaAsync();
+
+            return Json(new
+            {
+                success = result.Success,
+                totalQuota = result.TotalQuota,
+                remainingQuota = result.RemainingQuota,
+                message = result.Success
+                    ? $"الكوتا المتبقية: {result.RemainingQuota ?? 0} / {result.TotalQuota ?? 0}"
+                    : $"فشل جلب الكوتا: {result.ErrorMessage}",
+                response = result.ResponseBody,
+                statusCode = result.StatusCode
+            });
+        }
+
+        #endregion
     }
 }

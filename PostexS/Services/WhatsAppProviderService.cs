@@ -55,6 +55,30 @@ namespace PostexS.Services
                 };
                 await _context.WhatsAppProviderSettings.AddAsync(newSettings);
             }
+            // لما يتفعل مزود، التانيين يتعطلوا تلقائي
+            var wapilotSettings = await _context.WapilotSettings.Where(s => !s.IsDeleted).FirstOrDefaultAsync();
+            if (wapilotSettings != null)
+            {
+                wapilotSettings.IsActive = (provider == WhatsAppProvider.Wapilot);
+                wapilotSettings.ModifiedOn = DateTime.UtcNow;
+                wapilotSettings.IsModified = true;
+            }
+
+            var botCloudSettings = await _context.WhatsAppBotCloudSettings.Where(s => !s.IsDeleted).FirstOrDefaultAsync();
+            if (botCloudSettings != null)
+            {
+                botCloudSettings.IsActive = (provider == WhatsAppProvider.WhatsAppBotCloud);
+                botCloudSettings.ModifiedOn = DateTime.UtcNow;
+                botCloudSettings.IsModified = true;
+            }
+
+            var whaStackSettings = await _context.WhaStackSettings.Where(s => !s.IsDeleted).FirstOrDefaultAsync();
+            if (whaStackSettings != null)
+            {
+                whaStackSettings.IsActive = (provider == WhatsAppProvider.WhaStack);
+                whaStackSettings.ModifiedOn = DateTime.UtcNow;
+                whaStackSettings.IsModified = true;
+            }
 
             return await _context.SaveChangesAsync() > 0;
         }

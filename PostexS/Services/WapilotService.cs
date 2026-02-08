@@ -21,19 +21,22 @@ namespace PostexS.Services
         private readonly ILogger<WapilotService> _logger;
         private readonly IWhatsAppProviderService _providerService;
         private readonly IWhatsAppBotCloudService _whatsAppBotCloudService;
+        private readonly IWhaStackService _whaStackService;
 
         public WapilotService(
             ApplicationDbContext context,
             IHttpClientFactory httpClientFactory,
             ILogger<WapilotService> logger,
             IWhatsAppProviderService providerService,
-            IWhatsAppBotCloudService whatsAppBotCloudService)
+            IWhatsAppBotCloudService whatsAppBotCloudService,
+                        IWhaStackService whaStackService)
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
             _logger = logger;
             _providerService = providerService;
             _whatsAppBotCloudService = whatsAppBotCloudService;
+            _whaStackService = whaStackService;
         }
 
         #region Settings Management
@@ -229,6 +232,31 @@ namespace PostexS.Services
                         RequestUrl = "EnqueueOrderStatusUpdateAsync",
                         RequestBody = $"OrderId: {order.Id}, Provider: WhatsAppBotCloud",
                         ResponseBody = $"WhatsApp Bot Cloud is not active. Settings null: {botCloudSettings == null}, IsActive: {botCloudSettings?.IsActive}",
+                        ResponseStatusCode = 0,
+                        IsSuccess = false,
+                        RequestDurationMs = 0,
+                        RequestedAt = DateTime.UtcNow,
+                        CreateOn = DateTime.UtcNow
+                    });
+                }
+            }
+            // Use WhaStack if it's the active provider
+            if (activeProvider == WhatsAppProvider.WhaStack)
+            {
+                var whaStackSettings = await _whaStackService.GetSettingsAsync();
+                if (whaStackSettings != null && whaStackSettings.IsActive)
+                {
+                    // Send directly via WhaStack (for group messages)
+                    var result = await _whaStackService.SendGroupMessageAsync(chatId, message);
+                    return result.Success;
+                }
+                else
+                {
+                    await LogRequestAsync(new WhatsAppMessageLog
+                    {
+                        RequestUrl = "EnqueueOrderStatusUpdateAsync",
+                        RequestBody = $"OrderId: {order.Id}, Provider: WhaStack",
+                        ResponseBody = $"WhaStack is not active. Settings null: {whaStackSettings == null}, IsActive: {whaStackSettings?.IsActive}",
                         ResponseStatusCode = 0,
                         IsSuccess = false,
                         RequestDurationMs = 0,

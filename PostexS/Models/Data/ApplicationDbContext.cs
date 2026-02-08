@@ -31,6 +31,7 @@ namespace PostexS.Models.Data
         public DbSet<WhatsAppProviderSettings> WhatsAppProviderSettings { get; set; }
         public DbSet<WhatsAppMessageQueue> WhatsAppMessageQueues { get; set; }
         public DbSet<WhatsAppMessageLog> WhatsAppMessageLogs { get; set; }
+        public DbSet<WhaStackSettings> WhaStackSettings { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ApplicationUser>().

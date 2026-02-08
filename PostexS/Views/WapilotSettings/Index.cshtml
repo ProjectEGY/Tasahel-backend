@@ -1,6 +1,7 @@
 @model PostexS.Models.ViewModels.WhatsAppSettingsViewModel
 @using PostexS.Models.ViewModels
 @using PostexS.Models.Enums
+    @using System.Linq
 @{
     ViewData["Title"] = "اعدادات واتساب";
 }
@@ -8,32 +9,48 @@
 <style>
     .provider-tab {
         cursor: pointer;
-        padding: 15px 20px;
+        padding: 12px 25px;
         border: 2px solid #ddd;
-        border-radius: 5px 5px 0 0;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
         background: #f5f5f5;
-        margin-right: 5px;
+        margin-left: 3px;
         display: inline-block;
         transition: all 0.3s;
+        font-size: 14px;
+        font-weight: bold;
+        position: relative;
+        bottom: -2px;
     }
     .provider-tab.active {
         background: #337ab7;
         color: white;
         border-color: #337ab7;
+        z-index: 1;
     }
-    .provider-tab:hover {
+    .provider-tab:hover:not(.active) {
         background: #e0e0e0;
     }
     .provider-tab.active:hover {
         background: #286090;
     }
+    .provider-tab .fa {
+        margin-left: 5px;
+    }
+    .provider-tab .provider-badge {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-right: 5px;
+        vertical-align: middle;
+    }
     .provider-content {
         display: none;
-        padding: 20px;
-        border: 2px solid #ddd;
-        border-top: none;
-        border-radius: 0 0 5px 5px;
+        padding: 25px;
+        border: 2px solid #337ab7;
+        border-radius: 0 0 8px 8px;
         background: white;
+        margin-bottom: 20px;
     }
     .provider-content.active {
         display: block;
@@ -74,6 +91,20 @@
     .group-search {
         margin-bottom: 10px;
     }
+    .provider-tabs {
+        text-align: center;
+        margin-bottom: 0;
+    }
+    .active-provider-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+        vertical-align: middle;
+    }
+    .active-provider-indicator.on { background: #2ecc71; }
+    .active-provider-indicator.off { background: #e74c3c; }
 </style>
 
 <div class="panel panel-primary">
@@ -116,9 +147,13 @@
                                     <input type="radio" name="provider" value="@((int)WhatsAppProvider.WhatsAppBotCloud)" @(Model.ActiveProvider == WhatsAppProvider.WhatsAppBotCloud ? "checked" : "") autocomplete="off">
                                     <i class="fa fa-cloud"></i> Server 2 (WhatsApp Cloud)
                                 </label>
+                                <label class="btn btn-lg @(Model.ActiveProvider == WhatsAppProvider.WhaStack ? "btn-success active" : "btn-default")" data-provider="@((int)WhatsAppProvider.WhaStack)">
+                                    <input type="radio" name="provider" value="@((int)WhatsAppProvider.WhaStack)" @(Model.ActiveProvider == WhatsAppProvider.WhaStack ? "checked" : "") autocomplete="off">
+                                    <i class="fa fa-bolt"></i> Server 3 (WhaStack)
+                                </label>
                             </div>
                             <small class="text-muted" style="display: block; margin-top: 10px;">
-                                اختر المزود النشط لإرسال الرسائل. Server 1 (Wapilot) للرسائل المباشرة، Server 2 (WhatsApp Cloud) للجروبات.
+                                اختر المزود النشط لإرسال الرسائل. Server 1 (Wapilot) للرسائل المباشرة، Server 2 (WhatsApp Cloud) للجروبات، Server 3 (WhaStack) للرسائل والجروبات.
                             </small>
                         </div>
                     </div>
@@ -168,17 +203,27 @@
 
         <!-- Provider Tabs -->
         <div style="margin-bottom: 20px;">
-            <div class="provider-tabs" style="border-bottom: 2px solid #ddd; padding-bottom: 0;">
-                <div class="provider-tab active" data-provider="Wapilot">
-                    <i class="fa fa-server"></i> Server 1 (Wapilot)
+            <div class="provider-tabs" style="padding-bottom: 0;">
+                @{
+                    var activeProviderName = Model.ActiveProvider == WhatsAppProvider.Wapilot ? "Wapilot" :
+                                             Model.ActiveProvider == WhatsAppProvider.WhatsAppBotCloud ? "WhatsAppBotCloud" : "WhaStack";
+                }
+                <div class="provider-tab @(activeProviderName == "WhaStack" ? "active" : "")" data-provider="WhaStack">
+                    @if(Model.ActiveProvider == WhatsAppProvider.WhaStack) { <span class="active-provider-indicator on"></span> }
+                    <i class="fa fa-bolt"></i> Server 3 (WhaStack)
                 </div>
-                <div class="provider-tab" data-provider="WhatsAppBotCloud">
+                <div class="provider-tab @(activeProviderName == "WhatsAppBotCloud" ? "active" : "")" data-provider="WhatsAppBotCloud">
+                    @if(Model.ActiveProvider == WhatsAppProvider.WhatsAppBotCloud) { <span class="active-provider-indicator on"></span> }
                     <i class="fa fa-cloud"></i> Server 2 (WhatsApp Cloud)
+                </div>
+                <div class="provider-tab @(activeProviderName == "Wapilot" ? "active" : "")" data-provider="Wapilot">
+                    @if(Model.ActiveProvider == WhatsAppProvider.Wapilot) { <span class="active-provider-indicator on"></span> }
+                    <i class="fa fa-server"></i> Server 1 (Wapilot)
                 </div>
             </div>
 
             <!-- Wapilot Settings -->
-            <div class="provider-content active" id="WapilotContent">
+            <div class="provider-content @(activeProviderName == "Wapilot" ? "active" : "")" id="WapilotContent">
                 @using (Html.BeginForm("Index", "WapilotSettings", FormMethod.Post, new { @class = "form-horizontal" }))
                 {
                     @Html.AntiForgeryToken()
@@ -192,7 +237,23 @@
                             <h4 class="panel-title"><i class="fa fa-cogs"></i> اعدادات Wapilot API</h4>
                         </div>
                         <div class="panel-body">
-                            @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+                            @{
+                                var wapilotErrors = ViewData.ModelState.Keys
+                                    .Where(k => k.StartsWith("WapilotSettings"))
+                                    .SelectMany(k => ViewData.ModelState[k].Errors)
+                                    .ToList();
+                            }
+                            @if (wapilotErrors.Any())
+                            {
+                                <div class="text-danger">
+                                    <ul>
+                                        @foreach (var error in wapilotErrors)
+                                        {
+                                            <li>@error.ErrorMessage</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
 
                             <div class="row">
                                 <div class="col-md-6">
@@ -309,7 +370,7 @@
             </div>
 
             <!-- WhatsApp Bot Cloud Settings -->
-            <div class="provider-content" id="WhatsAppBotCloudContent">
+            <div class="provider-content @(activeProviderName == "WhatsAppBotCloud" ? "active" : "")" id="WhatsAppBotCloudContent">
                 @using (Html.BeginForm("Index", "WapilotSettings", FormMethod.Post, new { @class = "form-horizontal" }))
                 {
                     @Html.AntiForgeryToken()
@@ -323,7 +384,23 @@
                             <h4 class="panel-title"><i class="fa fa-cloud"></i> اعدادات WhatsApp Bot Cloud API</h4>
                         </div>
                         <div class="panel-body">
-                            @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+                            @{
+                                var botCloudErrors = ViewData.ModelState.Keys
+                                    .Where(k => k.StartsWith("WhatsAppBotCloudSettings"))
+                                    .SelectMany(k => ViewData.ModelState[k].Errors)
+                                    .ToList();
+                            }
+                            @if (botCloudErrors.Any())
+                            {
+                                <div class="text-danger">
+                                    <ul>
+                                        @foreach (var error in botCloudErrors)
+                                        {
+                                            <li>@error.ErrorMessage</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
 
                             <div class="row">
                                 <div class="col-md-6">
@@ -462,7 +539,7 @@
                                 </div>
                                 <div class="form-group">
                                     <label>نص الرسالة</label>
-                                    <textarea id="bgTestPhoneMessage" class="form-control" rows="3" placeholder="رسالة تجريبية">🧪 تجربة الإرسال في الخلفية</textarea>
+                                    <textarea id="bgTestPhoneMessage" class="form-control" rows="3" placeholder="رسالة تجريبية">تجربة الإرسال في الخلفية</textarea>
                                 </div>
                                 <button type="button" id="btnBgSendToPhone" class="btn btn-warning btn-lg">
                                     <i class="fa fa-rocket"></i> ارسال للرقم (Background)
@@ -476,7 +553,7 @@
                                 </div>
                                 <div class="form-group">
                                     <label>نص الرسالة</label>
-                                    <textarea id="bgTestGroupMessage" class="form-control" rows="3" placeholder="رسالة تجريبية للجروب">🧪 تجربة الإرسال في الخلفية</textarea>
+                                    <textarea id="bgTestGroupMessage" class="form-control" rows="3" placeholder="رسالة تجريبية للجروب">تجربة الإرسال في الخلفية</textarea>
                                 </div>
                                 <button type="button" id="btnBgSendToGroup" class="btn btn-warning btn-lg">
                                     <i class="fa fa-rocket"></i> ارسال للجروب (Background)
@@ -484,6 +561,169 @@
                             </div>
                         </div>
                         <div id="backgroundTestResult" class="alert" style="display:none; margin-top: 15px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WhaStack Settings -->
+            <div class="provider-content @(activeProviderName == "WhaStack" ? "active" : "")" id="WhaStackContent">
+                @using (Html.BeginForm("Index", "WapilotSettings", FormMethod.Post, new { @class = "form-horizontal" }))
+                {
+                    @Html.AntiForgeryToken()
+                    @Html.Hidden("providerType", "WhaStack")
+                    @Html.HiddenFor(m => m.WhaStackSettings.Id)
+                    @Html.HiddenFor(m => m.WhaStackSettings.CreateOn)
+                    @Html.HiddenFor(m => m.WhaStackSettings.IsDeleted)
+
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title"><i class="fa fa-bolt"></i> اعدادات WhaStack API</h4>
+                        </div>
+                        <div class="panel-body">
+                            @{
+                                var whaStackErrors = ViewData.ModelState.Keys
+                                    .Where(k => k.StartsWith("WhaStackSettings"))
+                                    .SelectMany(k => ViewData.ModelState[k].Errors)
+                                    .ToList();
+                            }
+                            @if (whaStackErrors.Any())
+                            {
+                                <div class="text-danger">
+                                    <ul>
+                                        @foreach (var error in whaStackErrors)
+                                        {
+                                            <li>@error.ErrorMessage</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="control-label">Base URL</label>
+                                        @Html.TextBoxFor(m => m.WhaStackSettings.BaseUrl, new { @class = "form-control", placeholder = "https://whastackapi.com/api/v1" })
+                                        <small class="text-muted">رابط API الاساسي</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="control-label">API Key</label>
+                                        @Html.TextBoxFor(m => m.WhaStackSettings.ApiKey, new { @class = "form-control", placeholder = "ادخل الـ API Key" })
+                                        <small class="text-muted">مفتاح الـ API الخاص بك (Bearer Token) - ادخله أولاً ثم اضغط جلب الجلسات</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="control-label">Session ID</label>
+                                        <div class="input-group">
+                                            @Html.TextBoxFor(m => m.WhaStackSettings.SessionId, new { @class = "form-control", placeholder = "ادخل الـ Session ID أو اختر من القائمة" })
+                                            <span class="input-group-btn">
+                                                <button type="button" id="btnLoadWhaStackSessions" class="btn btn-info">
+                                                    <i class="fa fa-refresh"></i> جلب الجلسات
+                                                </button>
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">معرف الجلسة - اضغط "جلب الجلسات" لعرض كل الجلسات المتاحة</small>
+                                        <div id="whaStackSessionsList" style="display: none; margin-top: 10px; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="control-label">الفاصل الزمني بين الرسائل (بالثواني)</label>
+                                        @Html.TextBoxFor(m => m.WhaStackSettings.MessageIntervalSeconds, new { @class = "form-control", type = "number", min = "5", max = "3600" })
+                                        <small class="text-muted">الحد الادنى 5 ثواني - يفضل 30-60 ثانية لتجنب الحظر</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="control-label">حالة خدمة الارسال</label>
+                                        @Html.HiddenFor(m => m.WhaStackSettings.IsActive)
+                                        <div style="margin-top: 5px;">
+                                            @if (Model.WhaStackSettings.IsActive)
+                                            {
+                                                <button type="button" class="btn btn-success btn-lg btnToggleWhaStack" data-active="true">
+                                                    <i class="fa fa-power-off"></i> الخدمة مفعلة - اضغط للإيقاف
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn btn-danger btn-lg btnToggleWhaStack" data-active="false">
+                                                    <i class="fa fa-power-off"></i> الخدمة متوقفة - اضغط للتفعيل
+                                                </button>
+                                            }
+                                        </div>
+                                        <small class="text-muted">عند الإيقاف، لن يتم ارسال أي رسائل واتساب عند تقفيل الطلبات</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 20px;">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fa fa-save"></i> حفظ الاعدادات
+                                </button>
+                                <button type="button" id="btnCheckWhaStackQuota" class="btn btn-info btn-lg">
+                                    <i class="fa fa-bar-chart"></i> فحص الكوتا
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- WhaStack Test Section -->
+                <div class="panel panel-default" style="margin-top: 20px;">
+                    <div class="panel-heading">
+                        <h4 class="panel-title"><i class="fa fa-flask"></i> اختبار الارسال - WhaStack</h4>
+                    </div>
+                    <div class="panel-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5><i class="fa fa-paper-plane"></i> ارسال رسالة لرقم</h5>
+                                <div class="form-group">
+                                    <label>رقم الهاتف (بدون +)</label>
+                                    <input type="text" id="whaStackTestPhoneNumber" class="form-control" placeholder="201012345678" />
+                                </div>
+                                <div class="form-group">
+                                    <label>نص الرسالة</label>
+                                    <textarea id="whaStackTestMessage" class="form-control" rows="3" placeholder="رسالة تجريبية"></textarea>
+                                </div>
+                                <button type="button" id="btnSendWhaStackTest" class="btn btn-primary">
+                                    <i class="fa fa-paper-plane"></i> ارسال للرقم
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <h5><i class="fa fa-users"></i> ارسال رسالة لجروب</h5>
+                                <div class="form-group">
+                                    <label>Group ID (معرف الجروب)</label>
+                                    <div class="input-group">
+                                        <input type="text" id="whaStackTestGroupId" class="form-control" placeholder="120363XXXXXXXXXX@@g.us" />
+                                        <span class="input-group-btn">
+                                            <button type="button" id="btnLoadWhaStackGroups" class="btn btn-info">
+                                                <i class="fa fa-refresh"></i> جلب الجروبات
+                                            </button>
+                                        </span>
+                                    </div>
+                                    <div class="group-search" style="margin-top: 10px;">
+                                        <input type="text" id="whaStackGroupSearch" class="form-control" placeholder="ابحث عن الجروب..." style="display: none;" />
+                                    </div>
+                                    <div id="whaStackGroupsList" class="groups-list" style="display: none;"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label>نص الرسالة</label>
+                                    <textarea id="whaStackTestGroupMessage" class="form-control" rows="3" placeholder="رسالة تجريبية للجروب"></textarea>
+                                </div>
+                                <button type="button" id="btnSendWhaStackTestGroup" class="btn btn-success">
+                                    <i class="fa fa-paper-plane"></i> ارسال للجروب
+                                </button>
+                            </div>
+                        </div>
+                        <div id="whaStackTestResult" class="alert" style="display:none; margin-top: 15px;"></div>
                     </div>
                 </div>
             </div>
@@ -497,19 +737,21 @@
         $(function () {
             var allBotCloudGroups = [];
             var selectedBotCloudGroupId = '';
+            var allWhaStackGroups = [];
+            var selectedWhaStackGroupId = '';
 
             // Provider Switch
             $('#providerSwitch label').click(function () {
                 var provider = $(this).data('provider');
                 var btn = $(this);
-                
+
                 $.post('@Url.Action("UpdateProvider")', { provider: provider }, function (response) {
                     if (response.success) {
                         $('#providerSwitch label').removeClass('btn-success active').addClass('btn-default');
                         btn.removeClass('btn-default').addClass('btn-success active');
                         $('#providerSwitch input[type="radio"]').prop('checked', false);
                         btn.find('input[type="radio"]').prop('checked', true);
-                        
+
                         showResult('provider', true, response.message);
                     } else {
                         showResult('provider', false, response.message);
@@ -543,6 +785,15 @@
                 var isActive = btn.data('active');
                 var newState = !isActive;
                 $('#WhatsAppBotCloudSettings_IsActive').val(newState.toString());
+                updateToggleButton(btn, newState);
+            });
+
+            // Toggle WhaStack Service
+            $('.btnToggleWhaStack').click(function () {
+                var btn = $(this);
+                var isActive = btn.data('active');
+                var newState = !isActive;
+                $('#WhaStackSettings_IsActive').val(newState.toString());
                 updateToggleButton(btn, newState);
             });
 
@@ -611,7 +862,7 @@
             $('#botCloudGroupSearch').on('input', function () {
                 var searchTerm = $(this).val().toLowerCase();
                 if (allBotCloudGroups.length === 0) return;
-                
+
                 var filtered = allBotCloudGroups.filter(function (g) {
                     return (g.name && g.name.toLowerCase().includes(searchTerm)) ||
                            (g.id && g.id.toLowerCase().includes(searchTerm));
@@ -734,9 +985,182 @@
                 });
             });
 
+            // WhaStack Test Messages
+            $('#btnSendWhaStackTest').click(function () {
+                var phone = $('#whaStackTestPhoneNumber').val();
+                var message = $('#whaStackTestMessage').val();
+                if (!phone || !message) {
+                    showResult('whaStack', false, 'برجاء ادخال رقم الهاتف والرسالة');
+                    return;
+                }
+                sendTest('@Url.Action("SendTestMessageWhaStack")', { phoneNumber: phone, message: message }, $(this), 'whaStack');
+            });
+
+            $('#btnSendWhaStackTestGroup').click(function () {
+                var groupId = $('#whaStackTestGroupId').val().trim();
+                var message = $('#whaStackTestGroupMessage').val();
+                if (!groupId || !message) {
+                    showResult('whaStack', false, 'برجاء إدخال معرف الجروب والرسالة');
+                    return;
+                }
+                sendTest('@Url.Action("SendTestGroupMessageWhaStack")', { groupId: groupId, message: message }, $(this), 'whaStack');
+            });
+
+            // WhaStack Load Groups
+            $('#btnLoadWhaStackGroups').click(function () {
+                var btn = $(this);
+                var originalHtml = btn.html();
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الجلب...');
+
+                $.post('@Url.Action("GetGroupsForWhaStack")', {}, function (response) {
+                    if (response.success && response.groups && response.groups.length > 0) {
+                        allWhaStackGroups = response.groups;
+                        renderWhaStackGroups(allWhaStackGroups);
+                        $('#whaStackGroupsList').show();
+                        $('#whaStackGroupSearch').show();
+                        showResult('whaStack', true, response.message);
+                    } else {
+                        showResult('whaStack', false, response.message || 'لم يتم العثور على جروبات');
+                        $('#whaStackGroupsList').hide();
+                        $('#whaStackGroupSearch').hide();
+                    }
+                    btn.prop('disabled', false).html(originalHtml);
+                }).fail(function () {
+                    showResult('whaStack', false, 'حدث خطأ أثناء جلب الجروبات');
+                    btn.prop('disabled', false).html(originalHtml);
+                });
+            });
+
+            // WhaStack Search Groups
+            $('#whaStackGroupSearch').on('input', function () {
+                var searchTerm = $(this).val().toLowerCase();
+                if (allWhaStackGroups.length === 0) return;
+
+                var filtered = allWhaStackGroups.filter(function (g) {
+                    return (g.name && g.name.toLowerCase().includes(searchTerm)) ||
+                           (g.id && g.id.toLowerCase().includes(searchTerm));
+                });
+                renderWhaStackGroups(filtered);
+            });
+
+            // Render WhaStack Groups
+            function renderWhaStackGroups(groups) {
+                var list = $('#whaStackGroupsList');
+                list.empty();
+
+                if (groups.length === 0) {
+                    list.append('<div class="group-item text-muted text-center">لا توجد جروبات</div>');
+                    return;
+                }
+
+                groups.forEach(function (group) {
+                    var item = $('<div class="group-item" data-group-id="' + group.id + '">' +
+                        '<div class="group-name">' + (group.name || 'بدون اسم') + '</div>' +
+                        '<div class="group-id">' + group.id + '</div>' +
+                        '</div>');
+
+                    if (group.id === selectedWhaStackGroupId) {
+                        item.addClass('selected');
+                    }
+
+                    item.click(function () {
+                        $('#whaStackGroupsList .group-item').removeClass('selected');
+                        $(this).addClass('selected');
+                        selectedWhaStackGroupId = group.id;
+                        $('#whaStackTestGroupId').val(group.id);
+                    });
+
+                    list.append(item);
+                });
+            }
+
+            // WhaStack Load Sessions
+            $('#btnLoadWhaStackSessions').click(function () {
+                var btn = $(this);
+                var originalHtml = btn.html();
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الجلب...');
+
+                $.post('@Url.Action("GetWhaStackSessions")', {}, function (response) {
+                    if (response.success && response.sessions && response.sessions.length > 0) {
+                        var list = $('#whaStackSessionsList');
+                        list.empty();
+
+                        response.sessions.forEach(function (session) {
+                            var statusBadge = '';
+                            var statusClass = 'default';
+                            if (session.status) {
+                                var sl = session.status.toLowerCase();
+                                if (sl === 'connected' || sl === 'active' || sl === 'online') statusClass = 'success';
+                                else if (sl === 'disconnected' || sl === 'offline') statusClass = 'danger';
+                                else if (sl === 'connecting' || sl === 'pending') statusClass = 'warning';
+                                statusBadge = '<span class="label label-' + statusClass + '" style="margin-right: 5px;">' + session.status + '</span>';
+                            }
+
+                            var phoneText = session.phoneNumber ? ' <small class="text-muted">(' + session.phoneNumber + ')</small>' : '';
+                            var nameText = session.name ? session.name : session.sessionId;
+
+                            var item = $('<div class="group-item" style="padding: 10px 12px; border-bottom: 1px solid #eee; cursor: pointer;">' +
+                                '<div style="display: flex; justify-content: space-between; align-items: center;">' +
+                                '<div>' +
+                                '<strong>' + nameText + '</strong>' + phoneText +
+                                '<div style="font-size: 12px; color: #888; font-family: monospace; margin-top: 3px;">ID: ' + session.sessionId + '</div>' +
+                                '</div>' +
+                                '<div>' + statusBadge + '</div>' +
+                                '</div>' +
+                                '</div>');
+
+                            // Highlight current session
+                            if (session.sessionId === $('#WhaStackSettings_SessionId').val()) {
+                                item.css('background', '#d4edda').css('border-right', '4px solid #28a745');
+                            }
+
+                            item.click(function () {
+                                $('#WhaStackSettings_SessionId').val(session.sessionId);
+                                $('#whaStackSessionsList .group-item').css('background', '').css('border-right', '');
+                                $(this).css('background', '#d4edda').css('border-right', '4px solid #28a745');
+                                showResult('whaStack', true, 'تم اختيار الجلسة: ' + session.sessionId);
+                            });
+
+                            item.hover(
+                                function() { if (session.sessionId !== $('#WhaStackSettings_SessionId').val()) $(this).css('background', '#f0f8ff'); },
+                                function() { if (session.sessionId !== $('#WhaStackSettings_SessionId').val()) $(this).css('background', ''); }
+                            );
+
+                            list.append(item);
+                        });
+
+                        list.show();
+                        showResult('whaStack', true, response.message);
+                    } else {
+                        showResult('whaStack', false, response.message || 'لم يتم العثور على جلسات');
+                        $('#whaStackSessionsList').hide();
+                    }
+                    btn.prop('disabled', false).html(originalHtml);
+                }).fail(function () {
+                    showResult('whaStack', false, 'حدث خطأ أثناء جلب الجلسات - تأكد من ادخال الـ API Key وحفظ الاعدادات أولاً');
+                    btn.prop('disabled', false).html(originalHtml);
+                });
+            });
+
+            // WhaStack Check Quota
+            $('#btnCheckWhaStackQuota').click(function () {
+                var btn = $(this);
+                var originalHtml = btn.html();
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الفحص...');
+
+                $.post('@Url.Action("GetWhaStackQuota")', {}, function (response) {
+                    showResult('whaStack', response.success, response.message);
+                    btn.prop('disabled', false).html(originalHtml);
+                }).fail(function () {
+                    showResult('whaStack', false, 'حدث خطأ أثناء فحص الكوتا');
+                    btn.prop('disabled', false).html(originalHtml);
+                });
+            });
+
             function showResult(provider, success, message) {
                 var resultDiv = provider === 'wapilot' ? $('#wapilotTestResult') :
                                provider === 'botCloud' ? $('#botCloudTestResult') :
+                               provider === 'whaStack' ? $('#whaStackTestResult') :
                                provider === 'background' ? $('#backgroundTestResult') :
                                $('#providerResult');
                 resultDiv.removeClass('alert-success alert-danger');

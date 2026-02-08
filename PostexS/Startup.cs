@@ -1,5 +1,5 @@
-using FirebaseAdmin.Messaging;
 using FirebaseAdmin;
+using FirebaseAdmin.Messaging;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -13,8 +13,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using PostexS.Interfaces;
+using PostexS.Models;
 using PostexS.Models.Data;
 using PostexS.Models.Domain;
 using PostexS.Services;
@@ -23,9 +25,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using PostexS.Models;
-using Microsoft.OpenApi.Models;
-
 namespace PostexS
 {
     public class Startup
@@ -109,6 +108,7 @@ namespace PostexS
             services.AddHttpClient();
             services.AddScoped<IWapilotService, WapilotService>();
             services.AddScoped<IWhatsAppBotCloudService, WhatsAppBotCloudService>();
+            services.AddScoped<IWhaStackService, WhaStackService>();
             services.AddScoped<IWhatsAppProviderService, WhatsAppProviderService>();
             services.AddHostedService<WhatsAppQueueProcessor>();
 

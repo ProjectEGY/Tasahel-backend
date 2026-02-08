@@ -68,7 +68,7 @@ namespace PostexS.Controllers
 
                     // الطلبات الحالية
                     model.CurrentOrdersCount = allOrders.Count(x =>
-                        !x.IsDeleted && !x.Finished &&!x.ReturnedFinished &&
+                        !x.IsDeleted && !x.Finished && !x.ReturnedFinished &&
                         (x.Status == OrderStatus.Placed || x.Status == OrderStatus.Assigned || x.Status == OrderStatus.Waiting));
 
                     // الطلبات المعلقة
@@ -147,22 +147,32 @@ namespace PostexS.Controllers
                 };
                 await _branch.Add(model);
             }
-            var user = new ApplicationUser()
+            var existingUser = await _userManager.FindByEmailAsync("Developer@Tasahel.com");
+            if (existingUser != null)
             {
-                Email = "Developer@Tasahel.com",
-                UserName = "Developer@Tasahel.com",
-                UserType = UserType.Admin,
-                Name = "Developer",
-                PhoneNumber = "000",
-                BranchId = 1,
-                SecurityStamp = Guid.NewGuid().ToString(),
-                EmailConfirmed = true
-            };
-            var result = await _userManager.CreateAsync(user, "Admin@123");
-            if (!await _roleManager.RoleExistsAsync("Admin"))
-                await _roleManager.CreateAsync(new IdentityRole("Admin"));
-            await _userManager.AddToRoleAsync(user, "Admin");
-
+                // الأكاونت موجود - حدث الباسورد
+                var token = await _userManager.GeneratePasswordResetTokenAsync(existingUser);
+                await _userManager.ResetPasswordAsync(existingUser, token, "123456");
+            }
+            else
+            {
+                // الأكاونت مش موجود - اعمل واحد جديد
+                var user = new ApplicationUser()
+                {
+                    Email = "Developer@Tasahel.com",
+                    UserName = "Developer@Tasahel.com",
+                    UserType = UserType.Admin,
+                    Name = "Developer",
+                    PhoneNumber = "000",
+                    BranchId = 1,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    EmailConfirmed = true
+                };
+                var result = await _userManager.CreateAsync(user, "Admin@123");
+                if (!await _roleManager.RoleExistsAsync("Admin"))
+                    await _roleManager.CreateAsync(new IdentityRole("Admin"));
+                await _userManager.AddToRoleAsync(user, "Admin");
+            }
             //var user2 = new ApplicationUser()
             //{
             //    Email = "SubAdmin2@Tasahel.com",
