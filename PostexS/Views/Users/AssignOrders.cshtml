@@ -215,6 +215,19 @@
             </div>
         </div>
 
+        <!-- اختيار الأعمدة الاختيارية في Excel -->
+        <div id="excelColumnsPanel" style="display:none; background:#f8f9fa; border:1px solid #ddd; border-radius:8px; padding:15px; margin-top:10px; margin-bottom:15px;">
+            <h5 style="margin-bottom:10px; font-weight:bold;"><i class="fa fa-columns"></i> اختر الأعمدة الإضافية في ملف Excel:</h5>
+            <div style="display:flex; flex-wrap:wrap; gap:15px;">
+                <label style="cursor:pointer;"><input asp-for="showProductName" type="checkbox" /> اسم المنتج</label>
+                <label style="cursor:pointer;"><input asp-for="showSenderPhone" type="checkbox" /> رقم تليفون الراسل</label>
+                <label style="cursor:pointer;"><input asp-for="showSenderName" type="checkbox" /> اسم الراسل</label>
+                <label style="cursor:pointer;"><input asp-for="showOrderCost" type="checkbox" /> سعر الطلب</label>
+                <label style="cursor:pointer;"><input asp-for="showDeliveryFees" type="checkbox" /> سعر الشحن</label>
+                <label style="cursor:pointer;"><input asp-for="showClientCode" type="checkbox" /> كود العميل</label>
+            </div>
+        </div>
+
         <!-- زر الإضافة وعدد الطلبات المختارة -->
         <div class="form-group text-center">
             <button type="submit" class="btn">إضافة</button>
@@ -237,5 +250,14 @@
         function updateCount() {
             $('#selectedCount').text('عدد الطلبات المختارة: ' + selectedCount);
         }
+
+        // إظهار/إخفاء خيارات أعمدة Excel
+        $('#print').on('change', function () {
+            if ($(this).is(':checked')) {
+                $('#excelColumnsPanel').slideDown(200);
+            } else {
+                $('#excelColumnsPanel').slideUp(200);
+            }
+        });
     });
 </script>

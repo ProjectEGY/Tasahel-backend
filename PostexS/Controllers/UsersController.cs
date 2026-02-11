@@ -1509,9 +1509,17 @@ namespace PostexS.Controllers
                     {
                         if (model.print)
                         {
-                            //await ExportToExecl(OrdersPrint);
-                            //return RedirectToAction(nameof(PrintExcelClientNewOrders), new { Id = model.UserId, OrdersPrint = OrdersPrint });
-                            return RedirectToAction("PrintExcelClientNewOrders", "Orders", new { Id = model.UserId, OrdersPrint = OrdersPrint });
+                            return RedirectToAction("PrintExcelClientNewOrders", "Orders", new
+                            {
+                                Id = model.UserId,
+                                OrdersPrint = OrdersPrint,
+                                showProductName = model.showProductName,
+                                showSenderPhone = model.showSenderPhone,
+                                showSenderName = model.showSenderName,
+                                showOrderCost = model.showOrderCost,
+                                showDeliveryFees = model.showDeliveryFees,
+                                showClientCode = model.showClientCode
+                            });
                         }
                         return RedirectToAction(nameof(Index), new { q = "d", message = message });
                     }

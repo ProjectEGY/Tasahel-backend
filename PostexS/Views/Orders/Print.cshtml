@@ -25,16 +25,28 @@
                     <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
                     @if (!User.IsInRole("Client"))
                     {
-                        <a href="@Url.Action("ExportToExeclWalletForAdmins","Orders",new{userWallet=@Model.First().CompletedId})" class="btn btn-warning">Export to Excel</a>
+                        <a href="javascript:void(0)" onclick="exportWalletExcel('@Url.Action("ExportToExeclWalletForAdmins","Orders",new{userWallet=Model.First().CompletedId})')" class="btn btn-warning">Export to Excel</a>
                     }
                     else
                     {
-                        <a href="@Url.Action("ExportToExeclWallet","Orders",new{userWallet=@Model.First().CompletedId})" class="btn btn-warning">Export to Excel</a>
+                        <a href="javascript:void(0)" onclick="exportWalletExcel('@Url.Action("ExportToExeclWallet","Orders",new{userWallet=Model.First().CompletedId})')" class="btn btn-warning">Export to Excel</a>
                     }
                     <a class="btn btn-info  no-print" target="_blank" href="/Orders/PrintReceipt?walletId=@Model.First().CompletedId
                     ">طباعه إيصال الاستلام</a>
                 </h4>
             </div>
+        </div>
+        <!-- اختيار الأعمدة الاختيارية في Excel -->
+        <div class="no-print" style="background:#f8f9fa; border:1px solid #ddd; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <strong><i class="fa fa-columns"></i> أعمدة إضافية في Excel:</strong>
+            <span style="display:inline-flex; flex-wrap:wrap; gap:12px; margin-right:10px;">
+                <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showProductName" /> اسم المنتج</label>
+                <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showSenderPhone" /> رقم تليفون الراسل</label>
+                <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showSenderName" /> اسم الراسل</label>
+                <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showOrderCost" /> سعر الطلب</label>
+                <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showDeliveryFees" /> سعر الشحن</label>
+                <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showClientCode" /> كود العميل</label>
+            </span>
         </div>
         <table class="table text-center table-bordered">
             <thead>
@@ -162,6 +174,15 @@
         </table>
     </div>
 </div>
+<script>
+    function exportWalletExcel(baseUrl) {
+        var params = '&useCustomColumns=true';
+        document.querySelectorAll('.excel-col-option').forEach(function (cb) {
+            params += '&' + cb.getAttribute('data-col') + '=' + cb.checked;
+        });
+        window.location.href = baseUrl + (baseUrl.indexOf('?') >= 0 ? params : '?' + params.substring(1));
+    }
+</script>
 <script>
     function Delete(url) {
         swal({

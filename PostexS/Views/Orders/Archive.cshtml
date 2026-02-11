@@ -168,6 +168,13 @@
     </div>
 </div>
 <script>
+    function exportWalletExcel(baseUrl) {
+        var params = '&useCustomColumns=true';
+        document.querySelectorAll('.excel-col-option').forEach(function (cb) {
+            params += '&' + cb.getAttribute('data-col') + '=' + cb.checked;
+        });
+        window.location.href = baseUrl + (baseUrl.indexOf('?') >= 0 ? params : '?' + params.substring(1));
+    }
     function Delete(url) {
         swal({
             title: "هل متأكد؟",
@@ -217,7 +224,7 @@
     }
 </script>
 <script>
-    document.ready(function () {
+    $(document).ready(function () {
         $("#tableOrders").DataTable({
             paging: false,
             ordering: false,

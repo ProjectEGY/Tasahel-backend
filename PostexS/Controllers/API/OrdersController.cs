@@ -526,6 +526,7 @@ namespace PostexS.Controllers.API
             return Ok(baseResponse);
         }
         */
+        [NonAction]
         public byte[] getBarcode(string Code)
         {
             //            id += 1000;

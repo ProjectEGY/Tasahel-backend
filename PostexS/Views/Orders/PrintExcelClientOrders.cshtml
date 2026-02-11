@@ -27,6 +27,19 @@
                     }
                 </div>
                 <div class="panel-body">
+                    <!-- اختيار الأعمدة الاختيارية في Excel -->
+                    <div class="no-print" style="background:#f8f9fa; border:1px solid #ddd; border-radius:8px; padding:15px; margin-bottom:15px;">
+                        <h5 style="margin-bottom:10px; font-weight:bold;"><i class="fa fa-columns"></i> اختر الأعمدة الإضافية في ملف Excel:</h5>
+                        <div style="display:flex; flex-wrap:wrap; gap:15px;">
+                            <label style="cursor:pointer;"><input type="checkbox" class="excel-col-option" data-col="showProductName" /> اسم المنتج</label>
+                            <label style="cursor:pointer;"><input type="checkbox" class="excel-col-option" data-col="showSenderPhone" /> رقم تليفون الراسل</label>
+                            <label style="cursor:pointer;"><input type="checkbox" class="excel-col-option" data-col="showSenderName" /> اسم الراسل</label>
+                            <label style="cursor:pointer;"><input type="checkbox" class="excel-col-option" data-col="showOrderCost" /> سعر الطلب</label>
+                            <label style="cursor:pointer;"><input type="checkbox" class="excel-col-option" data-col="showDeliveryFees" /> سعر الشحن</label>
+                            <label style="cursor:pointer;"><input type="checkbox" class="excel-col-option" data-col="showClientCode" /> كود العميل</label>
+                        </div>
+                    </div>
+
                     <table class="table text-center table-bordered" style="table-layout: fixed; word-wrap: break-word;font-size:10px;">
                         <thead>
                             <tr>
@@ -41,7 +54,14 @@
                             </tr>
                         </thead>
                         <tbody style="text-align:center">
-                            <form asp-action="ExportToExecl" asp-controller="Orders">
+                            <form asp-action="ExportToExecl" asp-controller="Orders" id="excelExportForm">
+                                <input type="hidden" name="useCustomColumns" value="true" />
+                                <input type="hidden" name="showProductName" id="hdn_showProductName" value="false" />
+                                <input type="hidden" name="showSenderPhone" id="hdn_showSenderPhone" value="false" />
+                                <input type="hidden" name="showSenderName" id="hdn_showSenderName" value="false" />
+                                <input type="hidden" name="showOrderCost" id="hdn_showOrderCost" value="false" />
+                                <input type="hidden" name="showDeliveryFees" id="hdn_showDeliveryFees" value="false" />
+                                <input type="hidden" name="showClientCode" id="hdn_showClientCode" value="false" />
                                 <button type="submit" class="btn-btn-success no-print">طباعة المحدد شيت إكسيل</button>
                                 <br />
                                 <label class="no-print" style="position:center">
@@ -123,4 +143,18 @@
             checkboxes[i].checked = source.checked;
         }
     }
+    // مزامنة checkboxes الأعمدة الاختيارية مع الحقول المخفية
+    document.querySelectorAll('.excel-col-option').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+            var colName = this.getAttribute('data-col');
+            document.getElementById('hdn_' + colName).value = this.checked ? 'true' : 'false';
+        });
+    });
+    // مزامنة عند submit
+    document.getElementById('excelExportForm').addEventListener('submit', function () {
+        document.querySelectorAll('.excel-col-option').forEach(function (cb) {
+            var colName = cb.getAttribute('data-col');
+            document.getElementById('hdn_' + colName).value = cb.checked ? 'true' : 'false';
+        });
+    });
 </script>

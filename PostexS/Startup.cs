@@ -132,14 +132,18 @@ namespace PostexS
             // Register Firebase Messaging as a singleton if needed
             services.AddSingleton(FirebaseMessaging.DefaultInstance);
 
-            // Swagger Configuration - Show only Sender APIs
+            // Swagger Configuration - single document that contains all APIs
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
                 {
-                    Title = "Tasahel Express - Sender API",
+                    Title = "Tasahel Express - API",
                     Version = "v1",
-                    Description = "API للراسلين (Senders) لإدارة وتتبع الطلبات - Authentication: استخدم X-Public-Key و X-Private-Key في Headers",
+                    Description =
+                        "جميع واجهات Tasahel Express في صفحة واحدة:\n\n" +
+                        "- Sender API (مفاتيح API: X-Public-Key, X-Private-Key)\n" +
+                        "- Driver & Mobile API (JWT Bearer Token عبر /api/Account/Login)\n\n" +
+                        "استخدم زر **Authorize** لإرسال الـ Headers أو الـ Bearer Token تلقائياً.",
                     Contact = new OpenApiContact
                     {
                         Name = "Tasahel Express Support",
@@ -147,20 +151,22 @@ namespace PostexS
                     }
                 });
 
-                // Filter to show only Sender APIs
+                // توثيق API Controllers فقط (استبعاد MVC Controllers التي تسبب 500 عند توليد swagger.json)
                 c.DocInclusionPredicate((docName, apiDesc) =>
                 {
-                    var controllerName = apiDesc.ActionDescriptor.RouteValues["controller"];
-
-                    // Include only SenderController endpoints
-                    return controllerName == "Sender";
+                    if (apiDesc.ActionDescriptor is Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor cad)
+                        return cad.ControllerTypeInfo?.Namespace == "PostexS.Controllers.API";
+                    return false;
                 });
 
                 // Resolve conflicting actions and schema IDs
                 c.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
                 c.CustomSchemaIds(type => type.FullName);
 
-                // Add API Key security definitions - Two separate headers
+                // Header parameters filter (Latitude/Longitude with default values)
+                c.OperationFilter<Filters.AddHeaderParametersFilter>();
+
+                // Security: API Key (for Sender APIs)
                 c.AddSecurityDefinition("X-Public-Key", new OpenApiSecurityScheme
                 {
                     Type = SecuritySchemeType.ApiKey,
@@ -175,6 +181,17 @@ namespace PostexS
                     In = ParameterLocation.Header,
                     Name = "X-Private-Key",
                     Description = "المفتاح الخاص (Private Key) - احصل عليه من /developer/api-keys"
+                });
+
+                // Security: JWT Bearer (for Driver/Mobile APIs)
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Name = "Authorization",
+                    Description = "أدخل الـ JWT Token هنا.\n\nمثال: `eyJhbGciOiJIUzI1NiIs...`\n\n(لا تكتب كلمة Bearer - هتتضاف تلقائياً)"
                 });
 
                 c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -197,6 +214,17 @@ namespace PostexS
                             {
                                 Type = ReferenceType.SecurityScheme,
                                 Id = "X-Private-Key"
+                            }
+                        },
+                        new string[] {}
+                    },
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
                             }
                         },
                         new string[] {}
@@ -230,9 +258,10 @@ namespace PostexS
             });
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("./v1/swagger.json", "Tasahel Sender API v1");
+                // Single combined Swagger document for all APIs
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Tasahel Express - API");
                 c.RoutePrefix = "swagger";
-                c.DocumentTitle = "Tasahel Express - Sender API";
+                c.DocumentTitle = "Tasahel Express - API Documentation";
             });
 
             app.UseRouting();

@@ -67,7 +67,7 @@
         </td>
         <td>
             <a class="btn btn-success" target="_blank" href="/Orders/WalletOrders?walletId=@item.Id">طلبات التسوية</a>
-            <a href="@Url.Action("ExportToExeclWallet","Orders",new{userWallet=item.Id})" class="btn btn-warning">Export to Excel</a>
+            <a href="javascript:void(0)" onclick="exportWalletExcel('@Url.Action("ExportToExeclWallet","Orders",new{userWallet=item.Id})')" class="btn btn-warning">Export to Excel</a>
         </td>
     </tr>
 }

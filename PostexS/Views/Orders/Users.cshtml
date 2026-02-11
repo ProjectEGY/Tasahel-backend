@@ -180,14 +180,39 @@
 
                     <tbody style="text-align:center">
                         @* <button class="btn btn-info form-control" type="submit">  طباعة المحدد شيت اكسيل </button> *@
+                        <!-- اختيار الأعمدة الاختيارية في Excel -->
+                        <div style="background:#f8f9fa; border:1px solid #ddd; border-radius:8px; padding:12px; margin-bottom:12px;">
+                            <strong><i class="fa fa-columns"></i> أعمدة إضافية في Excel:</strong>
+                            <span style="display:inline-flex; flex-wrap:wrap; gap:12px; margin-right:10px;">
+                                <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showProductName" /> اسم المنتج</label>
+                                <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showSenderPhone" /> رقم تليفون الراسل</label>
+                                <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showSenderName" /> اسم الراسل</label>
+                                <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showOrderCost" /> سعر الطلب</label>
+                                <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showDeliveryFees" /> سعر الشحن</label>
+                                <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showClientCode" /> كود العميل</label>
+                            </span>
+                        </div>
+                        <!-- فورم مخفي لتصدير Excel مع الأعمدة الاختيارية -->
+                        <form id="excelExportHiddenForm" action="/Orders/ExportToExecl" method="post" style="display:none;">
+                            <input type="hidden" name="useCustomColumns" value="true" />
+                            <input type="hidden" name="showProductName" id="hdn_showProductName" value="false" />
+                            <input type="hidden" name="showSenderPhone" id="hdn_showSenderPhone" value="false" />
+                            <input type="hidden" name="showSenderName" id="hdn_showSenderName" value="false" />
+                            <input type="hidden" name="showOrderCost" id="hdn_showOrderCost" value="false" />
+                            <input type="hidden" name="showDeliveryFees" id="hdn_showDeliveryFees" value="false" />
+                            <input type="hidden" name="showClientCode" id="hdn_showClientCode" value="false" />
+                            <div id="excelExportIdsContainer"></div>
+                        </form>
                         <div style="margin-bottom: 15px;">
                             <button onclick="prepareExport('selected')" class="btn btn-info" style="margin-left: 10px;">
                                 <i class="fa fa-file-excel-o"></i>  Excel Sheet  تصدير المحدد فقط
                             </button>
-
-                            @* <button onclick="prepareExport('all')" class="btn btn-success">
-                                <i class="fa fa-file-excel-o"></i> تصدير كل النتائج
-                            </button> *@
+                            <button onclick="preparePrint('normal')" class="btn btn-default" style="margin-left: 10px;">
+                                <i class="fa fa-print"></i> طباعة المحدد
+                            </button>
+                            <button onclick="preparePrint('barcode')" class="btn btn-warning" style="margin-left: 10px;">
+                                <i class="fa fa-barcode"></i> طباعة باركود المحدد
+                            </button>
                         </div>
                         <br />
                         <label style="position:center">
@@ -558,35 +583,51 @@
 
         function prepareExport(exportType) {
             const selectedIds = exportType === 'selected'
-                ? Array.from(document.querySelectorAll('input[name="OrdersId[]"]:checked')).map(x => parseInt(x.value))
-                : Array.from(document.querySelectorAll('input[name="OrdersId[]"]')).map(x => parseInt(x.value));
+                ? Array.from(document.querySelectorAll('input[name="OrdersId[]"]:checked')).map(x => parseInt(x.value)).filter(id => id > 0)
+                : Array.from(document.querySelectorAll('input[name="OrdersId[]"]')).map(x => parseInt(x.value)).filter(id => id > 0);
 
-            if (selectedIds.some(isNaN)) {
-                Swal.fire('خطأ', 'توجد بيانات غير صالحة في الطلبات المحددة', 'error');
+            if (selectedIds.length === 0) {
+                Swal.fire('تنبيه', 'برجاء تحديد طلب واحد على الأقل للتصدير', 'warning');
                 return;
             }
 
-            fetch('/Orders/StoreExportIds', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify(selectedIds.filter(id => id > 0)) // تأكد من أن جميع الـ IDs صالحة
-            })
-            .then(response => {
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                return response.json();
-            })
-            .then(data => {
-                if (!data.success) throw new Error(data.message);
-                console.log("Exported IDs:", data);
-                window.location.href = `/Orders/ExportToExecl?exportType=${exportType}`;
-            })
-            .catch(error => {
-                console.error('Export Error:', error);
-                Swal.fire('خطأ', `فشل التصدير: ${error.message}`, 'error');
+            // مزامنة checkboxes الأعمدة الاختيارية مع الحقول المخفية
+            document.querySelectorAll('.excel-col-option').forEach(function (cb) {
+                var colName = cb.getAttribute('data-col');
+                document.getElementById('hdn_' + colName).value = cb.checked ? 'true' : 'false';
             });
+
+            // إضافة IDs الطلبات في الفورم المخفي
+            var container = document.getElementById('excelExportIdsContainer');
+            container.innerHTML = '';
+            selectedIds.forEach(function (id) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'OrdersId';
+                input.value = id;
+                container.appendChild(input);
+            });
+
+            // إرسال الفورم
+            document.getElementById('excelExportHiddenForm').submit();
+        }
+
+        function preparePrint(printType) {
+            const selectedIds = Array.from(document.querySelectorAll('input[name="OrdersId[]"]:checked')).map(x => parseInt(x.value)).filter(id => id > 0);
+
+            if (selectedIds.length === 0) {
+                Swal.fire('تنبيه', 'برجاء تحديد طلب واحد على الأقل للطباعة', 'warning');
+                return;
+            }
+
+            // بناء query string بنفس الطريقة اللي بيستخدمها PrintAllNew
+            var queryString = selectedIds.map(function(id) { return 'Orders=' + id; }).join('&');
+
+            if (printType === 'barcode') {
+                window.open('/Orders/PrintAllNewBarCode?' + queryString, '_blank');
+            } else {
+                window.open('/Orders/PrintAllNew?' + queryString, '_blank');
+            }
         }
 
 

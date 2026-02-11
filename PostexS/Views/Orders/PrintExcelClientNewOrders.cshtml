@@ -45,6 +45,19 @@
                     </h4>
                     </div>
                     </div>*@
+                    <!-- اختيار الأعمدة الاختيارية في Excel -->
+                    <div class="no-print" style="background:#f8f9fa; border:1px solid #ddd; border-radius:8px; padding:15px; margin-bottom:15px;">
+                        <h5 style="margin-bottom:10px; font-weight:bold;"><i class="fa fa-columns"></i> اختر الأعمدة الإضافية في ملف Excel:</h5>
+                        <div style="display:flex; flex-wrap:wrap; gap:15px;">
+                            <label style="cursor:pointer;"><input type="checkbox" class="excel-col-option" data-col="showProductName" @(ViewBag.showProductName == true ? "checked" : "") /> اسم المنتج</label>
+                            <label style="cursor:pointer;"><input type="checkbox" class="excel-col-option" data-col="showSenderPhone" @(ViewBag.showSenderPhone == true ? "checked" : "") /> رقم تليفون الراسل</label>
+                            <label style="cursor:pointer;"><input type="checkbox" class="excel-col-option" data-col="showSenderName" @(ViewBag.showSenderName == true ? "checked" : "") /> اسم الراسل</label>
+                            <label style="cursor:pointer;"><input type="checkbox" class="excel-col-option" data-col="showOrderCost" @(ViewBag.showOrderCost == true ? "checked" : "") /> سعر الطلب</label>
+                            <label style="cursor:pointer;"><input type="checkbox" class="excel-col-option" data-col="showDeliveryFees" @(ViewBag.showDeliveryFees == true ? "checked" : "") /> سعر الشحن</label>
+                            <label style="cursor:pointer;"><input type="checkbox" class="excel-col-option" data-col="showClientCode" @(ViewBag.showClientCode == true ? "checked" : "") /> كود العميل</label>
+                        </div>
+                    </div>
+
                     <table class="table text-center table-bordered">
                         <thead>
                             <tr>
@@ -63,7 +76,14 @@
                             </tr>
                         </thead>
                         <tbody style="text-align:center">
-                            <form asp-action="ExportToExecl" asp-controller="Orders">
+                            <form asp-action="ExportToExecl" asp-controller="Orders" id="excelExportForm">
+                                <input type="hidden" name="useCustomColumns" value="true" />
+                                <input type="hidden" name="showProductName" id="hdn_showProductName" value="@(ViewBag.showProductName == true ? "true" : "false")" />
+                                <input type="hidden" name="showSenderPhone" id="hdn_showSenderPhone" value="@(ViewBag.showSenderPhone == true ? "true" : "false")" />
+                                <input type="hidden" name="showSenderName" id="hdn_showSenderName" value="@(ViewBag.showSenderName == true ? "true" : "false")" />
+                                <input type="hidden" name="showOrderCost" id="hdn_showOrderCost" value="@(ViewBag.showOrderCost == true ? "true" : "false")" />
+                                <input type="hidden" name="showDeliveryFees" id="hdn_showDeliveryFees" value="@(ViewBag.showDeliveryFees == true ? "true" : "false")" />
+                                <input type="hidden" name="showClientCode" id="hdn_showClientCode" value="@(ViewBag.showClientCode == true ? "true" : "false")" />
                                 <button type="submit" class="btn-btn-success">طباعة المحدد شيت إكسيل</button>
                                 <br />
                                 <label style="position:center">
@@ -226,5 +246,18 @@
             checkboxes[i].checked = source.checked;
         }
     }
+    // مزامنة checkboxes الأعمدة الاختيارية مع الحقول المخفية
+    document.querySelectorAll('.excel-col-option').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+            var colName = this.getAttribute('data-col');
+            document.getElementById('hdn_' + colName).value = this.checked ? 'true' : 'false';
+        });
+    });
+    document.getElementById('excelExportForm').addEventListener('submit', function () {
+        document.querySelectorAll('.excel-col-option').forEach(function (cb) {
+            var colName = cb.getAttribute('data-col');
+            document.getElementById('hdn_' + colName).value = cb.checked ? 'true' : 'false';
+        });
+    });
 </script>
 

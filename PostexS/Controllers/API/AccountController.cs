@@ -25,6 +25,7 @@ using PostexS.Services;
 using Newtonsoft.Json.Linq;
 using System.Net.Http;
 using System.IO;
+using System.Globalization;
 
 namespace PostexS.Controllers.API
 {
@@ -39,10 +40,13 @@ namespace PostexS.Controllers.API
         private readonly IConfiguration _configuration;
         private readonly IGeneric<Order> _orders;
         private readonly IGeneric<Location> _locations;
+        private readonly IGeneric<OrderNotes> _orderNotes;
+        private readonly IGeneric<OrderOperationHistory> _histories;
         private readonly IHttpClientFactory _httpClientFactory;
         public AccountController(UserManager<ApplicationUser> userManager, IGeneric<ApplicationUser> user
             , IConfiguration configuration, IGeneric<Location> locations, IGeneric<Order> orders,
-            IHttpClientFactory httpClientFactory)
+            IHttpClientFactory httpClientFactory, IGeneric<OrderNotes> orderNotes,
+            IGeneric<OrderOperationHistory> histories)
         {
             _userManager = userManager;
             _user = user;
@@ -51,6 +55,8 @@ namespace PostexS.Controllers.API
             _orders = orders;
             _locations = locations;
             _httpClientFactory = httpClientFactory;
+            _orderNotes = orderNotes;
+            _histories = histories;
         }
         [HttpPost("Login")]
         public async Task<IActionResult> Login(SubmitLoginDto model, [FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude, string lang = "en")
@@ -82,6 +88,7 @@ namespace PostexS.Controllers.API
             baseResponse.ErrorCode = Errors.TheUsernameOrPasswordIsIncorrect;
             return StatusCode((int)HttpStatusCode.NotFound, baseResponse);
         }
+        [NonAction]
         public async Task<string> GenerateToken(ApplicationUser user)
         {
             var userRoles = await _userManager.GetRolesAsync(user);
@@ -450,6 +457,512 @@ namespace PostexS.Controllers.API
             baseResponse.Data = dto;
             return Ok(baseResponse);
         }
+
+        #region Driver Statistics & Reports APIs
+
+        /// <summary>
+        /// إحصائيات المندوب الشاملة - جميع الطلبات مع النسب المئوية
+        /// </summary>
+        [HttpGet("DriverStatistics")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> DriverStatistics([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude)
+        {
+            var userid = User.Identity.Name;
+            var user = await _userManager.FindByIdAsync(userid);
+            if (user == null || user.IsDeleted)
+            {
+                baseResponse.ErrorCode = Errors.TheUserNotExistOrDeleted;
+                return StatusCode((int)HttpStatusCode.NotFound, baseResponse);
+            }
+
+            var dto = new DriverStatisticsDto();
+            dto.Name = user.Name;
+
+            if (user.UserType == UserType.Driver)
+            {
+                // عدد الطلبات الحالية (Assigned + Waiting)
+                dto.CurrentOrdersCount = _orders.Get(x => x.DeliveryId == userid &&
+                        (x.Status == OrderStatus.Assigned || x.Status == OrderStatus.Waiting)
+                        && !x.IsDeleted).Count();
+
+                // جميع الطلبات ما عدا PartialReturned
+                var orders = _orders.Get(x =>
+                    (x.Status != OrderStatus.PartialReturned) && !x.IsDeleted
+                    && x.DeliveryId == userid).ToList();
+
+                dto.ReturnedCount = orders.Count(x => x.Status == OrderStatus.Returned);
+                dto.PartialDeliveredCount = orders.Count(x => x.Status == OrderStatus.PartialDelivered);
+                dto.PartialReturned_ReceivedCount = orders.Count(x => x.Status == OrderStatus.PartialReturned && x.Finished);
+                dto.Returned_ReceivedCount = orders.Count(x => x.Status == OrderStatus.Returned && x.Finished);
+                dto.DeliveredCount = orders.Count(x => x.Status == OrderStatus.Delivered);
+                dto.DeliveredFinishedCount = orders.Count(x => x.Status == OrderStatus.Delivered && x.Finished);
+                dto.WaitingCount = orders.Count(x => x.Status == OrderStatus.Waiting);
+                dto.RejectedCount = orders.Count(x => x.Status == OrderStatus.Rejected);
+                dto.AllOrdersCount = orders.Count();
+
+                var OrdersMoney = orders.Where(x => x.Status != OrderStatus.PartialReturned).Sum(x => x.ArrivedCost);
+                dto.OrdersMoney = OrdersMoney;
+                var DriverMoney = orders.Where(x => x.Status != OrderStatus.PartialReturned).Sum(x => x.DeliveryCost);
+                dto.DriverMoney = DriverMoney;
+                dto.SystemMoney = OrdersMoney - DriverMoney;
+
+                // حساب النسب المئوية
+                if (dto.AllOrdersCount > 0)
+                {
+                    dto.DeliveredPercentage = Math.Round((double)dto.DeliveredCount / dto.AllOrdersCount * 100, 1);
+                    dto.PartialDeliveredPercentage = Math.Round((double)dto.PartialDeliveredCount / dto.AllOrdersCount * 100, 1);
+                    dto.ReturnedPercentage = Math.Round((double)dto.ReturnedCount / dto.AllOrdersCount * 100, 1);
+                }
+            }
+
+            if (latitude.HasValue && longitude.HasValue)
+            {
+                UpdateUserLocation locationdto = new UpdateUserLocation()
+                {
+                    Longitude = longitude.Value,
+                    Latitude = latitude.Value,
+                };
+                await UpdateLocationMethod(locationdto, user);
+            }
+            baseResponse.Data = dto;
+            return Ok(baseResponse);
+        }
+
+        /// <summary>
+        /// إحصائيات المندوب الحالية - الطلبات الغير منتهية فقط مع النسب
+        /// </summary>
+        [HttpGet("CurrentStatistics")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> CurrentStatistics([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude)
+        {
+            var userid = User.Identity.Name;
+            var user = await _userManager.FindByIdAsync(userid);
+            if (user == null || user.IsDeleted)
+            {
+                baseResponse.ErrorCode = Errors.TheUserNotExistOrDeleted;
+                return StatusCode((int)HttpStatusCode.NotFound, baseResponse);
+            }
+
+            var dto = new DriverCurrentStatisticsDto();
+            dto.Name = user.Name;
+
+            if (user.UserType == UserType.Driver)
+            {
+                // عدد الطلبات الحالية (Assigned + Waiting)
+                dto.CurrentOrdersCount = _orders.Get(x => x.DeliveryId == userid &&
+                        (x.Status == OrderStatus.Assigned || x.Status == OrderStatus.Waiting)
+                        && !x.IsDeleted).Count();
+
+                // الطلبات الغير منتهية
+                var orders = _orders.Get(x =>
+                    (x.Status == OrderStatus.Delivered
+                    || x.Status == OrderStatus.Waiting
+                    || x.Status == OrderStatus.Rejected
+                    || x.Status == OrderStatus.PartialDelivered
+                    || x.Status == OrderStatus.Returned
+                    || x.Status == OrderStatus.Assigned
+                    ) && !x.Finished && !x.IsDeleted
+                    && x.DeliveryId == userid).ToList();
+
+                dto.ReturnedCount = orders.Count(x => x.Status == OrderStatus.Returned);
+                dto.PartialDeliveredCount = orders.Count(x => x.Status == OrderStatus.PartialDelivered);
+                dto.DeliveredCount = orders.Count(x => x.Status == OrderStatus.Delivered);
+                dto.WaitingCount = orders.Count(x => x.Status == OrderStatus.Waiting);
+                dto.RejectedCount = orders.Count(x => x.Status == OrderStatus.Rejected);
+                dto.AssignedCount = orders.Count(x => x.Status == OrderStatus.Assigned);
+                dto.AllOrdersCount = orders.Count();
+
+                var OrdersMoney = orders.Where(x => x.Status != OrderStatus.PartialReturned).Sum(x => x.ArrivedCost);
+                dto.OrdersMoney = OrdersMoney;
+                var DriverMoney = orders.Where(x => x.Status != OrderStatus.PartialReturned).Sum(x => x.DeliveryCost);
+                dto.DriverMoney = DriverMoney;
+                dto.SystemMoney = OrdersMoney - DriverMoney;
+
+                // حساب النسب المئوية
+                if (dto.AllOrdersCount > 0)
+                {
+                    dto.DeliveredPercentage = Math.Round((double)dto.DeliveredCount / dto.AllOrdersCount * 100, 1);
+                    dto.ReturnedPercentage = Math.Round((double)dto.ReturnedCount / dto.AllOrdersCount * 100, 1);
+                    dto.PartialDeliveredPercentage = Math.Round((double)dto.PartialDeliveredCount / dto.AllOrdersCount * 100, 1);
+                    dto.RejectedPercentage = Math.Round((double)dto.RejectedCount / dto.AllOrdersCount * 100, 1);
+                    dto.WaitingPercentage = Math.Round((double)dto.WaitingCount / dto.AllOrdersCount * 100, 1);
+                    dto.AssignedPercentage = Math.Round((double)dto.AssignedCount / dto.AllOrdersCount * 100, 1);
+                }
+            }
+
+            if (latitude.HasValue && longitude.HasValue)
+            {
+                UpdateUserLocation locationdto = new UpdateUserLocation()
+                {
+                    Longitude = longitude.Value,
+                    Latitude = latitude.Value,
+                };
+                await UpdateLocationMethod(locationdto, user);
+            }
+            baseResponse.Data = dto;
+            return Ok(baseResponse);
+        }
+
+        /// <summary>
+        /// تقرير المندوب بفلتر تاريخ
+        /// </summary>
+        [HttpGet("DriverReport")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> DriverReport([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude,
+            string from = null, string to = null, int page = 1, int size = 50)
+        {
+            var userid = User.Identity.Name;
+            var user = await _userManager.FindByIdAsync(userid);
+            if (user == null || user.IsDeleted)
+            {
+                baseResponse.ErrorCode = Errors.TheUserNotExistOrDeleted;
+                return StatusCode((int)HttpStatusCode.NotFound, baseResponse);
+            }
+
+            var dto = new DriverReportDto();
+            dto.Name = user.Name;
+
+            if (user.UserType == UserType.Driver)
+            {
+                // تحديد نطاق التاريخ
+                DateTime fromDate = DateTime.MinValue;
+                DateTime toDate = DateTime.MaxValue;
+
+                if (!string.IsNullOrEmpty(from))
+                {
+                    if (DateTime.TryParseExact(from, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedFrom))
+                        fromDate = parsedFrom.ToUniversalTime();
+                }
+                if (!string.IsNullOrEmpty(to))
+                {
+                    if (DateTime.TryParseExact(to, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedTo))
+                        toDate = parsedTo.AddDays(1).ToUniversalTime(); // نهاية اليوم
+                }
+
+                dto.FromDate = from ?? "الكل";
+                dto.ToDate = to ?? "الكل";
+
+                // جلب طلبات المندوب في الفترة المحددة
+                var orders = _orders.Get(x =>
+                    x.DeliveryId == userid && !x.IsDeleted
+                    && x.Status != OrderStatus.PartialReturned
+                    && x.CreateOn >= fromDate && x.CreateOn < toDate
+                ).ToList();
+
+                dto.TotalOrders = orders.Count;
+                dto.DeliveredCount = orders.Count(x => x.Status == OrderStatus.Delivered || x.Status == OrderStatus.Delivered_With_Edit_Price);
+                dto.ReturnedCount = orders.Count(x => x.Status == OrderStatus.Returned || x.Status == OrderStatus.Returned_And_Paid_DeliveryCost || x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender);
+                dto.PartialDeliveredCount = orders.Count(x => x.Status == OrderStatus.PartialDelivered);
+                dto.RejectedCount = orders.Count(x => x.Status == OrderStatus.Rejected);
+                dto.WaitingCount = orders.Count(x => x.Status == OrderStatus.Waiting);
+
+                dto.TotalCollected = orders.Sum(x => x.ArrivedCost);
+                dto.DriverCommission = orders.Sum(x => x.DeliveryCost);
+                dto.SystemMoney = dto.TotalCollected - dto.DriverCommission;
+
+                // حساب النسب المئوية
+                if (dto.TotalOrders > 0)
+                {
+                    dto.DeliveredPercentage = Math.Round((double)dto.DeliveredCount / dto.TotalOrders * 100, 1);
+                    dto.ReturnedPercentage = Math.Round((double)dto.ReturnedCount / dto.TotalOrders * 100, 1);
+                    dto.PartialDeliveredPercentage = Math.Round((double)dto.PartialDeliveredCount / dto.TotalOrders * 100, 1);
+                }
+
+                // الطلبات مع pagination
+                var pagedOrders = orders.OrderByDescending(x => x.CreateOn).Skip((page - 1) * size).Take(size).ToList();
+                foreach (var order in pagedOrders)
+                {
+                    var orderDto = new OrderDto(order);
+                    var sender = await _user.GetObj(x => x.Id == order.ClientId);
+                    orderDto.AgentName = sender?.Name ?? "-";
+                    orderDto.SenderName = sender?.Name ?? "-";
+                    orderDto.SenderNumber = sender?.PhoneNumber ?? "-";
+                    dto.Orders.Add(orderDto);
+                }
+            }
+
+            if (latitude.HasValue && longitude.HasValue)
+            {
+                UpdateUserLocation locationdto = new UpdateUserLocation()
+                {
+                    Longitude = longitude.Value,
+                    Latitude = latitude.Value,
+                };
+                await UpdateLocationMethod(locationdto, user);
+            }
+            baseResponse.Data = dto;
+            return Ok(baseResponse);
+        }
+
+        /// <summary>
+        /// أرشيف الطلبات المنتهية للمندوب مع فلتر حسب الحالة
+        /// </summary>
+        [HttpGet("OrderHistory")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> OrderHistory([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude,
+            int? status = null, int page = 1, int size = 15)
+        {
+            var userid = User.Identity.Name;
+            var user = await _userManager.FindByIdAsync(userid);
+            if (user == null || user.IsDeleted)
+            {
+                baseResponse.ErrorCode = Errors.TheUserNotExistOrDeleted;
+                return StatusCode((int)HttpStatusCode.NotFound, baseResponse);
+            }
+
+            var ordersQuery = _orders.Get(x =>
+                x.DeliveryId == userid && !x.IsDeleted
+                && x.Status != OrderStatus.Assigned
+                && x.Status != OrderStatus.Placed
+            );
+
+            // فلتر حسب الحالة
+            if (status.HasValue)
+            {
+                var orderStatus = (OrderStatus)status.Value;
+                ordersQuery = ordersQuery.Where(x => x.Status == orderStatus);
+            }
+
+            var totalCount = ordersQuery.Count();
+            var orders = ordersQuery.OrderByDescending(x => x.CreateOn)
+                .Skip((page - 1) * size).Take(size).ToList();
+
+            string driverNotFound = "لم يتم تحديد السائق";
+            var dto = new List<OrderDto>();
+            foreach (var item in orders)
+            {
+                var model = new OrderDto(item);
+                var sender = await _user.GetObj(x => x.Id == item.ClientId);
+                model.AgentName = sender?.Name ?? driverNotFound;
+                model.SenderName = sender?.Name ?? driverNotFound;
+                model.SenderNumber = sender?.PhoneNumber ?? "-1";
+                dto.Add(model);
+            }
+
+            if (latitude.HasValue && longitude.HasValue)
+            {
+                UpdateUserLocation locationdto = new UpdateUserLocation()
+                {
+                    Longitude = longitude.Value,
+                    Latitude = latitude.Value,
+                };
+                await UpdateLocationMethod(locationdto, user);
+            }
+
+            baseResponse.Data = new PaginatedResponse<OrderDto>(dto, page, size, totalCount);
+            return Ok(baseResponse);
+        }
+
+        /// <summary>
+        /// تفاصيل طلب واحد مع الملاحظات وتاريخ العمليات
+        /// </summary>
+        [HttpGet("OrderDetails/{orderId}")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> OrderDetails([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude,
+            long orderId)
+        {
+            var userid = User.Identity.Name;
+            var user = await _userManager.FindByIdAsync(userid);
+            if (user == null || user.IsDeleted)
+            {
+                baseResponse.ErrorCode = Errors.TheUserNotExistOrDeleted;
+                return StatusCode((int)HttpStatusCode.NotFound, baseResponse);
+            }
+
+            var order = _orders.Get(x => x.Id == orderId && !x.IsDeleted &&
+                (x.DeliveryId == userid || x.ClientId == userid)).FirstOrDefault();
+
+            if (order == null)
+            {
+                baseResponse.ErrorCode = Errors.TheOrderNotExistOrDeleted;
+                return StatusCode((int)HttpStatusCode.NotFound, baseResponse);
+            }
+
+            var egyptTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+
+            var dto = new OrderDetailsDto
+            {
+                Id = order.Id,
+                Code = order.Code,
+                ClientName = order.ClientName,
+                ClientPhone = order.ClientPhone,
+                ClientCode = order.ClientCode,
+                Address = order.Address,
+                AddressCity = order.AddressCity,
+                Notes = order.Notes,
+                Cost = order.Cost,
+                DeliveryFees = order.DeliveryFees,
+                TotalCost = order.TotalCost,
+                ArrivedCost = order.ArrivedCost,
+                DeliveryCost = order.DeliveryCost,
+                ReturnedCost = order.ReturnedCost,
+                Status = GetStatusInArabic((OrderStatus)order.Status),
+                StatusCode = (int)order.Status,
+                Finished = order.Finished,
+                ReturnedImage = order.Returned_Image,
+                CreatedDate = TimeZoneInfo.ConvertTimeFromUtc(order.CreateOn, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt"),
+                LastUpdated = order.LastUpdated.HasValue ? TimeZoneInfo.ConvertTimeFromUtc(order.LastUpdated.Value, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null,
+            };
+
+            // بيانات الراسل
+            var sender = await _user.GetObj(x => x.Id == order.ClientId);
+            if (sender != null)
+            {
+                dto.SenderName = sender.Name;
+                dto.SenderPhone = sender.PhoneNumber;
+            }
+
+            // الملاحظات
+            var notes = _orderNotes.Get(x => x.OrderId == orderId && !x.IsDeleted)
+                .OrderByDescending(x => x.CreateOn).ToList();
+            foreach (var note in notes)
+            {
+                var noteUser = await _user.GetObj(x => x.Id == note.UserId);
+                dto.OrderNotes.Add(new OrderNoteDto
+                {
+                    Content = note.Content,
+                    UserName = noteUser?.Name ?? "-",
+                    Date = TimeZoneInfo.ConvertTimeFromUtc(note.CreateOn, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt")
+                });
+            }
+
+            // تاريخ العمليات (Timeline)
+            if (order.OrderOperationHistoryId.HasValue)
+            {
+                var history = _histories.Get(x => x.Id == order.OrderOperationHistoryId.Value).FirstOrDefault();
+                if (history != null)
+                {
+                    dto.Timeline = new OrderHistoryTimelineDto();
+
+                    if (!string.IsNullOrEmpty(history.Create_UserId))
+                    {
+                        var createUser = await _user.GetObj(x => x.Id == history.Create_UserId);
+                        dto.Timeline.CreatedDate = history.CreateDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.CreateDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
+                        dto.Timeline.CreatedBy = createUser?.Name;
+                    }
+                    if (!string.IsNullOrEmpty(history.Assign_To_Driver_UserId))
+                    {
+                        var assignUser = await _user.GetObj(x => x.Id == history.Assign_To_Driver_UserId);
+                        dto.Timeline.AssignedToDriverDate = history.Assign_To_DriverDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.Assign_To_DriverDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
+                        dto.Timeline.AssignedBy = assignUser?.Name;
+                    }
+                    if (!string.IsNullOrEmpty(history.Finish_UserId))
+                    {
+                        var finishUser = await _user.GetObj(x => x.Id == history.Finish_UserId);
+                        dto.Timeline.FinishDate = history.FinishDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.FinishDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
+                        dto.Timeline.FinishedBy = finishUser?.Name;
+                    }
+                    if (!string.IsNullOrEmpty(history.Complete_UserId))
+                    {
+                        var completeUser = await _user.GetObj(x => x.Id == history.Complete_UserId);
+                        dto.Timeline.CompleteDate = history.CompleteDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.CompleteDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
+                        dto.Timeline.CompletedBy = completeUser?.Name;
+                    }
+                }
+            }
+
+            if (latitude.HasValue && longitude.HasValue)
+            {
+                UpdateUserLocation locationdto = new UpdateUserLocation()
+                {
+                    Longitude = longitude.Value,
+                    Latitude = latitude.Value,
+                };
+                await UpdateLocationMethod(locationdto, user);
+            }
+
+            baseResponse.Data = dto;
+            return Ok(baseResponse);
+        }
+
+        /// <summary>
+        /// الملخص المالي للمندوب
+        /// </summary>
+        [HttpGet("FinancialSummary")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> FinancialSummary([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude)
+        {
+            var userid = User.Identity.Name;
+            var user = await _userManager.FindByIdAsync(userid);
+            if (user == null || user.IsDeleted)
+            {
+                baseResponse.ErrorCode = Errors.TheUserNotExistOrDeleted;
+                return StatusCode((int)HttpStatusCode.NotFound, baseResponse);
+            }
+
+            var dto = new DriverFinancialSummaryDto();
+            dto.Name = user.Name;
+
+            if (user.UserType == UserType.Driver)
+            {
+                // الطلبات الغير منتهية (المعلقة - المطلوب تسليمها)
+                var pendingOrders = _orders.Get(x =>
+                    x.DeliveryId == userid && !x.IsDeleted && !x.Finished
+                    && x.Status != OrderStatus.PartialReturned
+                    && x.Status != OrderStatus.Assigned
+                    && x.Status != OrderStatus.Waiting
+                    && x.Status != OrderStatus.Placed
+                ).ToList();
+
+                dto.PendingOrdersCount = pendingOrders.Count;
+                dto.PendingCollected = pendingOrders.Sum(x => x.ArrivedCost);
+                dto.PendingDriverCommission = pendingOrders.Sum(x => x.DeliveryCost);
+                dto.PendingToDeliver = dto.PendingCollected - dto.PendingDriverCommission;
+
+                // الطلبات المنتهية (تم تسويتها)
+                var finishedOrders = _orders.Get(x =>
+                    x.DeliveryId == userid && !x.IsDeleted && x.Finished
+                    && x.Status != OrderStatus.PartialReturned
+                ).ToList();
+
+                dto.FinishedOrdersCount = finishedOrders.Count;
+                dto.FinishedCollected = finishedOrders.Sum(x => x.ArrivedCost);
+                dto.FinishedDriverCommission = finishedOrders.Sum(x => x.DeliveryCost);
+                dto.FinishedDelivered = dto.FinishedCollected - dto.FinishedDriverCommission;
+
+                // إجمالي
+                dto.TotalOrdersCount = dto.PendingOrdersCount + dto.FinishedOrdersCount;
+                dto.TotalCollected = dto.PendingCollected + dto.FinishedCollected;
+                dto.TotalDriverCommission = dto.PendingDriverCommission + dto.FinishedDriverCommission;
+                dto.TotalDeliveredToCompany = dto.PendingToDeliver + dto.FinishedDelivered;
+            }
+
+            if (latitude.HasValue && longitude.HasValue)
+            {
+                UpdateUserLocation locationdto = new UpdateUserLocation()
+                {
+                    Longitude = longitude.Value,
+                    Latitude = latitude.Value,
+                };
+                await UpdateLocationMethod(locationdto, user);
+            }
+
+            baseResponse.Data = dto;
+            return Ok(baseResponse);
+        }
+
+        private string GetStatusInArabic(OrderStatus status)
+        {
+            return status switch
+            {
+                OrderStatus.Placed => "جديد",
+                OrderStatus.Assigned => "جارى التوصيل",
+                OrderStatus.Delivered => "تم التوصيل",
+                OrderStatus.Waiting => "مؤجل",
+                OrderStatus.Rejected => "مرفوض",
+                OrderStatus.Finished => "منتهي",
+                OrderStatus.Completed => "تم تسويته",
+                OrderStatus.PartialDelivered => "تم التوصيل جزئي",
+                OrderStatus.Returned => "مرتجع كامل",
+                OrderStatus.PartialReturned => "مرتجع جزئي",
+                OrderStatus.Delivered_With_Edit_Price => "تم التوصيل مع تعديل السعر",
+                OrderStatus.Returned_And_Paid_DeliveryCost => "مرتجع ودفع شحن",
+                OrderStatus.Returned_And_DeliveryCost_On_Sender => "مرتجع وشحن على الراسل",
+                _ => status.ToString()
+            };
+        }
+
+        #endregion
 
         [HttpGet("Images")]
         public IActionResult Images()

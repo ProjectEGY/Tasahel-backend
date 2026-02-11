@@ -41,6 +41,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using System.Data;
 
 namespace PostexS.Controllers
 {
@@ -1269,8 +1270,16 @@ namespace PostexS.Controllers
                 x.OrderCompleted == OrderCompleted.NOK && !x.Finished));
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin")]
-        public IActionResult PrintExcelClientNewOrders(string Id, List<long> OrdersPrint)
+        public IActionResult PrintExcelClientNewOrders(string Id, List<long> OrdersPrint,
+            bool showProductName = false, bool showSenderPhone = false, bool showSenderName = false,
+            bool showOrderCost = false, bool showDeliveryFees = false, bool showClientCode = false)
         {
+            ViewBag.showProductName = showProductName;
+            ViewBag.showSenderPhone = showSenderPhone;
+            ViewBag.showSenderName = showSenderName;
+            ViewBag.showOrderCost = showOrderCost;
+            ViewBag.showDeliveryFees = showDeliveryFees;
+            ViewBag.showClientCode = showClientCode;
             return View(_orderService.GetList(x =>
                 x.DeliveryId == Id && x.Status == OrderStatus.Assigned && !x.IsDeleted &&
                 x.OrderCompleted == OrderCompleted.NOK && !x.Finished && OrdersPrint.Contains(x.Id)));
@@ -1451,7 +1460,7 @@ namespace PostexS.Controllers
         {
             //using (var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
             using (var scope = new TransactionScope(TransactionScopeOption.Required,
-                                       new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted, Timeout = TimeSpan.FromMinutes(10) },
+                                       new TransactionOptions { IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted, Timeout = TimeSpan.FromMinutes(10) },
                                        TransactionScopeAsyncFlowOption.Enabled))
             {
                 try
@@ -1691,7 +1700,7 @@ namespace PostexS.Controllers
         public async Task<IActionResult> ReturnedComplete(List<long> OrderId, List<bool> Recieve)
         {
             using (var scope = new TransactionScope(TransactionScopeOption.Required,
-                                       new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted, Timeout = TimeSpan.FromMinutes(10) },
+                                       new TransactionOptions { IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted, Timeout = TimeSpan.FromMinutes(10) },
                                        TransactionScopeAsyncFlowOption.Enabled))
             {
                 try
@@ -2589,7 +2598,10 @@ namespace PostexS.Controllers
             return PartialView(totalPrice);
         }
         public System.IO.Stream OutputStream { get; }
-        public IActionResult ExportToExecl(List<long> OrdersId)
+        public IActionResult ExportToExecl(List<long> OrdersId,
+            bool showProductName = false, bool showSenderPhone = false, bool showSenderName = false,
+            bool showOrderCost = false, bool showDeliveryFees = false, bool showClientCode = false,
+            bool useCustomColumns = false)
         {
             List<Order> Orders = new List<Order>();
             bool auth = User.IsInRole("Client");
@@ -2603,19 +2615,41 @@ namespace PostexS.Controllers
                         Orders.Add(_orderService.GetList(x => x.Id == OrdersId[i]).FirstOrDefault());
                 }
             }
-            var dt = ExcelExport.OrderExport(Orders);
+
+            DataTable dt;
+            if (useCustomColumns)
+            {
+                var options = new ExcelOptionalColumns
+                {
+                    ShowProductName = showProductName,
+                    ShowSenderPhone = showSenderPhone,
+                    ShowSenderName = showSenderName,
+                    ShowOrderCost = showOrderCost,
+                    ShowDeliveryFees = showDeliveryFees,
+                    ShowClientCode = showClientCode
+                };
+                dt = ExcelExport.OrderExportWithOptions(Orders, options);
+            }
+            else
+            {
+                dt = ExcelExport.OrderExport(Orders);
+            }
+
             using (XLWorkbook wb = new XLWorkbook())
             {
                 wb.Worksheets.Add(dt);
                 using (MemoryStream stream = new MemoryStream())
                 {
                     wb.SaveAs(stream);
-                    return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "OrdersReport.xlsx");
+                    return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "OrdersReport-" + DateTime.Now.ToString("yyyy-MM-dd-HHmmss") + ".xlsx");
                 }
             }
         }
 
-        public async Task<IActionResult> ExportToExeclWallet(long userWallet)
+        public async Task<IActionResult> ExportToExeclWallet(long userWallet,
+            bool showProductName = false, bool showSenderPhone = false, bool showSenderName = false,
+            bool showOrderCost = false, bool showDeliveryFees = false, bool showClientCode = false,
+            bool useCustomColumns = false)
         {
             using (var workbook = new XLWorkbook())
             {
@@ -2628,104 +2662,79 @@ namespace PostexS.Controllers
                     // Setting up header row with bold formatting
                     var headerRow = worksheet.Row(1);
                     headerRow.Style.Font.Bold = true;
-                    headerRow.Cell(1).Value = "حالة الطلب";
-                    headerRow.Cell(2).Value = "رقم الطلب";
-                    headerRow.Cell(3).Value = "الراسل";
-                    headerRow.Cell(4).Value = "كود العميل";
-                    headerRow.Cell(5).Value = "اسم المرسل إليه";
-                    headerRow.Cell(6).Value = "تليفون المرسل إليه";
-                    headerRow.Cell(7).Value = "العنوان";
-                    headerRow.Cell(8).Value = "تم تسديده";
-                    headerRow.Cell(9).Value = "نسبة الراسل";
-                    headerRow.Cell(10).Value = "المندوب";
-                    headerRow.Cell(11).Value = "ملاحظات المندوب";
-                    headerRow.Cell(12).Value = "الملاحظات";
+
+                    // الأعمدة الأساسية
+                    int col = 1;
+                    headerRow.Cell(col++).Value = "حالة الطلب";
+                    headerRow.Cell(col++).Value = "رقم الطلب";
+                    headerRow.Cell(col++).Value = "التاريخ";
+                    headerRow.Cell(col++).Value = "المرسل إليه";
+                    headerRow.Cell(col++).Value = "تليفون المرسل إليه";
+                    headerRow.Cell(col++).Value = "المحافظة";
+                    headerRow.Cell(col++).Value = "العنوان";
+                    headerRow.Cell(col++).Value = "المطلوب دفعه";
+                    headerRow.Cell(col++).Value = "المندوب";
+                    headerRow.Cell(col++).Value = "الملاحظات";
+
+                    // الأعمدة الاختيارية
+                    int colProductName = 0, colSenderPhone = 0, colSenderName = 0, colOrderCost = 0, colDeliveryFees = 0, colClientCode = 0;
+                    if (!useCustomColumns || showProductName) { colProductName = col; headerRow.Cell(col++).Value = "اسم المنتج"; }
+                    if (!useCustomColumns || showSenderPhone) { colSenderPhone = col; headerRow.Cell(col++).Value = "رقم تليفون الراسل"; }
+                    if (!useCustomColumns || showSenderName) { colSenderName = col; headerRow.Cell(col++).Value = "اسم الراسل"; }
+                    if (!useCustomColumns || showOrderCost) { colOrderCost = col; headerRow.Cell(col++).Value = "سعر الطلب"; }
+                    if (!useCustomColumns || showDeliveryFees) { colDeliveryFees = col; headerRow.Cell(col++).Value = "سعر الشحن"; }
+                    if (!useCustomColumns || showClientCode) { colClientCode = col; headerRow.Cell(col++).Value = "كود العميل"; }
+
+                    // أعمدة المحفظة الإضافية
+                    int colArrivedCost = col; headerRow.Cell(col++).Value = "تم تسديده";
+                    int colClientCost = col; headerRow.Cell(col++).Value = "نسبة الراسل";
+                    int colDriverNotes = col; headerRow.Cell(col++).Value = "ملاحظات المندوب";
 
                     foreach (var item in wallets)
                     {
-                        string statusBadge = "";
-
-                        if (item.IsDeleted == true)
-                        {
-                            statusBadge = "محذوف";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Placed)
-                        {
-                            statusBadge = "جديد";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Assigned)
-                        {
-                            statusBadge = "جارى التوصيل";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered)
-                        {
-                            statusBadge = "تم التوصيل";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
-                        {
-                            statusBadge = "تم التوصيل جزئي";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
-                        {
-                            statusBadge = "مرتجع جزئي";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Rejected)
-                        {
-                            statusBadge = "مرفوض";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Waiting)
-                        {
-                            statusBadge = "مؤجل";
-                        }
-                        //else if (item.Status != PostexS.Models.Enums.OrderStatus.Completed && item.Finished == true)
-                        //{
-                        //    statusBadge = "تم تقفيله";
-                        //}
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Completed)
-                        {
-                            statusBadge = "تم تسويته";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
-                        {
-                            statusBadge = "مرتجع وشحن على الراسل";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
-                        {
-                            statusBadge = "مرتجع ودفع شحن";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
-                        {
-                            statusBadge = "تم التوصيل مع تعديل السعر";
-                        }
+                        string statusBadge = GetWalletStatusText(item);
                         string lastOrderNoteContent = "";
 
                         if (item.DeliveryId != null && item.OrderNotes.Count > 0 && !string.IsNullOrWhiteSpace(item.OrderNotes.OrderBy(x => x.Id).Last().Content))
                         {
                             lastOrderNoteContent = item.OrderNotes.OrderBy(x => x.Id).Last().Content;
                         }
-                        worksheet.Cell(row, 1).Value = statusBadge;
-                        worksheet.Cell(row, 2).Value = item.Code;
-                        worksheet.Cell(row, 3).Value = item.Client.Name;
-                        worksheet.Cell(row, 4).Value = item.ClientCode;
-                        worksheet.Cell(row, 5).Value = item.ClientName;
-                        worksheet.Cell(row, 6).Value = item.ClientPhone;
-                        worksheet.Cell(row, 7).Value = item.AddressCity + '-' + item.Address;
-                        worksheet.Cell(row, 8).Value = item.ArrivedCost;
-                        worksheet.Cell(row, 9).Value = item.ClientCost;
-                        worksheet.Cell(row, 10).Value = item.Delivery.Name;
-                        worksheet.Cell(row, 11).Value = lastOrderNoteContent;
-                        worksheet.Cell(row, 12).Value = item.Notes;
+
+                        string DeliveryName = item.DeliveryId != null && item.Delivery != null ? item.Delivery.Name : "";
+                        var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(item.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
+
+                        int c = 1;
+                        worksheet.Cell(row, c++).Value = statusBadge;
+                        worksheet.Cell(row, c++).Value = item.Code;
+                        worksheet.Cell(row, c++).Value = CreatedOn.ToString("dd MMM, yyyy - hh:mm tt");
+                        worksheet.Cell(row, c++).Value = item.ClientName;
+                        worksheet.Cell(row, c++).Value = item.ClientPhone;
+                        worksheet.Cell(row, c++).Value = item.AddressCity ?? "";
+                        worksheet.Cell(row, c++).Value = item.Address ?? "";
+                        worksheet.Cell(row, c++).Value = item.TotalCost;
+                        worksheet.Cell(row, c++).Value = DeliveryName;
+                        worksheet.Cell(row, c++).Value = item.Notes ?? "";
+
+                        // الأعمدة الاختيارية
+                        if (colProductName > 0) worksheet.Cell(row, colProductName).Value = "";
+                        if (colSenderPhone > 0) worksheet.Cell(row, colSenderPhone).Value = item.Client?.PhoneNumber ?? "";
+                        if (colSenderName > 0) worksheet.Cell(row, colSenderName).Value = item.Client?.Name ?? "";
+                        if (colOrderCost > 0) worksheet.Cell(row, colOrderCost).Value = item.Cost;
+                        if (colDeliveryFees > 0) worksheet.Cell(row, colDeliveryFees).Value = item.DeliveryFees;
+                        if (colClientCode > 0) worksheet.Cell(row, colClientCode).Value = item.ClientCode ?? "";
+
+                        // أعمدة المحفظة
+                        worksheet.Cell(row, colArrivedCost).Value = item.ArrivedCost;
+                        worksheet.Cell(row, colClientCost).Value = item.ClientCost;
+                        worksheet.Cell(row, colDriverNotes).Value = lastOrderNoteContent;
 
                         row++;
                     }
 
                     using (var memoryStream = new MemoryStream())
                     {
-                        Response.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
                         workbook.SaveAs(memoryStream);
-                        var content = memoryStream.ToArray();
-                        await memoryStream.CopyToAsync(Response.Body); // Use asynchronous method here
-                        return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "OrdersReport.xlsx");
+                        return File(memoryStream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "OrdersReport-" + DateTime.Now.ToString("yyyy-MM-dd-HHmmss") + ".xlsx");
                     }
                 }
 
@@ -2733,7 +2742,10 @@ namespace PostexS.Controllers
             }
         }
 
-        public async Task<IActionResult> ExportToExeclWalletForAdmins(long userWallet)
+        public async Task<IActionResult> ExportToExeclWalletForAdmins(long userWallet,
+            bool showProductName = false, bool showSenderPhone = false, bool showSenderName = false,
+            bool showOrderCost = false, bool showDeliveryFees = false, bool showClientCode = false,
+            bool useCustomColumns = false)
         {
             using (var workbook = new XLWorkbook())
             {
@@ -2746,113 +2758,112 @@ namespace PostexS.Controllers
                     // Setting up header row with bold formatting
                     var headerRow = worksheet.Row(1);
                     headerRow.Style.Font.Bold = true;
-                    headerRow.Cell(1).Value = "حالة الطلب";
-                    headerRow.Cell(2).Value = "رقم الطلب";
-                    headerRow.Cell(3).Value = "الراسل";
-                    headerRow.Cell(4).Value = "كود العميل";
-                    headerRow.Cell(5).Value = "اسم المرسل إليه";
-                    headerRow.Cell(6).Value = "تليفون المرسل إليه";
-                    headerRow.Cell(7).Value = "العنوان";
-                    headerRow.Cell(8).Value = "تم تسديده";
-                    headerRow.Cell(9).Value = "نسبة الراسل";
-                    headerRow.Cell(10).Value = "المندوب";
-                    headerRow.Cell(11).Value = "ملاحظات المندوب";
-                    headerRow.Cell(12).Value = "عمولة المندوب";
-                    headerRow.Cell(13).Value = "صافي الربح";
-                    headerRow.Cell(14).Value = "الملاحظات";
+
+                    // الأعمدة الأساسية
+                    int col = 1;
+                    headerRow.Cell(col++).Value = "حالة الطلب";
+                    headerRow.Cell(col++).Value = "رقم الطلب";
+                    headerRow.Cell(col++).Value = "التاريخ";
+                    headerRow.Cell(col++).Value = "المرسل إليه";
+                    headerRow.Cell(col++).Value = "تليفون المرسل إليه";
+                    headerRow.Cell(col++).Value = "المحافظة";
+                    headerRow.Cell(col++).Value = "العنوان";
+                    headerRow.Cell(col++).Value = "المطلوب دفعه";
+                    headerRow.Cell(col++).Value = "المندوب";
+                    headerRow.Cell(col++).Value = "الملاحظات";
+
+                    // الأعمدة الاختيارية
+                    int colProductName = 0, colSenderPhone = 0, colSenderName = 0, colOrderCost = 0, colDeliveryFeesOpt = 0, colClientCode = 0;
+                    if (!useCustomColumns || showProductName) { colProductName = col; headerRow.Cell(col++).Value = "اسم المنتج"; }
+                    if (!useCustomColumns || showSenderPhone) { colSenderPhone = col; headerRow.Cell(col++).Value = "رقم تليفون الراسل"; }
+                    if (!useCustomColumns || showSenderName) { colSenderName = col; headerRow.Cell(col++).Value = "اسم الراسل"; }
+                    if (!useCustomColumns || showOrderCost) { colOrderCost = col; headerRow.Cell(col++).Value = "سعر الطلب"; }
+                    if (!useCustomColumns || showDeliveryFees) { colDeliveryFeesOpt = col; headerRow.Cell(col++).Value = "سعر الشحن"; }
+                    if (!useCustomColumns || showClientCode) { colClientCode = col; headerRow.Cell(col++).Value = "كود العميل"; }
+
+                    // أعمدة المحفظة الإضافية (للأدمن)
+                    int colArrivedCost = col; headerRow.Cell(col++).Value = "تم تسديده";
+                    int colClientCost = col; headerRow.Cell(col++).Value = "نسبة الراسل";
+                    int colDriverNotes = col; headerRow.Cell(col++).Value = "ملاحظات المندوب";
+                    int colDriverCommission = col; headerRow.Cell(col++).Value = "عمولة المندوب";
+                    int colNetProfit = col; headerRow.Cell(col++).Value = "صافي الربح";
 
                     foreach (var item in wallets)
                     {
-                        string statusBadge = "";
-
-                        if (item.IsDeleted == true)
-                        {
-                            statusBadge = "محذوف";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Placed)
-                        {
-                            statusBadge = "جديد";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Assigned)
-                        {
-                            statusBadge = "جارى التوصيل";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered)
-                        {
-                            statusBadge = "تم التوصيل";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
-                        {
-                            statusBadge = "تم التوصيل جزئي";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
-                        {
-                            statusBadge = "مرتجع جزئي";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Rejected)
-                        {
-                            statusBadge = "مرفوض";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Waiting)
-                        {
-                            statusBadge = "مؤجل";
-                        }
-                        //else if (item.Status != PostexS.Models.Enums.OrderStatus.Completed && item.Finished == true)
-                        //{
-                        //    statusBadge = "تم تقفيله";
-                        //}
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Completed)
-                        {
-                            statusBadge = "تم تسويته";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
-                        {
-                            statusBadge = "مرتجع وشحن على الراسل";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
-                        {
-                            statusBadge = "مرتجع ودفع شحن";
-                        }
-                        else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
-                        {
-                            statusBadge = "تم التوصيل مع تعديل السعر";
-                        }
+                        string statusBadge = GetWalletStatusText(item);
                         string lastOrderNoteContent = "";
 
                         if (item.DeliveryId != null && item.OrderNotes.Count > 0 && !string.IsNullOrWhiteSpace(item.OrderNotes.OrderBy(x => x.Id).Last().Content))
                         {
                             lastOrderNoteContent = item.OrderNotes.OrderBy(x => x.Id).Last().Content;
                         }
-                        worksheet.Cell(row, 1).Value = statusBadge;
-                        worksheet.Cell(row, 2).Value = item.Code;
-                        worksheet.Cell(row, 3).Value = item.Client.Name;
-                        worksheet.Cell(row, 4).Value = item.ClientCode;
-                        worksheet.Cell(row, 5).Value = item.ClientName;
-                        worksheet.Cell(row, 6).Value = item.ClientPhone;
-                        worksheet.Cell(row, 7).Value = item.AddressCity + '-' + item.Address;
-                        worksheet.Cell(row, 8).Value = item.ArrivedCost;
-                        worksheet.Cell(row, 9).Value = item.ClientCost;
-                        worksheet.Cell(row, 10).Value = item.Delivery.Name;
-                        worksheet.Cell(row, 11).Value = lastOrderNoteContent;
-                        worksheet.Cell(row, 12).Value = item.DeliveryCost;
-                        worksheet.Cell(row, 13).Value = item.DeliveryFees - item.DeliveryCost;
-                        worksheet.Cell(row, 14).Value = item.Notes;
+
+                        string DeliveryName = item.DeliveryId != null && item.Delivery != null ? item.Delivery.Name : "";
+                        var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(item.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
+
+                        int c = 1;
+                        worksheet.Cell(row, c++).Value = statusBadge;
+                        worksheet.Cell(row, c++).Value = item.Code;
+                        worksheet.Cell(row, c++).Value = CreatedOn.ToString("dd MMM, yyyy - hh:mm tt");
+                        worksheet.Cell(row, c++).Value = item.ClientName;
+                        worksheet.Cell(row, c++).Value = item.ClientPhone;
+                        worksheet.Cell(row, c++).Value = item.AddressCity ?? "";
+                        worksheet.Cell(row, c++).Value = item.Address ?? "";
+                        worksheet.Cell(row, c++).Value = item.TotalCost;
+                        worksheet.Cell(row, c++).Value = DeliveryName;
+                        worksheet.Cell(row, c++).Value = item.Notes ?? "";
+
+                        // الأعمدة الاختيارية
+                        if (colProductName > 0) worksheet.Cell(row, colProductName).Value = "";
+                        if (colSenderPhone > 0) worksheet.Cell(row, colSenderPhone).Value = item.Client?.PhoneNumber ?? "";
+                        if (colSenderName > 0) worksheet.Cell(row, colSenderName).Value = item.Client?.Name ?? "";
+                        if (colOrderCost > 0) worksheet.Cell(row, colOrderCost).Value = item.Cost;
+                        if (colDeliveryFeesOpt > 0) worksheet.Cell(row, colDeliveryFeesOpt).Value = item.DeliveryFees;
+                        if (colClientCode > 0) worksheet.Cell(row, colClientCode).Value = item.ClientCode ?? "";
+
+                        // أعمدة المحفظة (أدمن)
+                        worksheet.Cell(row, colArrivedCost).Value = item.ArrivedCost;
+                        worksheet.Cell(row, colClientCost).Value = item.ClientCost;
+                        worksheet.Cell(row, colDriverNotes).Value = lastOrderNoteContent;
+                        worksheet.Cell(row, colDriverCommission).Value = item.DeliveryCost;
+                        worksheet.Cell(row, colNetProfit).Value = item.DeliveryFees - item.DeliveryCost;
 
                         row++;
                     }
 
                     using (var memoryStream = new MemoryStream())
                     {
-                        Response.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
                         workbook.SaveAs(memoryStream);
-                        var content = memoryStream.ToArray();
-                        await memoryStream.CopyToAsync(Response.Body); // Use asynchronous method here
-                        return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "OrdersReport.xlsx");
+                        return File(memoryStream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "OrdersReport-" + DateTime.Now.ToString("yyyy-MM-dd-HHmmss") + ".xlsx");
                     }
                 }
 
                 return RedirectToAction("Index");
             }
+        }
+
+        /// <summary>
+        /// دالة مساعدة لتحويل حالة الطلب لنص عربي (تُستخدم في تصدير المحفظة)
+        /// </summary>
+        private string GetWalletStatusText(Order item)
+        {
+            if (item.IsDeleted) return "محذوف";
+            return item.Status switch
+            {
+                OrderStatus.Placed => "جديد",
+                OrderStatus.Assigned => "جارى التوصيل",
+                OrderStatus.Delivered => "تم التوصيل",
+                OrderStatus.PartialDelivered => "تم التوصيل جزئي",
+                OrderStatus.PartialReturned => "مرتجع جزئي",
+                OrderStatus.Rejected => "مرفوض",
+                OrderStatus.Waiting => "مؤجل",
+                OrderStatus.Completed => "تم تسويته",
+                OrderStatus.Returned_And_DeliveryCost_On_Sender => "مرتجع وشحن على الراسل",
+                OrderStatus.Returned_And_Paid_DeliveryCost => "مرتجع ودفع شحن",
+                OrderStatus.Delivered_With_Edit_Price => "تم التوصيل مع تعديل السعر",
+                OrderStatus.Returned => "مرتجع كامل",
+                _ => ""
+            };
         }
 
         public async Task<IActionResult> FinishOrder(DriverSubmitOrderDto model)

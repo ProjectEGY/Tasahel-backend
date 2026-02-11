@@ -12,5 +12,12 @@ namespace PostexS.Models.ViewModels
         public string UserId { get; set; }
         public bool print { get; set; }
 
+        // خيارات الأعمدة الاختيارية في Excel
+        public bool showProductName { get; set; }
+        public bool showSenderPhone { get; set; }
+        public bool showSenderName { get; set; }
+        public bool showOrderCost { get; set; }
+        public bool showDeliveryFees { get; set; }
+        public bool showClientCode { get; set; }
     }
 }

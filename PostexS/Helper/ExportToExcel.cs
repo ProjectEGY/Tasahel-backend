@@ -8,6 +8,19 @@ using ZXing;
 
 namespace PostexS.Helper
 {
+    /// <summary>
+    /// إعدادات الأعمدة الاختيارية في تصدير Excel
+    /// </summary>
+    public class ExcelOptionalColumns
+    {
+        public bool ShowProductName { get; set; } = false;    // اسم المنتج
+        public bool ShowSenderPhone { get; set; } = false;    // رقم تليفون الراسل
+        public bool ShowSenderName { get; set; } = false;     // اسم الراسل
+        public bool ShowOrderCost { get; set; } = false;      // سعر الطلب
+        public bool ShowDeliveryFees { get; set; } = false;   // سعر الشحن
+        public bool ShowClientCode { get; set; } = false;     // كود العميل
+    }
+
     public class ExportToExcel
     {
         public class ExcelExport
@@ -36,99 +49,142 @@ namespace PostexS.Helper
                 }
                 return dt;
             }
+
+            /// <summary>
+            /// تصدير الطلبات - النسخة القديمة (15 عمود ثابت) - للتوافقية
+            /// </summary>
             public static DataTable OrderExport(List<Order> order)
             {
+                return OrderExportWithOptions(order, null);
+            }
+
+            /// <summary>
+            /// تصدير الطلبات مع أعمدة اختيارية
+            /// الأعمدة الأساسية (ثابتة): رقم الطلب - التاريخ - المرسل اليه - تليفون المرسل اليه - المحافظة - العنوان - المطلوب دفعه - المندوب - ملاحظات
+            /// الأعمدة الاختيارية: اسم المنتج - رقم تليفون الراسل - اسم الراسل - سعر الطلب - سعر الشحن - كود العميل
+            /// </summary>
+            public static DataTable OrderExportWithOptions(List<Order> order, ExcelOptionalColumns options)
+            {
+                // لو مفيش options يبقى نرجع كل الأعمدة (الطريقة القديمة)
+                bool showAll = (options == null);
+
                 DataTable dt = new DataTable("Report");
-                dt.Columns.AddRange(new DataColumn[15] {
-                        new DataColumn("الحاله"),new DataColumn("التسويه"), new DataColumn("رقم الطلب"), new DataColumn("التاريخ"),
-                        new DataColumn("الراسل"), new DataColumn("رقم تليفون الراسل"),
-                    new DataColumn("كود العميل"), new DataColumn("المرسل إليه"), new DataColumn("رقم تليفون المرسل إليه"), new DataColumn("العنوان"),
-                        new DataColumn("المطلوب دفعه"), new DataColumn("تم دفعه"), new DataColumn("المندوب"),
-                        new DataColumn("الملاحظات"), new DataColumn("ملاحظات المندوب")
-      });
-                string status = "";
-                string Complete = "";
+
+                // الأعمدة الأساسية دايماً موجودة
+                dt.Columns.Add(new DataColumn("رقم الطلب"));
+                dt.Columns.Add(new DataColumn("التاريخ"));
+                dt.Columns.Add(new DataColumn("المرسل إليه"));
+                dt.Columns.Add(new DataColumn("تليفون المرسل إليه"));
+                dt.Columns.Add(new DataColumn("المحافظة"));
+                dt.Columns.Add(new DataColumn("العنوان"));
+                dt.Columns.Add(new DataColumn("المطلوب دفعه"));
+                dt.Columns.Add(new DataColumn("المندوب"));
+                dt.Columns.Add(new DataColumn("الملاحظات"));
+
+                // الأعمدة الاختيارية
+                if (showAll || (options != null && options.ShowProductName))
+                    dt.Columns.Add(new DataColumn("اسم المنتج"));
+                if (showAll || (options != null && options.ShowSenderPhone))
+                    dt.Columns.Add(new DataColumn("رقم تليفون الراسل"));
+                if (showAll || (options != null && options.ShowSenderName))
+                    dt.Columns.Add(new DataColumn("اسم الراسل"));
+                if (showAll || (options != null && options.ShowOrderCost))
+                    dt.Columns.Add(new DataColumn("سعر الطلب"));
+                if (showAll || (options != null && options.ShowDeliveryFees))
+                    dt.Columns.Add(new DataColumn("سعر الشحن"));
+                if (showAll || (options != null && options.ShowClientCode))
+                    dt.Columns.Add(new DataColumn("كود العميل"));
+
+                // لو showAll نضيف الأعمدة الإضافية القديمة
+                if (showAll)
+                {
+                    dt.Columns.Add(new DataColumn("الحاله"));
+                    dt.Columns.Add(new DataColumn("التسويه"));
+                    dt.Columns.Add(new DataColumn("تم دفعه"));
+                    dt.Columns.Add(new DataColumn("ملاحظات المندوب"));
+                }
+
                 string DriverNotes = "";
                 string DeliveryName = "";
                 DateTime CreatedOn;
                 foreach (var item in order)
                 {
-                    if (item.OrderCompleted == Models.Enums.OrderCompleted.NOK)
-                    {
-                        Complete = "لم يتم تسويتها";
-                    }
-                    else
-                    {
-                        Complete = "تم تسويتها";
-                    }
-                    if (item.IsDeleted == true)
-                    {
-                        status = "محذوف";
-                    }
-                    else if (item.Status == PostexS.Models.Enums.OrderStatus.Placed)
-                    {
-                        status = "جديد";
-                    }
-                    else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialReturned)
-                    {
-                        status = "مرتجع جزئي";
-                    }
-                    else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned)
-                    {
-                        status = "مرتجع كامل";
-                    }
-                    else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender)
-                    {
-                        status = "مرتجع وشحن على الراسل";
-                    }
-                    else if (item.Status == PostexS.Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost)
-                    {
-                        status = " مرتجع ودفع شحن";
-                    }
-                    else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered_With_Edit_Price)
-                    {
-                        status = "تم التوصيل مع تعديل السعر";
-                    }
-                    else if (item.Status == PostexS.Models.Enums.OrderStatus.PartialDelivered)
-                    {
-                        status = "تم التوصيل جزئي";
-                    }
-                    else if (item.Status == PostexS.Models.Enums.OrderStatus.Assigned)
-                    {
-                        status = "جارى التوصيل";
-                    }
-                    else if (item.Status == PostexS.Models.Enums.OrderStatus.Delivered)
-                    {
-                        status = "تم التوصيل";
-                    }
-                    else if (item.Status == PostexS.Models.Enums.OrderStatus.Rejected)
-                    {
-                        status = "مرفوض";
-                    }
-                    else if (item.Status == PostexS.Models.Enums.OrderStatus.Waiting)
-                    {
-                        status = "مؤجل";
-                    }
-                    else if (item.Status == PostexS.Models.Enums.OrderStatus.Completed)
-                    {
-                        status = "تم تسويته";
-                    }
-                    // Convert CreateOn to local time zone and format the date and time
+                    string status = GetStatusText(item);
+                    string Complete = item.OrderCompleted == Models.Enums.OrderCompleted.NOK ? "لم يتم تسويتها" : "تم تسويتها";
+
                     CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(item.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
-                    if (item.OrderNotes.Count > 0)
+                    DriverNotes = "";
+                    if (item.OrderNotes != null && item.OrderNotes.Count > 0)
                     {
                         DriverNotes = item.OrderNotes.OrderBy(x => x.Id).Last().Content;
                     }
-                    if (item.DeliveryId != null)
+                    DeliveryName = "";
+                    if (item.DeliveryId != null && item.Delivery != null)
                     {
                         DeliveryName = item.Delivery.Name;
                     }
-                    // Format the date and time
                     string formattedDateTime = CreatedOn.ToString("dd MMM, yyyy - hh:mm tt");
-                    dt.Rows.Add(status, Complete, item.Code, formattedDateTime, item.Client.Name, item.Client.PhoneNumber, item.ClientCode, item.ClientName, item.ClientPhone,
-                       item.AddressCity + " - " + item.Address, item.TotalCost, item.ArrivedCost, DeliveryName, item.Notes, DriverNotes);
+
+                    var row = dt.NewRow();
+
+                    // الأعمدة الأساسية
+                    row["رقم الطلب"] = item.Code;
+                    row["التاريخ"] = formattedDateTime;
+                    row["المرسل إليه"] = item.ClientName;
+                    row["تليفون المرسل إليه"] = item.ClientPhone;
+                    row["المحافظة"] = item.AddressCity ?? "";
+                    row["العنوان"] = item.Address ?? "";
+                    row["المطلوب دفعه"] = item.TotalCost;
+                    row["المندوب"] = DeliveryName;
+                    row["الملاحظات"] = item.Notes ?? "";
+
+                    // الأعمدة الاختيارية
+                    if (showAll || (options != null && options.ShowProductName))
+                        row["اسم المنتج"] = ""; // يمكن إضافة حقل المنتج لاحقاً
+                    if (showAll || (options != null && options.ShowSenderPhone))
+                        row["رقم تليفون الراسل"] = item.Client?.PhoneNumber ?? "";
+                    if (showAll || (options != null && options.ShowSenderName))
+                        row["اسم الراسل"] = item.Client?.Name ?? "";
+                    if (showAll || (options != null && options.ShowOrderCost))
+                        row["سعر الطلب"] = item.Cost;
+                    if (showAll || (options != null && options.ShowDeliveryFees))
+                        row["سعر الشحن"] = item.DeliveryFees;
+                    if (showAll || (options != null && options.ShowClientCode))
+                        row["كود العميل"] = item.ClientCode ?? "";
+
+                    // الأعمدة الإضافية القديمة
+                    if (showAll)
+                    {
+                        row["الحاله"] = status;
+                        row["التسويه"] = Complete;
+                        row["تم دفعه"] = item.ArrivedCost;
+                        row["ملاحظات المندوب"] = DriverNotes;
+                    }
+
+                    dt.Rows.Add(row);
                 }
                 return dt;
+            }
+
+            private static string GetStatusText(Order item)
+            {
+                if (item.IsDeleted) return "محذوف";
+                return item.Status switch
+                {
+                    Models.Enums.OrderStatus.Placed => "جديد",
+                    Models.Enums.OrderStatus.PartialReturned => "مرتجع جزئي",
+                    Models.Enums.OrderStatus.Returned => "مرتجع كامل",
+                    Models.Enums.OrderStatus.Returned_And_DeliveryCost_On_Sender => "مرتجع وشحن على الراسل",
+                    Models.Enums.OrderStatus.Returned_And_Paid_DeliveryCost => "مرتجع ودفع شحن",
+                    Models.Enums.OrderStatus.Delivered_With_Edit_Price => "تم التوصيل مع تعديل السعر",
+                    Models.Enums.OrderStatus.PartialDelivered => "تم التوصيل جزئي",
+                    Models.Enums.OrderStatus.Assigned => "جارى التوصيل",
+                    Models.Enums.OrderStatus.Delivered => "تم التوصيل",
+                    Models.Enums.OrderStatus.Rejected => "مرفوض",
+                    Models.Enums.OrderStatus.Waiting => "مؤجل",
+                    Models.Enums.OrderStatus.Completed => "تم تسويته",
+                    _ => ""
+                };
             }
         }
     }
