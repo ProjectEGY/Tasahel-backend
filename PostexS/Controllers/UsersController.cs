@@ -1239,11 +1239,11 @@ namespace PostexS.Controllers
             if (user != null)
             {
                 //عدد الطلبات الحاليه
-                model.CurrentOrdersCount = _orders.Get(x => x.DeliveryId == id &&
+                model.CurrentOrdersCount = _orders.Get(x => x.ClientId == id &&
                         (x.Status == OrderStatus.Assigned || x.Status == OrderStatus.Waiting)
                         && !x.IsDeleted).Count();
                 var orders = _orders.Get(x =>
-       (x.Status != OrderStatus.PartialReturned) && !x.IsDeleted && x.DeliveryId == id).ToList();
+       (x.Status != OrderStatus.PartialReturned) && !x.IsDeleted && x.ClientId == id).ToList();
 
                 model.ReturnedCount = orders.Count(x => x.Status == OrderStatus.Returned);
                 model.PartialDeliveredCount = orders.Count(x => x.Status == OrderStatus.PartialDelivered);
