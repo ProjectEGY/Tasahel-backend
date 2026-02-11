@@ -447,6 +447,51 @@
                 </div>
             </div>
             <div class="col-lg-12 mb-10">
+                <hr style="border-top: 2px solid #e0e0e0; margin: 15px 0;">
+                <h4 style="text-align: center; color: #555; margin-bottom: 15px;">
+                    <i class="fa fa-eye-slash"></i> إعدادات إخفاء بيانات الراسل في البوليصة
+                </h4>
+            </div>
+            <div class="col-lg-4 mb-10">
+                <div class="form-group">
+                    <label class="col-sm-7 control-label">إخفاء اسم الراسل:</label>
+                    <div class="col-sm-5">
+                        <div class="button-group">
+                            <button type="button" id="hideNameYes" onclick="setHideField('HideSenderName', true)">إخفاء</button>
+                            <button type="button" id="hideNameNo" onclick="setHideField('HideSenderName', false)">إظهار</button>
+                        </div>
+                        <input type="hidden" id="HideSenderName" name="HideSenderName" value="@Model.HideSenderName.ToString().ToLower()" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-10">
+                <div class="form-group">
+                    <label class="col-sm-7 control-label">إخفاء هاتف الراسل:</label>
+                    <div class="col-sm-5">
+                        <div class="button-group">
+                            <button type="button" id="hidePhoneYes" onclick="setHideField('HideSenderPhone', true)">إخفاء</button>
+                            <button type="button" id="hidePhoneNo" onclick="setHideField('HideSenderPhone', false)">إظهار</button>
+                        </div>
+                        <input type="hidden" id="HideSenderPhone" name="HideSenderPhone" value="@Model.HideSenderPhone.ToString().ToLower()" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-10">
+                <div class="form-group">
+                    <label class="col-sm-7 control-label">إخفاء رقم الراسل:</label>
+                    <div class="col-sm-5">
+                        <div class="button-group">
+                            <button type="button" id="hideCodeYes" onclick="setHideField('HideSenderCode', true)">إخفاء</button>
+                            <button type="button" id="hideCodeNo" onclick="setHideField('HideSenderCode', false)">إظهار</button>
+                        </div>
+                        <input type="hidden" id="HideSenderCode" name="HideSenderCode" value="@Model.HideSenderCode.ToString().ToLower()" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-12 mb-10">
+                <hr style="border-top: 2px solid #e0e0e0; margin: 15px 0;">
+            </div>
+            <div class="col-lg-12 mb-10">
                 <div class="form-group">
                     <label for="WhatsappGroupId" class="col-sm-3 control-label">
                         <i class="fa fa-whatsapp" style="color: #25D366; font-size: 18px;"></i> جروب واتساب :
@@ -649,14 +694,43 @@
             document.getElementById('yesButton').classList.remove('active');
         }
 
+        // إعدادات إخفاء بيانات الراسل
+        function setHideField(fieldId, value) {
+            document.getElementById(fieldId).value = value.toString();
+            var yesBtn, noBtn;
+            if (fieldId === 'HideSenderName') { yesBtn = 'hideNameYes'; noBtn = 'hideNameNo'; }
+            else if (fieldId === 'HideSenderPhone') { yesBtn = 'hidePhoneYes'; noBtn = 'hidePhoneNo'; }
+            else if (fieldId === 'HideSenderCode') { yesBtn = 'hideCodeYes'; noBtn = 'hideCodeNo'; }
+            if (value) {
+                document.getElementById(yesBtn).classList.add('active');
+                document.getElementById(noBtn).classList.remove('active');
+            } else {
+                document.getElementById(noBtn).classList.add('active');
+                document.getElementById(yesBtn).classList.remove('active');
+            }
+        }
+
+        function initHideFields() {
+            var fields = ['HideSenderName', 'HideSenderPhone', 'HideSenderCode'];
+            fields.forEach(function(fieldId) {
+                var el = document.getElementById(fieldId);
+                if (el) {
+                    setHideField(fieldId, el.value === 'true');
+                }
+            });
+        }
+
         // Set initial state based on Tracking value
         document.addEventListener('DOMContentLoaded', function () {
-            var trackingValue = document.getElementById('Tracking').value;
-            if (trackingValue === 'true') {
-                selectYes();
-            } else {
-                selectNo();
+            var trackingValue = document.getElementById('Tracking');
+            if (trackingValue) {
+                if (trackingValue.value === 'true') {
+                    selectYes();
+                } else {
+                    selectNo();
+                }
             }
+            initHideFields();
         });
 
         var allGroups = [];

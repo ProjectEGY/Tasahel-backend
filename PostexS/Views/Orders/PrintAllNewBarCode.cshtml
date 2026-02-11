@@ -25,7 +25,10 @@
                 {
                     <div class="barcode-item">
                         <div class="order-info">
-                            <p class="client-name">@order.Client.Name</p>
+                            @if (!order.Client.HideSenderName)
+                            {
+                                <p class="client-name">@order.Client.Name</p>
+                            }
                             <p class="address-city">@order.ClientName</p>
                             <p class="total-cost">@order.TotalCost جنيه</p>
                         </div>

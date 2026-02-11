@@ -1349,6 +1349,9 @@ namespace PostexS.Controllers
             {
                 user.OrdersGeneralNote = model.OrdersGeneralNote;
                 user.WhatsappGroupId = model.WhatsappGroupId;
+                user.HideSenderName = model.HideSenderName;
+                user.HideSenderPhone = model.HideSenderPhone;
+                user.HideSenderCode = model.HideSenderCode;
             }
 
             var file = HttpContext.Request.Form.Files.GetFile("IdentityFrontPhoto");
@@ -1391,6 +1394,25 @@ namespace PostexS.Controllers
                 return RedirectToAction(nameof(Index), new { q = type, BranchId = model.BranchId });
             }
             return RedirectToAction(nameof(Index));
+        }
+
+        // POST: تحديث إعدادات إخفاء بيانات الراسل لجميع الرواسل
+        [HttpPost]
+        [Authorize(Roles = "Admin,HighAdmin,TrustAdmin")]
+        public async Task<IActionResult> UpdateAllSendersHideSettings(bool hideSenderName, bool hideSenderPhone, bool hideSenderCode)
+        {
+            var clients = _user.Get(x => x.UserType == UserType.Client && !x.IsDeleted).ToList();
+            foreach (var client in clients)
+            {
+                client.HideSenderName = hideSenderName;
+                client.HideSenderPhone = hideSenderPhone;
+                client.HideSenderCode = hideSenderCode;
+            }
+            foreach (var client in clients)
+            {
+                await _user.Update(client);
+            }
+            return Json(new { success = true, message = $"تم تحديث إعدادات الإخفاء لـ {clients.Count} راسل بنجاح" });
         }
 
         // POST: Get Groups (no phone number needed - gets all groups)
