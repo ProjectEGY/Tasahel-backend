@@ -1,0 +1,810 @@
+@using PostexS.Models.Domain;
+@{
+    ViewData["Title"] = "إعدادات الموقع";
+    var contents = ViewBag.Contents as List<LandingPageContent> ?? new List<LandingPageContent>();
+    var statistics = ViewBag.Statistics as List<LandingStatistic> ?? new List<LandingStatistic>();
+    var testimonials = ViewBag.Testimonials as List<LandingTestimonial> ?? new List<LandingTestimonial>();
+    var partners = ViewBag.Partners as List<LandingPartner> ?? new List<LandingPartner>();
+
+    // تصنيف المحتويات حسب الأقسام
+    var heroContent = contents.FirstOrDefault(x => x.SectionKey == "hero");
+    var aboutContent = contents.FirstOrDefault(x => x.SectionKey == "about");
+    var services = contents.Where(x => x.SectionKey == "service").OrderBy(x => x.SortOrder).ToList();
+    var packages = contents.Where(x => x.SectionKey == "package").OrderBy(x => x.SortOrder).ToList();
+}
+
+<style>
+    .icon-select-wrapper {
+        position: relative;
+    }
+    .icon-select {
+        padding-right: 35px;
+    }
+    .icon-preview {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        text-align: center;
+        background: #f0f4ff;
+        border-radius: 50%;
+        margin-left: 5px;
+        font-size: 14px;
+        color: #1B3764;
+        vertical-align: middle;
+    }
+    .form-group label .icon-preview { margin-right: 5px; }
+</style>
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-cog"></i> إعدادات الموقع</h3>
+    </div>
+    <div class="panel-body">
+        <!-- Tabs -->
+        <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="active"><a href="#hero" data-toggle="tab"><i class="fa fa-home"></i> القسم الرئيسي</a></li>
+            <li role="presentation"><a href="#about" data-toggle="tab"><i class="fa fa-info-circle"></i> عن الشركة</a></li>
+            <li role="presentation"><a href="#services" data-toggle="tab"><i class="fa fa-cogs"></i> الخدمات</a></li>
+            <li role="presentation"><a href="#stats" data-toggle="tab"><i class="fa fa-bar-chart"></i> الإحصائيات</a></li>
+            <li role="presentation"><a href="#testimonials" data-toggle="tab"><i class="fa fa-comments"></i> آراء العملاء</a></li>
+            <li role="presentation"><a href="#partners" data-toggle="tab"><i class="fa fa-handshake-o"></i> الشركاء</a></li>
+            <li role="presentation"><a href="#packages" data-toggle="tab"><i class="fa fa-cube"></i> الباقات</a></li>
+        </ul>
+
+        <div class="tab-content" style="padding-top:20px;">
+
+            <!-- ======== Tab 1: القسم الرئيسي (Hero) ======== -->
+            <div role="tabpanel" class="tab-pane active" id="hero">
+                <h4><i class="fa fa-home"></i> القسم الرئيسي (Hero Section)</h4>
+                <hr />
+                <form asp-action="SaveContent" asp-controller="LandingSettings" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="Id" value="@(heroContent?.Id ?? 0)" />
+                    <input type="hidden" name="SectionKey" value="hero" />
+                    <input type="hidden" name="IsActive" value="true" />
+                    <input type="hidden" name="SortOrder" value="0" />
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>العنوان الرئيسي</label>
+                                <input type="text" name="TitleAr" class="form-control" value="@(heroContent?.TitleAr)" placeholder="مثال: تساهيل إكسبريس" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>العنوان الفرعي</label>
+                                <input type="text" name="SubTitleAr" class="form-control" value="@(heroContent?.SubTitleAr)" placeholder="مثال: شريكك في التوصيل" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>الوصف</label>
+                        <textarea name="DescriptionAr" class="form-control" rows="3" placeholder="وصف مختصر عن الشركة في القسم الرئيسي">@(heroContent?.DescriptionAr)</textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>رابط الزر (CTA)</label>
+                                <input type="text" name="LinkUrl" class="form-control" value="@(heroContent?.LinkUrl)" placeholder="مثال: /Home/Login" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>صورة الخلفية</label>
+                                <input type="file" name="ImageFile" class="form-control" accept="image/*" />
+                                @if (!string.IsNullOrEmpty(heroContent?.ImageUrl))
+                                {
+                                    <small class="text-muted">الصورة الحالية: @heroContent.ImageUrl</small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> حفظ</button>
+                </form>
+            </div>
+
+            <!-- ======== Tab 2: عن الشركة ======== -->
+            <div role="tabpanel" class="tab-pane" id="about">
+                <h4><i class="fa fa-info-circle"></i> عن الشركة</h4>
+                <hr />
+                <form asp-action="SaveContent" asp-controller="LandingSettings" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="Id" value="@(aboutContent?.Id ?? 0)" />
+                    <input type="hidden" name="SectionKey" value="about" />
+                    <input type="hidden" name="IsActive" value="true" />
+                    <input type="hidden" name="SortOrder" value="0" />
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>العنوان</label>
+                                <input type="text" name="TitleAr" class="form-control" value="@(aboutContent?.TitleAr)" placeholder="مثال: من نحن" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>العنوان الفرعي</label>
+                                <input type="text" name="SubTitleAr" class="form-control" value="@(aboutContent?.SubTitleAr)" placeholder="مثال: شركة رائدة في مجال التوصيل" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>الوصف</label>
+                        <textarea name="DescriptionAr" class="form-control" rows="5" placeholder="نبذة تفصيلية عن الشركة">@(aboutContent?.DescriptionAr)</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>الصورة</label>
+                        <input type="file" name="ImageFile" class="form-control" accept="image/*" />
+                        @if (!string.IsNullOrEmpty(aboutContent?.ImageUrl))
+                        {
+                            <small class="text-muted">الصورة الحالية: @aboutContent.ImageUrl</small>
+                        }
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> حفظ</button>
+                </form>
+            </div>
+
+            <!-- ======== Tab 3: الخدمات ======== -->
+            <div role="tabpanel" class="tab-pane" id="services">
+                <h4><i class="fa fa-cogs"></i> الخدمات</h4>
+                <hr />
+                <!-- فورم إضافة خدمة جديدة -->
+                <div class="panel panel-success">
+                    <div class="panel-heading">
+                        <h4 class="panel-title"><i class="fa fa-plus"></i> إضافة خدمة جديدة</h4>
+                    </div>
+                    <div class="panel-body">
+                        <form asp-action="SaveContent" asp-controller="LandingSettings" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="Id" value="0" />
+                            <input type="hidden" name="SectionKey" value="service" />
+                            <input type="hidden" name="IsActive" value="true" />
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>اسم الخدمة</label>
+                                        <input type="text" name="TitleAr" class="form-control" required placeholder="مثال: توصيل سريع" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>أيقونة</label>
+                                        <select name="IconClass" class="form-control icon-select">
+                                            <option value="">-- اختر أيقونة --</option>
+                                            <option value="fa fa-truck">&#xf0d1; شاحنة توصيل</option>
+                                            <option value="fa fa-shipping-fast">&#xf48b; شحن سريع</option>
+                                            <option value="fa fa-box">&#xf466; صندوق</option>
+                                            <option value="fa fa-box-open">&#xf49e; صندوق مفتوح</option>
+                                            <option value="fa fa-boxes">&#xf468; صناديق</option>
+                                            <option value="fa fa-dolly">&#xf472; عربة نقل</option>
+                                            <option value="fa fa-warehouse">&#xf494; مخزن</option>
+                                            <option value="fa fa-map-marker">&#xf041; موقع</option>
+                                            <option value="fa fa-map-marked-alt">&#xf5a0; خريطة</option>
+                                            <option value="fa fa-clock">&#xf017; ساعة</option>
+                                            <option value="fa fa-shield-alt">&#xf3ed; حماية</option>
+                                            <option value="fa fa-headset">&#xf590; دعم فني</option>
+                                            <option value="fa fa-hand-holding-usd">&#xf4c0; دفع</option>
+                                            <option value="fa fa-handshake">&#xf2b5; شراكة</option>
+                                            <option value="fa fa-rocket">&#xf135; صاروخ</option>
+                                            <option value="fa fa-star">&#xf005; نجمة</option>
+                                            <option value="fa fa-check-circle">&#xf058; علامة صح</option>
+                                            <option value="fa fa-cogs">&#xf085; إعدادات</option>
+                                            <option value="fa fa-users">&#xf0c0; مستخدمين</option>
+                                            <option value="fa fa-globe">&#xf0ac; عالمي</option>
+                                            <option value="fa fa-phone">&#xf095; هاتف</option>
+                                            <option value="fa fa-envelope">&#xf0e0; بريد</option>
+                                            <option value="fa fa-credit-card">&#xf09d; بطاقة ائتمان</option>
+                                            <option value="fa fa-motorcycle">&#xf21c; دراجة نارية</option>
+                                            <option value="fa fa-car">&#xf1b9; سيارة</option>
+                                            <option value="fa fa-plane">&#xf072; طائرة</option>
+                                            <option value="fa fa-money-bill">&#xf0d6; نقود</option>
+                                            <option value="fa fa-chart-line">&#xf201; رسم بياني</option>
+                                            <option value="fa fa-thumbs-up">&#xf164; إعجاب</option>
+                                            <option value="fa fa-bolt">&#xf0e7; برق / سرعة</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>الترتيب</label>
+                                        <input type="number" name="SortOrder" class="form-control" value="0" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>الوصف</label>
+                                <textarea name="DescriptionAr" class="form-control" rows="2" placeholder="وصف مختصر للخدمة"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>صورة (اختياري)</label>
+                                <input type="file" name="ImageFile" class="form-control" accept="image/*" />
+                            </div>
+                            <button type="submit" class="btn btn-success"><i class="fa fa-plus"></i> إضافة</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- قائمة الخدمات الحالية -->
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>الاسم</th>
+                            <th>الأيقونة</th>
+                            <th>الوصف</th>
+                            <th>الترتيب</th>
+                            <th>الحالة</th>
+                            <th>التحكم</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var svc in services)
+                        {
+                            <tr>
+                                <td>@svc.TitleAr</td>
+                                <td><i class="@svc.IconClass"></i> @svc.IconClass</td>
+                                <td>@(svc.DescriptionAr?.Length > 50 ? svc.DescriptionAr.Substring(0, 50) + "..." : svc.DescriptionAr)</td>
+                                <td>@svc.SortOrder</td>
+                                <td>
+                                    @if (svc.IsActive)
+                                    {
+                                        <span class="badge bg-green">مفعل</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-red">معطل</span>
+                                    }
+                                </td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" onclick="editService(@svc.Id, '@svc.TitleAr', '@svc.IconClass', '@(svc.DescriptionAr?.Replace("'", "\\'").Replace("\r\n"," ").Replace("\n"," "))', @svc.SortOrder, @svc.IsActive.ToString().ToLower())">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteContent(@svc.Id)">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <!-- Modal تعديل خدمة -->
+                <div class="modal fade" id="editServiceModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form asp-action="SaveContent" asp-controller="LandingSettings" method="post" enctype="multipart/form-data">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                    <h4 class="modal-title">تعديل الخدمة</h4>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="hidden" name="Id" id="editSvcId" />
+                                    <input type="hidden" name="SectionKey" value="service" />
+                                    <div class="form-group">
+                                        <label>اسم الخدمة</label>
+                                        <input type="text" name="TitleAr" id="editSvcTitle" class="form-control" required />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>أيقونة</label>
+                                        <select name="IconClass" id="editSvcIcon" class="form-control icon-select">
+                                            <option value="">-- اختر أيقونة --</option>
+                                            <option value="fa fa-truck">&#xf0d1; شاحنة توصيل</option>
+                                            <option value="fa fa-shipping-fast">&#xf48b; شحن سريع</option>
+                                            <option value="fa fa-box">&#xf466; صندوق</option>
+                                            <option value="fa fa-box-open">&#xf49e; صندوق مفتوح</option>
+                                            <option value="fa fa-boxes">&#xf468; صناديق</option>
+                                            <option value="fa fa-dolly">&#xf472; عربة نقل</option>
+                                            <option value="fa fa-warehouse">&#xf494; مخزن</option>
+                                            <option value="fa fa-map-marker">&#xf041; موقع</option>
+                                            <option value="fa fa-map-marked-alt">&#xf5a0; خريطة</option>
+                                            <option value="fa fa-clock">&#xf017; ساعة</option>
+                                            <option value="fa fa-shield-alt">&#xf3ed; حماية</option>
+                                            <option value="fa fa-headset">&#xf590; دعم فني</option>
+                                            <option value="fa fa-hand-holding-usd">&#xf4c0; دفع</option>
+                                            <option value="fa fa-handshake">&#xf2b5; شراكة</option>
+                                            <option value="fa fa-rocket">&#xf135; صاروخ</option>
+                                            <option value="fa fa-star">&#xf005; نجمة</option>
+                                            <option value="fa fa-check-circle">&#xf058; علامة صح</option>
+                                            <option value="fa fa-cogs">&#xf085; إعدادات</option>
+                                            <option value="fa fa-users">&#xf0c0; مستخدمين</option>
+                                            <option value="fa fa-globe">&#xf0ac; عالمي</option>
+                                            <option value="fa fa-phone">&#xf095; هاتف</option>
+                                            <option value="fa fa-envelope">&#xf0e0; بريد</option>
+                                            <option value="fa fa-credit-card">&#xf09d; بطاقة ائتمان</option>
+                                            <option value="fa fa-motorcycle">&#xf21c; دراجة نارية</option>
+                                            <option value="fa fa-car">&#xf1b9; سيارة</option>
+                                            <option value="fa fa-plane">&#xf072; طائرة</option>
+                                            <option value="fa fa-money-bill">&#xf0d6; نقود</option>
+                                            <option value="fa fa-chart-line">&#xf201; رسم بياني</option>
+                                            <option value="fa fa-thumbs-up">&#xf164; إعجاب</option>
+                                            <option value="fa fa-bolt">&#xf0e7; برق / سرعة</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>الوصف</label>
+                                        <textarea name="DescriptionAr" id="editSvcDesc" class="form-control" rows="3"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>الترتيب</label>
+                                        <input type="number" name="SortOrder" id="editSvcSort" class="form-control" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>مفعل</label>
+                                        <select name="IsActive" id="editSvcActive" class="form-control">
+                                            <option value="true">مفعل</option>
+                                            <option value="false">معطل</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>صورة جديدة (اختياري)</label>
+                                        <input type="file" name="ImageFile" class="form-control" accept="image/*" />
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal">إلغاء</button>
+                                    <button type="submit" class="btn btn-primary">حفظ التعديلات</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== Tab 4: الإحصائيات ======== -->
+            <div role="tabpanel" class="tab-pane" id="stats">
+                <h4><i class="fa fa-bar-chart"></i> الإحصائيات</h4>
+                <hr />
+                <div class="panel panel-success">
+                    <div class="panel-heading">
+                        <h4 class="panel-title"><i class="fa fa-plus"></i> إضافة إحصائية</h4>
+                    </div>
+                    <div class="panel-body">
+                        <form asp-action="SaveStatistic" asp-controller="LandingSettings" method="post">
+                            <input type="hidden" name="Id" value="0" />
+                            <input type="hidden" name="IsActive" value="true" />
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>العنوان</label>
+                                        <input type="text" name="Title" class="form-control" required placeholder="مثال: عدد العملاء" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>القيمة</label>
+                                        <input type="text" name="Value" class="form-control" required placeholder="مثال: 1500" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>أيقونة</label>
+                                        <select name="IconClass" class="form-control icon-select">
+                                            <option value="">-- اختر أيقونة --</option>
+                                            <option value="fa fa-users">&#xf0c0; مستخدمين</option>
+                                            <option value="fa fa-truck">&#xf0d1; شاحنة</option>
+                                            <option value="fa fa-box">&#xf466; صندوق</option>
+                                            <option value="fa fa-chart-line">&#xf201; رسم بياني</option>
+                                            <option value="fa fa-chart-bar">&#xf080; أعمدة بيانية</option>
+                                            <option value="fa fa-chart-pie">&#xf200; دائرة بيانية</option>
+                                            <option value="fa fa-map-marker">&#xf041; موقع</option>
+                                            <option value="fa fa-globe">&#xf0ac; عالمي</option>
+                                            <option value="fa fa-star">&#xf005; نجمة</option>
+                                            <option value="fa fa-check-circle">&#xf058; علامة صح</option>
+                                            <option value="fa fa-trophy">&#xf091; كأس</option>
+                                            <option value="fa fa-thumbs-up">&#xf164; إعجاب</option>
+                                            <option value="fa fa-heart">&#xf004; قلب</option>
+                                            <option value="fa fa-bolt">&#xf0e7; برق</option>
+                                            <option value="fa fa-shipping-fast">&#xf48b; شحن سريع</option>
+                                            <option value="fa fa-clock">&#xf017; ساعة</option>
+                                            <option value="fa fa-money-bill">&#xf0d6; نقود</option>
+                                            <option value="fa fa-handshake">&#xf2b5; شراكة</option>
+                                            <option value="fa fa-building">&#xf1ad; مبنى</option>
+                                            <option value="fa fa-motorcycle">&#xf21c; دراجة نارية</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>الترتيب</label>
+                                        <input type="number" name="SortOrder" class="form-control" value="0" />
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success"><i class="fa fa-plus"></i> إضافة</button>
+                        </form>
+                    </div>
+                </div>
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>العنوان</th>
+                            <th>القيمة</th>
+                            <th>الأيقونة</th>
+                            <th>الترتيب</th>
+                            <th>التحكم</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var stat in statistics)
+                        {
+                            <tr>
+                                <td>@stat.Title</td>
+                                <td>@stat.Value</td>
+                                <td><i class="@stat.IconClass"></i> @stat.IconClass</td>
+                                <td>@stat.SortOrder</td>
+                                <td>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteStatistic(@stat.Id)"><i class="fa fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ======== Tab 5: آراء العملاء ======== -->
+            <div role="tabpanel" class="tab-pane" id="testimonials">
+                <h4><i class="fa fa-comments"></i> آراء العملاء</h4>
+                <hr />
+                <div class="panel panel-success">
+                    <div class="panel-heading">
+                        <h4 class="panel-title"><i class="fa fa-plus"></i> إضافة رأي عميل</h4>
+                    </div>
+                    <div class="panel-body">
+                        <form asp-action="SaveTestimonial" asp-controller="LandingSettings" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="Id" value="0" />
+                            <input type="hidden" name="IsActive" value="true" />
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>اسم العميل</label>
+                                        <input type="text" name="ClientName" class="form-control" required placeholder="اسم العميل" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>التقييم (1-5)</label>
+                                        <select name="Rating" class="form-control">
+                                            <option value="5">5 نجوم</option>
+                                            <option value="4">4 نجوم</option>
+                                            <option value="3">3 نجوم</option>
+                                            <option value="2">2 نجوم</option>
+                                            <option value="1">1 نجمة</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>الترتيب</label>
+                                        <input type="number" name="SortOrder" class="form-control" value="0" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>رأي العميل</label>
+                                <textarea name="Content" class="form-control" rows="3" required placeholder="رأي العميل في الخدمة"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>صورة العميل (اختياري)</label>
+                                <input type="file" name="TestimonialImage" class="form-control" accept="image/*" />
+                            </div>
+                            <button type="submit" class="btn btn-success"><i class="fa fa-plus"></i> إضافة</button>
+                        </form>
+                    </div>
+                </div>
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>الاسم</th>
+                            <th>الرأي</th>
+                            <th>التقييم</th>
+                            <th>الترتيب</th>
+                            <th>التحكم</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var t in testimonials)
+                        {
+                            <tr>
+                                <td>@t.ClientName</td>
+                                <td>@(t.Content?.Length > 60 ? t.Content.Substring(0, 60) + "..." : t.Content)</td>
+                                <td>
+                                    @for (int i = 0; i < t.Rating; i++)
+                                    {
+                                        <i class="fa fa-star" style="color:gold"></i>
+                                    }
+                                </td>
+                                <td>@t.SortOrder</td>
+                                <td>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteTestimonial(@t.Id)"><i class="fa fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ======== Tab 6: الشركاء ======== -->
+            <div role="tabpanel" class="tab-pane" id="partners">
+                <h4><i class="fa fa-handshake-o"></i> الشركاء والعملاء</h4>
+                <hr />
+                <div class="panel panel-success">
+                    <div class="panel-heading">
+                        <h4 class="panel-title"><i class="fa fa-plus"></i> إضافة شريك</h4>
+                    </div>
+                    <div class="panel-body">
+                        <form asp-action="SavePartner" asp-controller="LandingSettings" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="Id" value="0" />
+                            <input type="hidden" name="IsActive" value="true" />
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>اسم الشريك</label>
+                                        <input type="text" name="Name" class="form-control" required placeholder="اسم الشركة" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>رابط الموقع</label>
+                                        <input type="text" name="WebsiteUrl" class="form-control" placeholder="https://..." />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>الترتيب</label>
+                                        <input type="number" name="SortOrder" class="form-control" value="0" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>اللوجو</label>
+                                <input type="file" name="PartnerLogo" class="form-control" accept="image/*" required />
+                            </div>
+                            <button type="submit" class="btn btn-success"><i class="fa fa-plus"></i> إضافة</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="row">
+                    @foreach (var p in partners)
+                    {
+                        <div class="col-md-3 text-center" style="margin-bottom:15px;">
+                            <div class="panel panel-default">
+                                <div class="panel-body">
+                                    @if (!string.IsNullOrEmpty(p.LogoUrl))
+                                    {
+                                        <img src="/Images/Landing/@p.LogoUrl" style="max-height:80px; max-width:100%;" alt="@p.Name" />
+                                    }
+                                    <h5>@p.Name</h5>
+                                    <button class="btn btn-danger btn-xs" onclick="deletePartner(@p.Id)"><i class="fa fa-trash"></i> حذف</button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- ======== Tab 7: الباقات ======== -->
+            <div role="tabpanel" class="tab-pane" id="packages">
+                <h4><i class="fa fa-cube"></i> باقات الشحن</h4>
+                <hr />
+                <div class="panel panel-success">
+                    <div class="panel-heading">
+                        <h4 class="panel-title"><i class="fa fa-plus"></i> إضافة باقة</h4>
+                    </div>
+                    <div class="panel-body">
+                        <form asp-action="SaveContent" asp-controller="LandingSettings" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="Id" value="0" />
+                            <input type="hidden" name="SectionKey" value="package" />
+                            <input type="hidden" name="IsActive" value="true" />
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>اسم الباقة</label>
+                                        <input type="text" name="TitleAr" class="form-control" required placeholder="مثال: الباقة الأساسية" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>السعر / العنوان الفرعي</label>
+                                        <input type="text" name="SubTitleAr" class="form-control" placeholder="مثال: 50 جنيه" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>أيقونة</label>
+                                        <select name="IconClass" class="form-control icon-select">
+                                            <option value="">-- اختر أيقونة --</option>
+                                            <option value="fa fa-cube">&#xf1b2; مكعب</option>
+                                            <option value="fa fa-cubes">&#xf1b3; مكعبات</option>
+                                            <option value="fa fa-box">&#xf466; صندوق</option>
+                                            <option value="fa fa-box-open">&#xf49e; صندوق مفتوح</option>
+                                            <option value="fa fa-boxes">&#xf468; صناديق</option>
+                                            <option value="fa fa-gem">&#xf3a5; جوهرة / مميز</option>
+                                            <option value="fa fa-crown">&#xf521; تاج / VIP</option>
+                                            <option value="fa fa-star">&#xf005; نجمة</option>
+                                            <option value="fa fa-rocket">&#xf135; صاروخ</option>
+                                            <option value="fa fa-bolt">&#xf0e7; برق</option>
+                                            <option value="fa fa-truck">&#xf0d1; شاحنة</option>
+                                            <option value="fa fa-shipping-fast">&#xf48b; شحن سريع</option>
+                                            <option value="fa fa-shield-alt">&#xf3ed; حماية</option>
+                                            <option value="fa fa-medal">&#xf5a2; ميدالية</option>
+                                            <option value="fa fa-award">&#xf559; جائزة</option>
+                                            <option value="fa fa-gift">&#xf06b; هدية</option>
+                                            <option value="fa fa-money-bill">&#xf0d6; نقود</option>
+                                            <option value="fa fa-tags">&#xf02c; تسعير</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>الترتيب</label>
+                                        <input type="number" name="SortOrder" class="form-control" value="0" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>الوصف / المميزات</label>
+                                <textarea name="DescriptionAr" class="form-control" rows="3" placeholder="مميزات الباقة (كل سطر ميزة)"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-success"><i class="fa fa-plus"></i> إضافة</button>
+                        </form>
+                    </div>
+                </div>
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>اسم الباقة</th>
+                            <th>السعر</th>
+                            <th>الوصف</th>
+                            <th>الترتيب</th>
+                            <th>التحكم</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pkg in packages)
+                        {
+                            <tr>
+                                <td>@pkg.TitleAr</td>
+                                <td>@pkg.SubTitleAr</td>
+                                <td>@(pkg.DescriptionAr?.Length > 60 ? pkg.DescriptionAr.Substring(0, 60) + "..." : pkg.DescriptionAr)</td>
+                                <td>@pkg.SortOrder</td>
+                                <td>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteContent(@pkg.Id)"><i class="fa fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    function editService(id, title, icon, desc, sort, active) {
+        $('#editSvcId').val(id);
+        $('#editSvcTitle').val(title);
+        $('#editSvcIcon').val(icon);
+        $('#editSvcDesc').val(desc);
+        $('#editSvcSort').val(sort);
+        $('#editSvcActive').val(active ? 'true' : 'false');
+        $('#editServiceModal').modal('show');
+    }
+
+    function deleteContent(id) {
+        swal({
+            title: "هل متأكد؟",
+            text: "سيتم حذف هذا العنصر",
+            icon: "warning",
+            dangerMode: true
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "POST",
+                    url: "/LandingSettings/DeleteContent",
+                    data: { id: id },
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setTimeout(function () { location.reload(); }, 1500);
+                        } else {
+                            toastr.error(data.message);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    function deleteStatistic(id) {
+        swal({
+            title: "هل متأكد؟",
+            text: "سيتم حذف هذه الإحصائية",
+            icon: "warning",
+            dangerMode: true
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "POST",
+                    url: "/LandingSettings/DeleteStatistic",
+                    data: { id: id },
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setTimeout(function () { location.reload(); }, 1500);
+                        } else {
+                            toastr.error(data.message);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    function deleteTestimonial(id) {
+        swal({
+            title: "هل متأكد؟",
+            text: "سيتم حذف رأي هذا العميل",
+            icon: "warning",
+            dangerMode: true
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "POST",
+                    url: "/LandingSettings/DeleteTestimonial",
+                    data: { id: id },
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setTimeout(function () { location.reload(); }, 1500);
+                        } else {
+                            toastr.error(data.message);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    function deletePartner(id) {
+        swal({
+            title: "هل متأكد؟",
+            text: "سيتم حذف هذا الشريك",
+            icon: "warning",
+            dangerMode: true
+        }).then((willDelete) => {
+            if (willDelete) {
+                $.ajax({
+                    type: "POST",
+                    url: "/LandingSettings/DeletePartner",
+                    data: { id: id },
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success(data.message);
+                            setTimeout(function () { location.reload(); }, 1500);
+                        } else {
+                            toastr.error(data.message);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    // إضافة معاينة الأيقونة عند الاختيار
+    $(document).ready(function () {
+        $('.icon-select').each(function () {
+            var $select = $(this);
+            var $preview = $('<span class="icon-preview"></span>');
+            $select.after($preview);
+
+            function updatePreview() {
+                var val = $select.val();
+                if (val) {
+                    $preview.html('<i class="' + val + '"></i>').show();
+                } else {
+                    $preview.hide();
+                }
+            }
+
+            $select.on('change', updatePreview);
+            updatePreview();
+        });
+    });
+</script>

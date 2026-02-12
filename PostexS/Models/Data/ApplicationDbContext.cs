@@ -32,6 +32,10 @@ namespace PostexS.Models.Data
         public DbSet<WhatsAppMessageQueue> WhatsAppMessageQueues { get; set; }
         public DbSet<WhatsAppMessageLog> WhatsAppMessageLogs { get; set; }
         public DbSet<WhaStackSettings> WhaStackSettings { get; set; }
+        public DbSet<LandingPageContent> LandingPageContents { get; set; }
+        public DbSet<LandingStatistic> LandingStatistics { get; set; }
+        public DbSet<LandingTestimonial> LandingTestimonials { get; set; }
+        public DbSet<LandingPartner> LandingPartners { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ApplicationUser>().

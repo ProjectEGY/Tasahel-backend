@@ -1,0 +1,405 @@
+@using PostexS.Models.Domain;
+@using PostexS.Models.Enums;
+@{
+    Layout = null;
+    var hero = ViewBag.HeroContent as LandingPageContent;
+    var about = ViewBag.AboutContent as LandingPageContent;
+    var services = ViewBag.Services as List<LandingPageContent> ?? new List<LandingPageContent>();
+    var packages = ViewBag.Packages as List<LandingPageContent> ?? new List<LandingPageContent>();
+    var statistics = ViewBag.Statistics as List<LandingStatistic> ?? new List<LandingStatistic>();
+    var testimonials = ViewBag.Testimonials as List<LandingTestimonial> ?? new List<LandingTestimonial>();
+    var partners = ViewBag.Partners as List<LandingPartner> ?? new List<LandingPartner>();
+    var contact = ViewBag.ContactInfo as ContactUs;
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>تساهيل إكسبريس - شريكك في التوصيل</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
+    <link href="/css/landing.css" rel="stylesheet" />
+</head>
+<body>
+    @if (TempData["SeedMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" style="position:fixed; top:80px; left:50%; transform:translateX(-50%); z-index:9999; min-width:400px; text-align:center; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.2);">
+            <i class="fas fa-check-circle"></i> @TempData["SeedMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    <!-- ======== Navbar ======== -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top" id="mainNav">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="/Content/Images/TasahelExpress-removebg-preview.png" alt="تساهيل إكسبريس" class="navbar-logo" />
+                <span>تساهيل إكسبريس</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="#hero">الرئيسية</a></li>
+                    @if (services.Any())
+                    {
+                        <li class="nav-item"><a class="nav-link" href="#services">خدماتنا</a></li>
+                    }
+                    @if (about != null)
+                    {
+                        <li class="nav-item"><a class="nav-link" href="#about">من نحن</a></li>
+                    }
+                    @if (statistics.Any())
+                    {
+                        <li class="nav-item"><a class="nav-link" href="#stats">إحصائياتنا</a></li>
+                    }
+                    @if (packages.Any())
+                    {
+                        <li class="nav-item"><a class="nav-link" href="#packages">الباقات</a></li>
+                    }
+                    <li class="nav-item"><a class="nav-link" href="#track">تتبع طلبك</a></li>
+                </ul>
+                <div class="nav-buttons">
+                    <a href="/Home/TrackOrder" class="btn btn-outline-light btn-sm me-2"><i class="fas fa-search"></i> تتبع الطلب</a>
+                    <a href="/Home/Join" class="btn btn-warning btn-sm me-2"><i class="fas fa-user-plus"></i> انضم إلينا</a>
+                    <a href="/Home/Login" class="btn btn-light btn-sm"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ======== Hero Section ======== -->
+    <section id="hero" class="hero-section" @if(hero != null && !string.IsNullOrEmpty(hero.ImageUrl)) { <text>style="background-image: linear-gradient(135deg, rgba(20,43,80,0.92), rgba(38,77,138,0.85)), url('/Images/Landing/@hero.ImageUrl');"</text> }>
+        <div class="container">
+            <div class="row align-items-center min-vh-100">
+                <div class="col-lg-7" data-aos="fade-left" data-aos-duration="1000">
+                    <h1 class="hero-title">
+                        @(hero?.TitleAr ?? "تساهيل إكسبريس")
+                    </h1>
+                    <h2 class="hero-subtitle">
+                        @(hero?.SubTitleAr ?? "شريكك الأمثل في التوصيل السريع والآمن")
+                    </h2>
+                    <p class="hero-desc">
+                        @(hero?.DescriptionAr ?? "نقدم لك خدمة توصيل احترافية بأعلى جودة وأسرع وقت. نحن نهتم بطلبك من لحظة الاستلام حتى التسليم.")
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="@(hero?.LinkUrl ?? "/Home/Join")" class="btn btn-primary btn-lg"><i class="fas fa-rocket"></i> ابدأ الآن</a>
+                        <a href="#track" class="btn btn-outline-light btn-lg"><i class="fas fa-search"></i> تتبع طلبك</a>
+                    </div>
+                </div>
+                <div class="col-lg-5 text-center" data-aos="fade-right" data-aos-duration="1000" data-aos-delay="300">
+                    <div class="hero-illustration">
+                        <i class="fas fa-truck-fast"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="hero-wave">
+            <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+                <path d="M0,60 C360,120 720,0 1080,60 C1260,90 1380,80 1440,60 L1440,120 L0,120 Z" fill="#ffffff"></path>
+            </svg>
+        </div>
+    </section>
+
+    <!-- ======== خدماتنا ======== -->
+    @if (services.Any())
+    {
+        <section id="services" class="section-padding">
+            <div class="container">
+                <div class="section-header text-center" data-aos="fade-up">
+                    <h2>خدماتنا</h2>
+                    <p>نقدم لك مجموعة متكاملة من خدمات التوصيل</p>
+                    <div class="section-divider"></div>
+                </div>
+                <div class="row g-4">
+                    @foreach (var svc in services)
+                    {
+                        <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="@(services.IndexOf(svc) * 100)">
+                            <div class="service-card">
+                                <div class="service-icon">
+                                    <i class="@(svc.IconClass ?? "fas fa-box")"></i>
+                                </div>
+                                <h4>@svc.TitleAr</h4>
+                                <p>@svc.DescriptionAr</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+    }
+
+    <!-- ======== عن الشركة ======== -->
+    @if (about != null)
+    {
+        <section id="about" class="section-padding bg-light">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-lg-6" data-aos="fade-left">
+                        @if (!string.IsNullOrEmpty(about.ImageUrl))
+                        {
+                            <img src="/Images/Landing/@about.ImageUrl" alt="عن الشركة" class="img-fluid rounded-4 shadow" />
+                        }
+                        else
+                        {
+                            <div class="about-placeholder">
+                                <i class="fas fa-building"></i>
+                            </div>
+                        }
+                    </div>
+                    <div class="col-lg-6" data-aos="fade-right">
+                        <div class="about-content">
+                            <h2>@(about.TitleAr ?? "من نحن")</h2>
+                            @if (!string.IsNullOrEmpty(about.SubTitleAr))
+                            {
+                                <h5 class="text-primary">@about.SubTitleAr</h5>
+                            }
+                            <p>@about.DescriptionAr</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+
+    <!-- ======== الإحصائيات ======== -->
+    @if (statistics.Any())
+    {
+        <section id="stats" class="stats-section">
+            <div class="container">
+                <div class="row g-4">
+                    @foreach (var stat in statistics)
+                    {
+                        <div class="col-lg-3 col-md-6 col-6" data-aos="zoom-in" data-aos-delay="@(statistics.IndexOf(stat) * 100)">
+                            <div class="stat-card text-center">
+                                <div class="stat-icon">
+                                    <i class="@(stat.IconClass ?? "fas fa-chart-line")"></i>
+                                </div>
+                                <h3 class="stat-number" data-target="@stat.Value">0</h3>
+                                <p>@stat.Title</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+    }
+
+    <!-- ======== الباقات ======== -->
+    @if (packages.Any())
+    {
+        <section id="packages" class="section-padding">
+            <div class="container">
+                <div class="section-header text-center" data-aos="fade-up">
+                    <h2>باقات الشحن</h2>
+                    <p>اختر الباقة المناسبة لاحتياجاتك</p>
+                    <div class="section-divider"></div>
+                </div>
+                <div class="row g-4 justify-content-center">
+                    @foreach (var pkg in packages)
+                    {
+                        <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="@(packages.IndexOf(pkg) * 100)">
+                            <div class="package-card">
+                                <div class="package-header">
+                                    <i class="@(pkg.IconClass ?? "fas fa-cube")"></i>
+                                    <h4>@pkg.TitleAr</h4>
+                                    @if (!string.IsNullOrEmpty(pkg.SubTitleAr))
+                                    {
+                                        <div class="package-price">@pkg.SubTitleAr</div>
+                                    }
+                                </div>
+                                <div class="package-body">
+                                    @if (!string.IsNullOrEmpty(pkg.DescriptionAr))
+                                    {
+                                        <ul class="package-features">
+                                            @foreach (var line in pkg.DescriptionAr.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                                            {
+                                                <li><i class="fas fa-check-circle"></i> @line.Trim()</li>
+                                            }
+                                        </ul>
+                                    }
+                                </div>
+                                <div class="package-footer">
+                                    <a href="/Home/Join" class="btn btn-primary">انضم إلينا</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+    }
+
+    <!-- ======== آراء العملاء ======== -->
+    @if (testimonials.Any())
+    {
+        <section id="testimonials" class="section-padding bg-light">
+            <div class="container">
+                <div class="section-header text-center" data-aos="fade-up">
+                    <h2>ماذا يقول عملاؤنا</h2>
+                    <p>نفتخر بثقة عملائنا</p>
+                    <div class="section-divider"></div>
+                </div>
+                <div class="row g-4">
+                    @foreach (var t in testimonials)
+                    {
+                        <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="@(testimonials.IndexOf(t) * 100)">
+                            <div class="testimonial-card">
+                                <div class="testimonial-stars">
+                                    @for (int i = 0; i < t.Rating; i++)
+                                    {
+                                        <i class="fas fa-star"></i>
+                                    }
+                                    @for (int i = t.Rating; i < 5; i++)
+                                    {
+                                        <i class="far fa-star"></i>
+                                    }
+                                </div>
+                                <p class="testimonial-text">"@t.Content"</p>
+                                <div class="testimonial-author">
+                                    @if (!string.IsNullOrEmpty(t.ImageUrl))
+                                    {
+                                        <img src="/Images/Landing/@t.ImageUrl" alt="@t.ClientName" />
+                                    }
+                                    else
+                                    {
+                                        <div class="author-avatar"><i class="fas fa-user"></i></div>
+                                    }
+                                    <h6>@t.ClientName</h6>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+    }
+
+    <!-- ======== الشركاء ======== -->
+    @if (partners.Any())
+    {
+        <section id="partners" class="section-padding">
+            <div class="container">
+                <div class="section-header text-center" data-aos="fade-up">
+                    <h2>شركاؤنا</h2>
+                    <p>نفتخر بالعمل مع أفضل الشركات</p>
+                    <div class="section-divider"></div>
+                </div>
+                <div class="row g-4 align-items-center justify-content-center">
+                    @foreach (var p in partners)
+                    {
+                        <div class="col-lg-2 col-md-3 col-4" data-aos="zoom-in" data-aos-delay="@(partners.IndexOf(p) * 50)">
+                            <div class="partner-logo">
+                                @if (!string.IsNullOrEmpty(p.LogoUrl))
+                                {
+                                    <img src="/Images/Landing/@p.LogoUrl" alt="@p.Name" title="@p.Name" />
+                                }
+                                else
+                                {
+                                    <span>@p.Name</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+    }
+
+    <!-- ======== تتبع الطلب ======== -->
+    <section id="track" class="track-section">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8" data-aos="fade-up">
+                    <div class="track-card">
+                        <div class="track-header">
+                            <i class="fas fa-search-location"></i>
+                            <h3>تتبع طلبك</h3>
+                            <p>أدخل كود الطلب لمعرفة حالته الحالية</p>
+                        </div>
+                        <form action="/Home/TrackOrder" method="post" id="trackForm">
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-barcode"></i></span>
+                                        <input type="text" name="code" class="form-control form-control-lg" placeholder="كود الطلب" required />
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                        <input type="text" name="phone" class="form-control form-control-lg" placeholder="رقم التليفون" required />
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-primary btn-lg w-100"><i class="fas fa-search"></i> تتبع</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======== Footer ======== -->
+    <footer class="footer-section">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="footer-brand">
+                        <h4><img src="/Content/Images/TasahelExpress-removebg-preview.png" alt="تساهيل إكسبريس" class="footer-logo" /> تساهيل إكسبريس</h4>
+                        <p>شريكك الأمثل في التوصيل السريع والآمن. نحن نهتم بطلبك من البداية حتى النهاية.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <h5>روابط سريعة</h5>
+                    <ul class="footer-links">
+                        <li><a href="#hero"><i class="fas fa-angle-left"></i> الرئيسية</a></li>
+                        <li><a href="#services"><i class="fas fa-angle-left"></i> خدماتنا</a></li>
+                        <li><a href="#track"><i class="fas fa-angle-left"></i> تتبع طلبك</a></li>
+                        <li><a href="/Home/Join"><i class="fas fa-angle-left"></i> انضم إلينا</a></li>
+                        <li><a href="/Home/Login"><i class="fas fa-angle-left"></i> تسجيل الدخول</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-4">
+                    <h5>تواصل معنا</h5>
+                    <div class="social-links">
+                        @if (contact != null)
+                        {
+                            if (!string.IsNullOrEmpty(contact.FaceBook))
+                            {
+                                <a href="@contact.FaceBook" target="_blank" class="social-link facebook"><i class="fab fa-facebook-f"></i></a>
+                            }
+                            if (!string.IsNullOrEmpty(contact.Instgram))
+                            {
+                                <a href="@contact.Instgram" target="_blank" class="social-link instagram"><i class="fab fa-instagram"></i></a>
+                            }
+                            if (!string.IsNullOrEmpty(contact.WhatsApp))
+                            {
+                                <a href="https://wa.me/@contact.WhatsApp" target="_blank" class="social-link whatsapp"><i class="fab fa-whatsapp"></i></a>
+                            }
+                            if (!string.IsNullOrEmpty(contact.Twitter))
+                            {
+                                <a href="@contact.Twitter" target="_blank" class="social-link twitter"><i class="fab fa-twitter"></i></a>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+            <hr class="footer-divider" />
+            <div class="text-center">
+                <p class="footer-copyright">&copy; @DateTime.Now.Year تساهيل إكسبريس. جميع الحقوق محفوظة.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script src="/js/landing.js"></script>
+</body>
+</html>

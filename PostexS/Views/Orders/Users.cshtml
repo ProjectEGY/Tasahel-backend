@@ -190,6 +190,7 @@
                                 <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showOrderCost" /> سعر الطلب</label>
                                 <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showDeliveryFees" /> سعر الشحن</label>
                                 <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showClientCode" /> كود العميل</label>
+                                <label style="cursor:pointer; margin:0;"><input type="checkbox" class="excel-col-option" data-col="showStatus" checked /> حالة الشحنة</label>
                             </span>
                         </div>
                         <!-- فورم مخفي لتصدير Excel مع الأعمدة الاختيارية -->
@@ -201,6 +202,7 @@
                             <input type="hidden" name="showOrderCost" id="hdn_showOrderCost" value="false" />
                             <input type="hidden" name="showDeliveryFees" id="hdn_showDeliveryFees" value="false" />
                             <input type="hidden" name="showClientCode" id="hdn_showClientCode" value="false" />
+                            <input type="hidden" name="showStatus" id="hdn_showStatus" value="true" />
                             <div id="excelExportIdsContainer"></div>
                         </form>
                         <div style="margin-bottom: 15px;">

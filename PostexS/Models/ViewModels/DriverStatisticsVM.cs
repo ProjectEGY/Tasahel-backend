@@ -49,5 +49,30 @@ namespace PostexS.Models.ViewModels
         public double DeliveredPercentage { get; set; }
         public double PartialDeliveredPercentage { get; set; }
         public double ReturnedPercentage { get; set; }
+        // Date filter
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        // Driver financial details
+        public double DriverDeliveryCostPerOrder { get; set; }
+        public double TotalDriverProfit { get; set; }
+        // Settlements
+        public List<DriverSettlementVM> Settlements { get; set; } = new List<DriverSettlementVM>();
+        // Live/Current stats (unfiltered - sidebar)
+        public long LiveCurrentCount { get; set; }
+        public long LiveDeliveredCount { get; set; }
+        public long LiveWaitingCount { get; set; }
+        public long LiveRejectedCount { get; set; }
+        public long LiveReturnedCount { get; set; }
+        public long LivePartialDeliveredCount { get; set; }
+        public long LiveReadyForFinishCount { get; set; }
+        public long LiveAllCount { get; set; }
+    }
+    public class DriverSettlementVM
+    {
+        public long WalletId { get; set; }
+        public DateTime Date { get; set; }
+        public int OrderCount { get; set; }
+        public double TotalAmount { get; set; }
+        public string TransactionTypeName { get; set; }
     }
 }

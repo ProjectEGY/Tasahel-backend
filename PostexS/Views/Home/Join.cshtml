@@ -1,0 +1,401 @@
+@{
+    Layout = null;
+    var error = ViewBag.Error as string;
+    var success = ViewBag.Success != null && (bool)ViewBag.Success;
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>انضم إلينا - تساهيل إكسبريس</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #142B50 0%, #1B3764 50%, #264D8A 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .join-nav {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+            padding: 15px 0;
+        }
+
+        .join-nav a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.2rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .join-nav img {
+            height: 35px;
+            vertical-align: middle;
+        }
+
+        .join-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 15px;
+        }
+
+        .join-wrapper {
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .join-card {
+            background: #fff;
+            border-radius: 24px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+            overflow: hidden;
+            display: flex;
+        }
+
+        .join-info {
+            background: linear-gradient(135deg, #1B3764, #264D8A);
+            color: #fff;
+            padding: 50px 35px;
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .join-info h2 {
+            font-weight: 900;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
+
+        .join-info p {
+            opacity: 0.85;
+            line-height: 1.8;
+            margin-bottom: 25px;
+        }
+
+        .join-features {
+            list-style: none;
+            padding: 0;
+        }
+
+        .join-features li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+
+        .join-features li i {
+            color: #F5A623;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .join-form-section {
+            padding: 45px 40px;
+            width: 60%;
+        }
+
+        .join-form-section h3 {
+            font-weight: 800;
+            color: #1B3764;
+            margin-bottom: 5px;
+        }
+
+        .join-form-section .subtitle {
+            color: #888;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+
+        .form-floating {
+            margin-bottom: 18px;
+        }
+
+        .form-floating .form-control {
+            border: 2px solid #EAF0F9;
+            border-radius: 12px;
+            padding: 18px 45px 8px 14px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.95rem;
+            height: auto;
+            transition: 0.3s;
+        }
+
+        .form-floating .form-control:focus {
+            border-color: #1B3764;
+            box-shadow: 0 0 0 4px rgba(27,55,100,0.1);
+        }
+
+        .form-floating label {
+            font-family: 'Cairo', sans-serif;
+            color: #888;
+            padding-right: 45px;
+        }
+
+        .form-floating .input-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #1B3764;
+            font-size: 1.1rem;
+            z-index: 5;
+        }
+
+        .btn-join {
+            background: linear-gradient(135deg, #F5A623, #E8960F);
+            color: #fff;
+            border: none;
+            padding: 14px;
+            width: 100%;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .btn-join:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245,166,35,0.4);
+            background: linear-gradient(135deg, #E8960F, #D4850A);
+            color: #fff;
+        }
+
+        .error-box {
+            background: #fff3f3;
+            border: 1px solid #ffcdd2;
+            border-radius: 12px;
+            padding: 12px 15px;
+            text-align: center;
+            color: #d32f2f;
+            margin-bottom: 18px;
+            font-size: 0.95rem;
+        }
+
+        .error-box i {
+            margin-left: 5px;
+        }
+
+        .success-box {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .success-icon {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #4caf50, #2e7d32);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .success-icon i {
+            font-size: 2.5rem;
+            color: #fff;
+        }
+
+        .success-box h3 {
+            color: #2e7d32;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .success-box p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 5px;
+        }
+
+        .success-box .info-item {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-align: right;
+        }
+
+        .success-box .info-item i {
+            color: #1B3764;
+            font-size: 1.1rem;
+        }
+
+        .login-link {
+            color: #F5A623;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .login-link:hover {
+            text-decoration: underline;
+            color: #E8960F;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link a:hover {
+            color: #fff;
+        }
+
+        @@media (max-width: 767px) {
+            .join-card {
+                flex-direction: column;
+            }
+            .join-info {
+                width: 100%;
+                padding: 30px 25px;
+            }
+            .join-form-section {
+                width: 100%;
+                padding: 30px 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="join-nav">
+        <div class="container">
+            <a href="/">
+                <img src="/Content/Images/TasahelExpress.png" alt="تساهيل إكسبريس" />
+                تساهيل إكسبريس
+            </a>
+        </div>
+    </div>
+
+    <div class="join-container">
+        <div class="join-wrapper">
+            <div class="join-card">
+                <div class="join-info">
+                    <h2>انضم إلى تساهيل إكسبريس</h2>
+                    <p>سجل الآن واستمتع بخدمة توصيل احترافية وسريعة لطلباتك</p>
+                    <ul class="join-features">
+                        <li><i class="fas fa-bolt"></i> توصيل سريع وآمن</li>
+                        <li><i class="fas fa-money-bill-wave"></i> أسعار تنافسية</li>
+                        <li><i class="fas fa-headset"></i> دعم فني على مدار الساعة</li>
+                        <li><i class="fas fa-chart-line"></i> لوحة تحكم لمتابعة طلباتك</li>
+                        <li><i class="fas fa-shield-alt"></i> ضمان وصول الطلبات</li>
+                        <li><i class="fas fa-map-marked-alt"></i> تتبع الطلبات لحظة بلحظة</li>
+                    </ul>
+                </div>
+
+                <div class="join-form-section">
+                    @if (success)
+                    {
+                        <div class="success-box">
+                            <div class="success-icon">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <h3>تم التسجيل بنجاح!</h3>
+                            <p>تم إرسال طلب الانضمام الخاص بك وسيتم مراجعته من قبل الإدارة</p>
+                            <div class="info-item">
+                                <i class="fas fa-key"></i>
+                                <span>كلمة المرور الافتراضية: <strong>123456</strong></span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-info-circle"></i>
+                                <span>سيتم التواصل معك لتفعيل حسابك</span>
+                            </div>
+                            <div style="margin-top: 20px;">
+                                <a href="/Home/Login" class="btn-join" style="display:inline-block; text-decoration:none; padding:12px 30px; border-radius:12px;">
+                                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                                </a>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <h3>إنشاء حساب جديد</h3>
+                        <p class="subtitle">أدخل بياناتك للانضمام كعميل جديد</p>
+
+                        @if (!string.IsNullOrEmpty(error))
+                        {
+                            <div class="error-box">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                @error
+                            </div>
+                        }
+
+                        <form method="post" action="/Home/Join">
+                            <div class="form-floating">
+                                <i class="fas fa-user input-icon"></i>
+                                <input type="text" class="form-control" id="name" name="Name" placeholder="الاسم الكامل"
+                                       value="@(ViewBag.Name)" required />
+                                <label for="name">الاسم الكامل *</label>
+                            </div>
+
+                            <div class="form-floating">
+                                <i class="fas fa-phone input-icon"></i>
+                                <input type="tel" class="form-control" id="phone" name="Phone" placeholder="رقم الهاتف"
+                                       value="@(ViewBag.Phone)" required />
+                                <label for="phone">رقم الهاتف *</label>
+                            </div>
+
+                            <div class="form-floating">
+                                <i class="fab fa-whatsapp input-icon" style="color:#25d366;"></i>
+                                <input type="tel" class="form-control" id="whatsapp" name="WhatsappPhone" placeholder="رقم الواتساب"
+                                       value="@(ViewBag.WhatsappPhone)" />
+                                <label for="whatsapp">رقم الواتساب (اختياري)</label>
+                            </div>
+
+                            <div class="form-floating">
+                                <i class="fas fa-map-marker-alt input-icon"></i>
+                                <input type="text" class="form-control" id="address" name="Address" placeholder="العنوان"
+                                       value="@(ViewBag.Address)" required />
+                                <label for="address">العنوان *</label>
+                            </div>
+
+                            <button type="submit" class="btn-join">
+                                <i class="fas fa-user-plus"></i> سجل الآن
+                            </button>
+
+                            <div class="text-center" style="margin-top:15px;">
+                                <span style="color:#888;">لديك حساب بالفعل؟</span>
+                                <a href="/Home/Login" class="login-link">تسجيل الدخول</a>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            <div class="back-link">
+                <a href="/"><i class="fas fa-arrow-right"></i> العودة للصفحة الرئيسية</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -35,9 +35,17 @@ namespace PostexS.Controllers
         private readonly IGeneric<Order> _orders;
         private readonly IGeneric<Branch> _branch;
         private readonly IConfiguration _configuration;
+        private readonly IGeneric<LandingPageContent> _landingContent;
+        private readonly IGeneric<LandingStatistic> _landingStats;
+        private readonly IGeneric<LandingTestimonial> _landingTestimonials;
+        private readonly IGeneric<LandingPartner> _landingPartners;
+        private readonly IGeneric<ContactUs> _contactUs;
         public HomeController(ILogger<HomeController> logger, SignInManager<ApplicationUser> signInManager,
            UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager,
-          IGeneric<Branch> br, IGeneric<ApplicationUser> user, IConfiguration configuration, IGeneric<Order> orders)
+          IGeneric<Branch> br, IGeneric<ApplicationUser> user, IConfiguration configuration, IGeneric<Order> orders,
+          IGeneric<LandingPageContent> landingContent, IGeneric<LandingStatistic> landingStats,
+          IGeneric<LandingTestimonial> landingTestimonials, IGeneric<LandingPartner> landingPartners,
+          IGeneric<ContactUs> contactUs)
         {
             _logger = logger;
             _roleManager = roleManager;
@@ -47,6 +55,11 @@ namespace PostexS.Controllers
             _configuration = configuration;
             _orders = orders;
             _branch = br;
+            _landingContent = landingContent;
+            _landingStats = landingStats;
+            _landingTestimonials = landingTestimonials;
+            _landingPartners = landingPartners;
+            _contactUs = contactUs;
         }
         [Authorize]
         public async Task<IActionResult> Index(DateTime? FilterTime, DateTime? FilterTimeTo)
@@ -285,6 +298,432 @@ namespace PostexS.Controllers
         }
         public IActionResult Start()
         {
+            return View();
+        }
+
+        [AllowAnonymous]
+        public IActionResult Landing()
+        {
+            // جلب كل بيانات Landing Page الديناميكية
+            var allContent = _landingContent.Get(x => !x.IsDeleted && x.IsActive).OrderBy(x => x.SortOrder).ToList();
+            ViewBag.HeroContent = allContent.FirstOrDefault(x => x.SectionKey == "hero");
+            ViewBag.AboutContent = allContent.FirstOrDefault(x => x.SectionKey == "about");
+            ViewBag.Services = allContent.Where(x => x.SectionKey == "service").ToList();
+            ViewBag.Packages = allContent.Where(x => x.SectionKey == "package").ToList();
+            ViewBag.Statistics = _landingStats.Get(x => !x.IsDeleted && x.IsActive).OrderBy(x => x.SortOrder).ToList();
+            ViewBag.Testimonials = _landingTestimonials.Get(x => !x.IsDeleted && x.IsActive).OrderBy(x => x.SortOrder).ToList();
+            ViewBag.Partners = _landingPartners.Get(x => !x.IsDeleted && x.IsActive).OrderBy(x => x.SortOrder).ToList();
+
+            // بيانات التواصل
+            try
+            {
+                ViewBag.ContactInfo = _contactUs.Get(x => !x.IsDeleted).FirstOrDefault();
+            }
+            catch { ViewBag.ContactInfo = null; }
+
+            return View();
+        }
+
+        // ===== Seed Landing Data from Old Start Page =====
+        [Authorize(Roles = "Admin,TrustAdmin")]
+        public async Task<IActionResult> SeedLandingData()
+        {
+            // التحقق من عدم وجود بيانات مسبقة
+            var existingContent = _landingContent.Get(x => !x.IsDeleted).ToList();
+            if (existingContent.Any())
+            {
+                TempData["SeedMessage"] = "البيانات موجودة بالفعل! تم العثور على " + existingContent.Count + " عنصر. احذف البيانات القديمة أولاً إذا أردت إعادة التهيئة.";
+                return RedirectToAction("Landing");
+            }
+
+            // ===== 1. Hero Section =====
+            await _landingContent.Add(new LandingPageContent
+            {
+                SectionKey = "hero",
+                TitleAr = "تساهيل إكسبريس",
+                SubTitleAr = "شريكك الأمثل في التوصيل السريع والآمن",
+                DescriptionAr = "نقدم لك خدمة توصيل احترافية بأعلى جودة وأسرع وقت. نحن نهتم بطلبك من لحظة الاستلام حتى التسليم.",
+                IconClass = "fas fa-truck-fast",
+                LinkUrl = "/Home/Join",
+                SortOrder = 1,
+                IsActive = true
+            });
+
+            // ===== 2. About Section =====
+            await _landingContent.Add(new LandingPageContent
+            {
+                SectionKey = "about",
+                TitleAr = "من نحن",
+                SubTitleAr = "سنوات من الخبرة في مجال الشحن والتوصيل",
+                DescriptionAr = "نحن نقدم خدمات توصيل طرود سريعة ومريحة وسهلة الاستخدام تجعل المستهلكين يشعرون بالتقدير وتشعر الشركات بالتمكين. مع سنوات من الخبرة والخبرة في مجال الشحن، نحن ملتزمون بتزويد عملائنا بأفضل الخدمات وأكثرها احترافية في أقل فترة زمنية مقدرة.",
+                IconClass = "fas fa-building",
+                SortOrder = 1,
+                IsActive = true
+            });
+
+            // ===== 3. Services Section =====
+            await _landingContent.Add(new LandingPageContent
+            {
+                SectionKey = "service",
+                TitleAr = "أفضل الأسعار",
+                SubTitleAr = "أسعار مرنة ومعقولة",
+                DescriptionAr = "نحن نقدم أسعارًا موثوقة ومرنة بشكل معقول لجميع الفئات مع خدمة متسقة ويمكن الاعتماد عليها ودقيقة بسعر فعال من حيث التكلفة",
+                IconClass = "fas fa-dollar-sign",
+                SortOrder = 1,
+                IsActive = true
+            });
+
+            await _landingContent.Add(new LandingPageContent
+            {
+                SectionKey = "service",
+                TitleAr = "أسرع شحن في مصر",
+                SubTitleAr = "توصيل سريع لكل المحافظات",
+                DescriptionAr = "توصيل سريع جدًا، في جميع أنحاء مصر في القاهرة والإسكندرية خلال 24 ساعة وفقط 48 ساعة إلى باقي الأماكن في جميع أنحاء مصر",
+                IconClass = "fas fa-gauge-high",
+                SortOrder = 2,
+                IsActive = true
+            });
+
+            await _landingContent.Add(new LandingPageContent
+            {
+                SectionKey = "service",
+                TitleAr = "24/7 الدعم",
+                SubTitleAr = "خدمة عملاء متاحة دائماً",
+                DescriptionAr = "نظام خدمة عملاء محترف يتفهم احتياجاتك ويسهل عليك حل مشاكلك",
+                IconClass = "fas fa-headset",
+                SortOrder = 3,
+                IsActive = true
+            });
+
+            await _landingContent.Add(new LandingPageContent
+            {
+                SectionKey = "service",
+                TitleAr = "تابع شحنتك في أي مكان",
+                SubTitleAr = "تتبع لحظة بلحظة",
+                DescriptionAr = "شغلك اونلاين وبتواجهك مشاكل كتير مع شركات الشحن! تساهيل إكسبريس وفرتلك أبلكيشن تتابع شحناتك من خلاله بكل سهولة. هتتابع شحنتك وانت في مكانك!",
+                IconClass = "fas fa-map-location-dot",
+                SortOrder = 4,
+                IsActive = true
+            });
+
+            await _landingContent.Add(new LandingPageContent
+            {
+                SectionKey = "service",
+                TitleAr = "شحنتك في أمان",
+                SubTitleAr = "تغليف مجاني للطرود",
+                DescriptionAr = "تعرف ان انطباع عميلك الأول عن البيزنس بتاعك بيكون من خلال شركة الشحن وتغليف الأوردر. وفرنالك في تساهيل خدمة التغليف المجاني عشان نساعدك تشحن اوردراتك وانت متطمن على رضا عميلك",
+                IconClass = "fas fa-shield-halved",
+                SortOrder = 5,
+                IsActive = true
+            });
+
+            await _landingContent.Add(new LandingPageContent
+            {
+                SectionKey = "service",
+                TitleAr = "سهولة التوصيل",
+                SubTitleAr = "من الباب للباب",
+                DescriptionAr = "طلبات البيت كتير ومعندكش وقت تنزل في الزحمة! متشلش هم الزحمة. طلبات البيت ومشاويرك دلوقتي أسهل مع تساهيل. هنجيبلك أي حاجة من أي مكان لحد باب بيتك",
+                IconClass = "fas fa-box",
+                SortOrder = 6,
+                IsActive = true
+            });
+
+            // ===== 4. Packages Section =====
+            await _landingContent.Add(new LandingPageContent
+            {
+                SectionKey = "package",
+                TitleAr = "الباقة الأساسية",
+                SubTitleAr = "45 جنيه",
+                DescriptionAr = "بداية من 600 أوردر شهرياً\nالشحن 45 جنيه\nتشمل التغليف\nعودة التحصيل مجاناً",
+                IconClass = "fas fa-cube",
+                SortOrder = 1,
+                IsActive = true
+            });
+
+            await _landingContent.Add(new LandingPageContent
+            {
+                SectionKey = "package",
+                TitleAr = "الباقة المميزة",
+                SubTitleAr = "40 جنيه",
+                DescriptionAr = "من 1200 أوردر شهرياً\nالشحن 40 جنيه\nتشمل التغليف\nعودة التحصيل مجاناً\nأولوية في التوصيل",
+                IconClass = "fas fa-cubes",
+                SortOrder = 2,
+                IsActive = true
+            });
+
+            await _landingContent.Add(new LandingPageContent
+            {
+                SectionKey = "package",
+                TitleAr = "باقة كبار العملاء",
+                SubTitleAr = "35 جنيه",
+                DescriptionAr = "من 1800 أوردر شهرياً\nالشحن 35 جنيه\nتشمل التغليف\nعودة التحصيل مجاناً\nأولوية قصوى في التوصيل\nمندوب مخصص",
+                IconClass = "fas fa-gem",
+                SortOrder = 3,
+                IsActive = true
+            });
+
+            // ===== 5. Statistics =====
+            await _landingStats.Add(new LandingStatistic
+            {
+                Title = "العملاء",
+                Value = "1232",
+                IconClass = "fas fa-users",
+                SortOrder = 1,
+                IsActive = true
+            });
+
+            await _landingStats.Add(new LandingStatistic
+            {
+                Title = "الشركات",
+                Value = "64",
+                IconClass = "fas fa-building",
+                SortOrder = 2,
+                IsActive = true
+            });
+
+            await _landingStats.Add(new LandingStatistic
+            {
+                Title = "المناديب",
+                Value = "42",
+                IconClass = "fas fa-motorcycle",
+                SortOrder = 3,
+                IsActive = true
+            });
+
+            await _landingStats.Add(new LandingStatistic
+            {
+                Title = "طلب تم توصيله",
+                Value = "15000",
+                IconClass = "fas fa-box-open",
+                SortOrder = 4,
+                IsActive = true
+            });
+
+            // ===== 6. Testimonials =====
+            await _landingTestimonials.Add(new LandingTestimonial
+            {
+                ClientName = "Donia Sabry",
+                Content = "من افضل الشركات بجد فى التعامل والشحن. المندوبين قمه فى الاحترام والذوق. سرعه فى الشحن وتسليم الاوردرات وتحصيل المبالغ وتسليمها فى اسرع وقت وبدوت تاخير. بجد شكرا جدا ومبسوطه بالتعامل معاكوا. ويا رب دايما فى نجاح وتقدم",
+                Rating = 5,
+                SortOrder = 1,
+                IsActive = true
+            });
+
+            await _landingTestimonials.Add(new LandingTestimonial
+            {
+                ClientName = "Ahmed Samir",
+                Content = "اسرع خدمة وثقة وباقل تكلفة",
+                Rating = 5,
+                SortOrder = 2,
+                IsActive = true
+            });
+
+            await _landingTestimonials.Add(new LandingTestimonial
+            {
+                ClientName = "Ahmed Amer",
+                Content = "شركه شحن ممتازه ودقه في التعامل. اعتقد لو كملتوا علي الوضع دا هتبقوا رقم واحد في الجمهوريه. بالتوفيق ان شاء الله",
+                Rating = 5,
+                SortOrder = 3,
+                IsActive = true
+            });
+
+            await _landingTestimonials.Add(new LandingTestimonial
+            {
+                ClientName = "Jomana Atef",
+                Content = "شركة شحن فى منتهى المهنية. اسرع شركة جربتها ف التوصيل فعلا والتعامل ف منتهى الذوق واسرع تحصيل. مرسى ليكم وبالتوفيق",
+                Rating = 5,
+                SortOrder = 4,
+                IsActive = true
+            });
+
+            // ===== 7. Partners (العملاء القدامى) =====
+            await _landingPartners.Add(new LandingPartner
+            {
+                Name = "عميل 1",
+                SortOrder = 1,
+                IsActive = true
+            });
+
+            await _landingPartners.Add(new LandingPartner
+            {
+                Name = "عميل 2",
+                SortOrder = 2,
+                IsActive = true
+            });
+
+            await _landingPartners.Add(new LandingPartner
+            {
+                Name = "عميل 3",
+                SortOrder = 3,
+                IsActive = true
+            });
+
+            await _landingPartners.Add(new LandingPartner
+            {
+                Name = "عميل 4",
+                SortOrder = 4,
+                IsActive = true
+            });
+
+            await _landingPartners.Add(new LandingPartner
+            {
+                Name = "عميل 5",
+                SortOrder = 5,
+                IsActive = true
+            });
+
+            await _landingPartners.Add(new LandingPartner
+            {
+                Name = "عميل 6",
+                SortOrder = 6,
+                IsActive = true
+            });
+
+            await _landingPartners.Add(new LandingPartner
+            {
+                Name = "عميل 7",
+                SortOrder = 7,
+                IsActive = true
+            });
+
+            await _landingPartners.Add(new LandingPartner
+            {
+                Name = "عميل 8",
+                SortOrder = 8,
+                IsActive = true
+            });
+
+            TempData["SeedMessage"] = "تم إضافة جميع بيانات الموقع القديم بنجاح! يمكنك الآن تعديلها من إعدادات Landing Page.";
+            return RedirectToAction("Landing");
+        }
+
+        [AllowAnonymous]
+        public IActionResult Join()
+        {
+            return View();
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+        public async Task<IActionResult> Join(string Name, string Phone, string WhatsappPhone, string Address)
+        {
+            if (string.IsNullOrEmpty(Name) || string.IsNullOrEmpty(Phone) || string.IsNullOrEmpty(Address))
+            {
+                ViewBag.Error = "يرجى ملء جميع الحقول المطلوبة";
+                ViewBag.Name = Name;
+                ViewBag.Phone = Phone;
+                ViewBag.WhatsappPhone = WhatsappPhone;
+                ViewBag.Address = Address;
+                return View();
+            }
+
+            // التحقق من عدم وجود رقم مسجل مسبقاً
+            if (await _user.IsExist(x => x.PhoneNumber == Phone.Trim()))
+            {
+                ViewBag.Error = "هذا الرقم مسجل بالفعل، يرجى تسجيل الدخول";
+                ViewBag.Name = Name;
+                ViewBag.Phone = Phone;
+                ViewBag.WhatsappPhone = WhatsappPhone;
+                ViewBag.Address = Address;
+                return View();
+            }
+
+            // إنشاء إيميل تلقائي
+            var email = Helper.RandomGenerator.GenerateString(6) + "@Tasahel.com";
+
+            // الحصول على أول فرع
+            var branch = _branch.GetAll().FirstOrDefault();
+            if (branch == null)
+            {
+                ViewBag.Error = "حدث خطأ، يرجى المحاولة لاحقاً";
+                return View();
+            }
+
+            var user = new ApplicationUser()
+            {
+                UserName = email,
+                Email = email,
+                Name = Name.Trim(),
+                PhoneNumber = Phone.Trim(),
+                WhatsappPhone = WhatsappPhone?.Trim() ?? Phone.Trim(),
+                Address = Address.Trim(),
+                UserType = UserType.Client,
+                BranchId = branch.Id,
+                IsPending = true,
+                SecurityStamp = Guid.NewGuid().ToString(),
+                EmailConfirmed = true
+            };
+
+            var result = await _userManager.CreateAsync(user, "123456");
+            if (!result.Succeeded)
+            {
+                ViewBag.Error = "حدث خطأ أثناء التسجيل، يرجى المحاولة لاحقاً";
+                ViewBag.Name = Name;
+                ViewBag.Phone = Phone;
+                ViewBag.WhatsappPhone = WhatsappPhone;
+                ViewBag.Address = Address;
+                return View();
+            }
+
+            if (!await _roleManager.RoleExistsAsync("Client"))
+                await _roleManager.CreateAsync(new IdentityRole("Client"));
+            await _userManager.AddToRoleAsync(user, "Client");
+
+            ViewBag.Success = true;
+            return View();
+        }
+
+        [AllowAnonymous]
+        public IActionResult TrackOrder()
+        {
+            return View();
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+        public IActionResult TrackOrder(string code, string phone)
+        {
+            if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(phone))
+            {
+                ViewBag.Error = "يرجى إدخال كود الطلب ورقم التليفون";
+                return View();
+            }
+
+            var order = _orders.Get(x => x.Code == code.Trim() && !x.IsDeleted).FirstOrDefault();
+
+            if (order == null)
+            {
+                ViewBag.Error = "لم يتم العثور على طلب بهذا الكود";
+                ViewBag.Code = code;
+                ViewBag.Phone = phone;
+                return View();
+            }
+
+            // التحقق من رقم التليفون
+            var cleanPhone = phone.Trim().Replace(" ", "");
+            var orderPhone = (order.ClientPhone ?? "").Trim().Replace(" ", "");
+
+            if (!orderPhone.EndsWith(cleanPhone) && !cleanPhone.EndsWith(orderPhone) && orderPhone != cleanPhone)
+            {
+                ViewBag.Error = "رقم التليفون غير مطابق لبيانات الطلب";
+                ViewBag.Code = code;
+                ViewBag.Phone = phone;
+                return View();
+            }
+
+            // تمرير بيانات الطلب للعرض
+            ViewBag.OrderFound = true;
+            ViewBag.OrderCode = order.Code;
+            ViewBag.OrderStatus = order.Status;
+            ViewBag.OrderCity = order.AddressCity;
+            ViewBag.OrderAddress = order.Address;
+            ViewBag.OrderClientName = order.ClientName;
+            ViewBag.OrderCost = order.TotalCost;
+            ViewBag.OrderDate = order.CreateOn;
+            ViewBag.OrderLastUpdated = order.LastUpdated;
+            ViewBag.Code = code;
+            ViewBag.Phone = phone;
+
             return View();
         }
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

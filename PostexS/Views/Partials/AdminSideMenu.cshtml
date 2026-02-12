@@ -196,6 +196,11 @@
                         <i class="fa fa-whatsapp"></i> <span>اعدادات واتساب</span>
                     </a>
                 </li>
+                <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("landingsettings") ? "active" : "")">
+                    <a href="@Url.Action("Index", "LandingSettings")">
+                        <i class="fa fa-globe"></i> <span>إعدادات الموقع</span>
+                    </a>
+                </li>
             }
 
         </ul>

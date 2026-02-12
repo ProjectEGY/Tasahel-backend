@@ -1,155 +1,381 @@
-﻿@model PostexS.Models.ViewModels.CurrentStatisticsVM
+@model PostexS.Models.ViewModels.CurrentStatisticsVM
 @{
 }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
 <style>
-    body {
-        background-color: #f8f9fa;
+    .cs-page { padding: 15px; }
+
+    /* Header */
+    .cs-header {
+        background: linear-gradient(135deg, #1B3764 0%, #264D8A 100%);
+        color: #fff;
+        padding: 28px 30px;
+        border-radius: 14px;
+        margin-bottom: 24px;
+        box-shadow: 0 6px 20px rgba(27,55,100,0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    .cs-header::after {
+        content: '';
+        position: absolute;
+        top: -40px;
+        left: -40px;
+        width: 120px;
+        height: 120px;
+        background: rgba(245,166,35,0.12);
+        border-radius: 50%;
+    }
+    .cs-header h3 { margin: 0; font-weight: 700; font-size: 1.4em; position: relative; z-index: 1; }
+    .cs-header p { margin: 6px 0 0; opacity: 0.8; font-size: 0.9em; position: relative; z-index: 1; }
+
+    /* Live Pulse Badge */
+    .live-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(245,166,35,0.2);
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: 700;
+        color: #F5A623;
+        margin-top: 8px;
+    }
+    .live-dot {
+        width: 10px;
+        height: 10px;
+        background: #F5A623;
+        border-radius: 50%;
+        animation: livePulse 1.5s ease-in-out infinite;
+    }
+    @@keyframes livePulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(0.7); }
     }
 
-    .panel {
-        margin-top: 20px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        border-radius: 10px;
-    }
-
-    .panel-heading {
-        background-color: #007bff;
-        color: white;
-        padding: 20px;
-        border-top-left-radius: 10px;
-        border-top-right-radius: 10px;
-        font-size: 1.5em;
-    }
-
-    .panel-title {
-        margin: 0;
-    }
-
-    .stat-value {
-        font-size: 2.5em;
-        font-weight: bold;
-        color: #007bff;
-    }
-
-    .percentage {
-        font-size: 1.2em;
-        color: #28a745;
-    }
-
-    .panel-body {
-        padding: 30px;
-    }
-
-    .stat-card {
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    /* Highlight Hero Cards */
+    .hero-row { margin-bottom: 20px; }
+    .hero-card {
+        border-radius: 16px;
+        padding: 28px 20px;
+        text-align: center;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 15px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         transition: transform 0.3s;
     }
+    .hero-card:hover { transform: translateY(-4px); }
+    .hero-card::before {
+        content: '';
+        position: absolute;
+        top: -25px;
+        right: -25px;
+        width: 80px;
+        height: 80px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+    .hero-card .hero-icon {
+        font-size: 2em;
+        margin-bottom: 10px;
+        display: block;
+        opacity: 0.9;
+    }
+    .hero-card .hero-num {
+        font-size: 3.2em;
+        font-weight: 900;
+        line-height: 1;
+        margin-bottom: 5px;
+    }
+    .hero-card .hero-label {
+        font-size: 1em;
+        font-weight: 600;
+        opacity: 0.9;
+    }
+    .hero-gold { background: linear-gradient(135deg, #F5A623, #E8960F); box-shadow: 0 8px 25px rgba(245,166,35,0.3); }
+    .hero-navy { background: linear-gradient(135deg, #1B3764, #264D8A); box-shadow: 0 8px 25px rgba(27,55,100,0.3); }
+    .hero-green { background: linear-gradient(135deg, #2e7d32, #43a047); box-shadow: 0 8px 25px rgba(46,125,50,0.3); }
 
-        .stat-card:hover {
-            transform: translateY(-7px);
-            background-color: #79ff87;
-        }
+    /* Stat Cards Grid */
+    .stat-grid { margin-bottom: 20px; }
+    .stat-card-v2 {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.07);
+        padding: 0;
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+        margin-bottom: 15px;
+        border-top: 4px solid transparent;
+    }
+    .stat-card-v2:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(27,55,100,0.12);
+    }
+    .stat-card-v2.border-green { border-top-color: #2e7d32; }
+    .stat-card-v2.border-red { border-top-color: #d32f2f; }
+    .stat-card-v2.border-orange { border-top-color: #F5A623; }
+    .stat-card-v2.border-purple { border-top-color: #6a1b9a; }
+    .stat-card-v2.border-teal { border-top-color: #00695c; }
+    .stat-card-v2.border-blue { border-top-color: #1B3764; }
 
-        .stat-card .card-body {
-            padding: 20px;
-        }
+    .stat-card-inner {
+        padding: 22px 18px;
+        text-align: center;
+    }
+    .stat-icon-wrap {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4em;
+        margin: 0 auto 12px;
+    }
+    .stat-icon-wrap.bg-green { background: rgba(46,125,50,0.1); color: #2e7d32; }
+    .stat-icon-wrap.bg-red { background: rgba(211,47,47,0.1); color: #d32f2f; }
+    .stat-icon-wrap.bg-orange { background: rgba(245,166,35,0.1); color: #F5A623; }
+    .stat-icon-wrap.bg-purple { background: rgba(106,27,154,0.1); color: #6a1b9a; }
+    .stat-icon-wrap.bg-teal { background: rgba(0,105,92,0.1); color: #00695c; }
+    .stat-icon-wrap.bg-blue { background: rgba(27,55,100,0.1); color: #1B3764; }
 
-    .mt-4 {
-        margin-top: 1.5rem !important;
+    .stat-number {
+        font-size: 2.4em;
+        font-weight: 800;
+        color: #1B3764;
+        line-height: 1;
+        margin-bottom: 4px;
+    }
+    .stat-title {
+        font-size: 0.92em;
+        color: #6c757d;
+        font-weight: 600;
+    }
+    .stat-pct {
+        font-size: 0.82em;
+        font-weight: 700;
+        color: #F5A623;
+        margin-top: 4px;
+    }
+
+    /* Money Section */
+    .money-section { margin-bottom: 20px; }
+    .money-box {
+        border-radius: 14px;
+        padding: 22px 18px;
+        text-align: center;
+        color: #fff;
+        margin-bottom: 15px;
+        box-shadow: 0 5px 18px rgba(0,0,0,0.15);
+        transition: transform 0.3s;
+    }
+    .money-box:hover { transform: translateY(-3px); }
+    .money-box .money-icon { font-size: 1.6em; margin-bottom: 8px; display: block; opacity: 0.85; }
+    .money-box .money-amount { font-size: 2.2em; font-weight: 800; line-height: 1.1; }
+    .money-box .money-text { font-size: 0.9em; opacity: 0.85; margin-top: 5px; }
+    .money-navy { background: linear-gradient(135deg, #1B3764, #264D8A); }
+    .money-gold { background: linear-gradient(135deg, #F5A623, #E8960F); }
+    .money-emerald { background: linear-gradient(135deg, #2e7d32, #43a047); }
+
+    /* Chart */
+    .chart-box {
+        background: #fff;
+        border-radius: 14px;
+        padding: 24px;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.07);
+        margin-bottom: 15px;
+    }
+    .chart-box h5 {
+        color: #1B3764;
+        font-weight: 700;
+        margin-bottom: 18px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #EAF0F9;
+    }
+
+    /* Donut Container */
+    .donut-container {
+        max-width: 300px;
+        margin: 0 auto;
     }
 </style>
 
-<div class="container">
-    <div class="panel panel-primary">
-        <div class="panel-heading">
-            <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> @ViewBag.Title</h3>
+<div class="cs-page">
+    <!-- Header -->
+    <div class="cs-header">
+        <h3><i class="fa fa-tachometer"></i> @ViewBag.Title</h3>
+        <p>إحصائيات فورية للطلبات الحالية التي لم يتم تقفيلها بعد</p>
+        <div class="live-badge">
+            <span class="live-dot"></span>
+            بيانات حية - لحظية
         </div>
-        <div class="panel-body">
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.CurrentOrdersCount</div>
-                            <div>الطلبات الحالية</div>
-                        </div>
-                    </div>
+    </div>
+
+    <!-- Hero Cards -->
+    <div class="row hero-row">
+        <div class="col-md-4">
+            <div class="hero-card hero-gold">
+                <i class="fa fa-motorcycle hero-icon"></i>
+                <div class="hero-num">@Model.CurrentOrdersCount</div>
+                <div class="hero-label">شحنات حالية مع المندوب</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="hero-card hero-navy">
+                <i class="fa fa-cubes hero-icon"></i>
+                <div class="hero-num">@Model.AllOrdersCount</div>
+                <div class="hero-label">إجمالي الطلبات غير المقفلة</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="hero-card hero-green">
+                <i class="fa fa-check-circle hero-icon"></i>
+                <div class="hero-num">@Model.DeliveredCount</div>
+                <div class="hero-label">تم التسليم (بانتظار التقفيل)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="row stat-grid">
+        <div class="col-md-3">
+            <div class="stat-card-v2 border-green">
+                <div class="stat-card-inner">
+                    <div class="stat-icon-wrap bg-green"><i class="fa fa-check-circle"></i></div>
+                    <div class="stat-number">@Model.DeliveredCount</div>
+                    <div class="stat-title">المستلمة</div>
+                    <div class="stat-pct">@Model.DeliveredPercentage.ToString("0.00")%</div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.DeliveredCount</div>
-                            <div>الطلبات المستلمة</div>
-                            <div class="percentage">(@Model.DeliveredPercentage.ToString("0.00")%)</div>
-                        </div>
-                    </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card-v2 border-red">
+                <div class="stat-card-inner">
+                    <div class="stat-icon-wrap bg-red"><i class="fa fa-times-circle"></i></div>
+                    <div class="stat-number">@Model.RejectedCount</div>
+                    <div class="stat-title">المرفوضة</div>
+                    @if (Model.RejectedPercentage > 0)
+                    {
+                        <div class="stat-pct" style="color:#d32f2f;">@Model.RejectedPercentage.ToString("0.00")%</div>
+                    }
                 </div>
-                <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.RejectedCount</div>
-                            <div>الطلبات المرفوضة</div>
-                        </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card-v2 border-orange">
+                <div class="stat-card-inner">
+                    <div class="stat-icon-wrap bg-orange"><i class="fa fa-pause-circle"></i></div>
+                    <div class="stat-number">@Model.WaitingCount</div>
+                    <div class="stat-title">المؤجلة</div>
+                    @if (Model.WaitingPercentage > 0)
+                    {
+                        <div class="stat-pct">@Model.WaitingPercentage.ToString("0.00")%</div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card-v2 border-purple">
+                <div class="stat-card-inner">
+                    <div class="stat-icon-wrap bg-purple"><i class="fa fa-adjust"></i></div>
+                    <div class="stat-number">@Model.PartialDeliveredCount</div>
+                    <div class="stat-title">تسليم جزئي</div>
+                    @if (Model.PartialDeliveredPercentage > 0)
+                    {
+                        <div class="stat-pct">@Model.PartialDeliveredPercentage.ToString("0.00")%</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row stat-grid">
+        <div class="col-md-4">
+            <div class="stat-card-v2 border-teal">
+                <div class="stat-card-inner">
+                    <div class="stat-icon-wrap bg-teal"><i class="fa fa-undo"></i></div>
+                    <div class="stat-number">@Model.ReturnedCount</div>
+                    <div class="stat-title">المرتجعات</div>
+                    <div class="stat-pct">@Model.ReturnedPercentage.ToString("0.00")%</div>
+                </div>
+            </div>
+        </div>
+        @if (Model.PartialReturnedCount > 0)
+        {
+            <div class="col-md-4">
+                <div class="stat-card-v2 border-orange">
+                    <div class="stat-card-inner">
+                        <div class="stat-icon-wrap bg-orange"><i class="fa fa-exchange"></i></div>
+                        <div class="stat-number">@Model.PartialReturnedCount</div>
+                        <div class="stat-title">مرتجعات جزئية</div>
+                        @if (Model.PartialReturnedPercentage > 0)
+                        {
+                            <div class="stat-pct">@Model.PartialReturnedPercentage.ToString("0.00")%</div>
+                        }
                     </div>
                 </div>
             </div>
-            <div class="row mt-4">
-                <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.PartialDeliveredCount</div>
-                            <div>الطلبات المستلمة جزئياً</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.WaitingCount</div>
-                            <div>الطلبات المؤجله</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.ReturnedCount</div>
-                            <div>الطلبات المرتجعة</div>
-                            <div class="percentage">(@Model.ReturnedPercentage.ToString("0.00")%)</div>
-                        </div>
+        }
+        @if (Model.AssignedCount > 0)
+        {
+            <div class="col-md-4">
+                <div class="stat-card-v2 border-blue">
+                    <div class="stat-card-inner">
+                        <div class="stat-icon-wrap bg-blue"><i class="fa fa-user-plus"></i></div>
+                        <div class="stat-number">@Model.AssignedCount</div>
+                        <div class="stat-title">معينة للمندوب</div>
+                        @if (Model.AssignedPercentage > 0)
+                        {
+                            <div class="stat-pct">@Model.AssignedPercentage.ToString("0.00")%</div>
+                        }
                     </div>
                 </div>
             </div>
-            <div class="row mt-4">
-                <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.AllOrdersCount</div>
-                            <div>إجمالي الطلبات</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.OrdersMoney ج</div>
-                            <div>إجمالي المبلغ</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.DriverMoney ج</div>
-                            <div>نسبة المندوب</div>
-                        </div>
-                    </div>
-                </div>
+        }
+    </div>
+
+    <!-- Money Section -->
+    <div class="row money-section">
+        <div class="col-md-4">
+            <div class="money-box money-navy">
+                <i class="fa fa-money money-icon"></i>
+                <div class="money-amount">@Model.OrdersMoney.ToString("N0") ج</div>
+                <div class="money-text">إجمالي المبالغ</div>
             </div>
-            <div class="row mt-4">
-                <div class="col-md-12">
-                    <canvas id="ordersChart"></canvas>
+        </div>
+        <div class="col-md-4">
+            <div class="money-box money-gold">
+                <i class="fa fa-truck money-icon"></i>
+                <div class="money-amount">@Model.DriverMoney.ToString("N0") ج</div>
+                <div class="money-text">نسبة المندوب</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="money-box money-emerald">
+                <i class="fa fa-building money-icon"></i>
+                <div class="money-amount">@Model.SystemMoney.ToString("N0") ج</div>
+                <div class="money-text">نسبة الشركة</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <div class="col-md-7">
+            <div class="chart-box">
+                <h5><i class="fa fa-bar-chart"></i> توزيع الطلبات</h5>
+                <canvas id="ordersChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="chart-box">
+                <h5><i class="fa fa-pie-chart"></i> نسب الطلبات</h5>
+                <div class="donut-container">
+                    <canvas id="donutChart"></canvas>
                 </div>
             </div>
         </div>
@@ -157,30 +383,58 @@
 </div>
 
 <script>
-    var count = @Model.AllOrdersCount
-                var ctx = document.getElementById('ordersChart').getContext('2d');
+    // Bar Chart
+    var count = @Model.AllOrdersCount;
+    var ctx = document.getElementById('ordersChart').getContext('2d');
     var ordersChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['الطلبات الحاليه', 'طلبات تم التوصيل', 'طلبات مرفوضه', 'طلبات تسليم جزئي', 'طلبات مؤجله', 'طلبات مرتجعه'],
+            labels: ['حالية', 'مستلمة', 'مرفوضة', 'جزئي', 'مؤجلة', 'مرتجعة'],
             datasets: [{
                 label: 'جميع الطلبات: ' + count,
                 data: [@Model.CurrentOrdersCount, @Model.DeliveredCount, @Model.RejectedCount, @Model.PartialDeliveredCount, @Model.WaitingCount, @Model.ReturnedCount],
-                backgroundColor: [
-                    '#007bff',
-                    '#28a745',
-                    '#dc3545',
-                    '#ffc107',
-                    '#17a2b8',
-                    '#6c757d'
-                ]
+                backgroundColor: ['#264D8A', '#2e7d32', '#d32f2f', '#6a1b9a', '#F5A623', '#00695c'],
+                borderRadius: 8,
+                borderSkipped: false
             }]
         },
         options: {
             responsive: true,
+            legend: { display: false },
             scales: {
-                y: {
-                    beginAtZero: true
+                yAxes: [{
+                    ticks: { beginAtZero: true },
+                    gridLines: { color: '#EAF0F9' }
+                }],
+                xAxes: [{
+                    gridLines: { display: false }
+                }]
+            }
+        }
+    });
+
+    // Donut Chart
+    var ctx2 = document.getElementById('donutChart').getContext('2d');
+    var donutChart = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: ['مستلمة', 'مرفوضة', 'جزئي', 'مؤجلة', 'مرتجعة'],
+            datasets: [{
+                data: [@Model.DeliveredCount, @Model.RejectedCount, @Model.PartialDeliveredCount, @Model.WaitingCount, @Model.ReturnedCount],
+                backgroundColor: ['#2e7d32', '#d32f2f', '#6a1b9a', '#F5A623', '#00695c'],
+                borderWidth: 3,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            cutoutPercentage: 60,
+            legend: {
+                position: 'bottom',
+                labels: {
+                    padding: 15,
+                    fontSize: 12,
+                    fontFamily: 'Cairo, sans-serif'
                 }
             }
         }

@@ -1,4 +1,4 @@
-﻿using PostexS.Migrations;
+using PostexS.Migrations;
 using PostexS.Models.Domain;
 using System;
 using System.Collections.Generic;
@@ -19,6 +19,7 @@ namespace PostexS.Helper
         public bool ShowOrderCost { get; set; } = false;      // سعر الطلب
         public bool ShowDeliveryFees { get; set; } = false;   // سعر الشحن
         public bool ShowClientCode { get; set; } = false;     // كود العميل
+        public bool ShowStatus { get; set; } = false;         // حالة الشحنة
     }
 
     public class ExportToExcel
@@ -70,6 +71,10 @@ namespace PostexS.Helper
 
                 DataTable dt = new DataTable("Report");
 
+                // عمود حالة الشحنة - أول عمود لو مفعّل
+                if (showAll || (options != null && options.ShowStatus))
+                    dt.Columns.Add(new DataColumn("الحاله"));
+
                 // الأعمدة الأساسية دايماً موجودة
                 dt.Columns.Add(new DataColumn("رقم الطلب"));
                 dt.Columns.Add(new DataColumn("التاريخ"));
@@ -98,7 +103,6 @@ namespace PostexS.Helper
                 // لو showAll نضيف الأعمدة الإضافية القديمة
                 if (showAll)
                 {
-                    dt.Columns.Add(new DataColumn("الحاله"));
                     dt.Columns.Add(new DataColumn("التسويه"));
                     dt.Columns.Add(new DataColumn("تم دفعه"));
                     dt.Columns.Add(new DataColumn("ملاحظات المندوب"));
@@ -126,6 +130,10 @@ namespace PostexS.Helper
                     string formattedDateTime = CreatedOn.ToString("dd MMM, yyyy - hh:mm tt");
 
                     var row = dt.NewRow();
+
+                    // عمود حالة الشحنة - أول عمود
+                    if (showAll || (options != null && options.ShowStatus))
+                        row["الحاله"] = status;
 
                     // الأعمدة الأساسية
                     row["رقم الطلب"] = item.Code;
@@ -155,7 +163,6 @@ namespace PostexS.Helper
                     // الأعمدة الإضافية القديمة
                     if (showAll)
                     {
-                        row["الحاله"] = status;
                         row["التسويه"] = Complete;
                         row["تم دفعه"] = item.ArrivedCost;
                         row["ملاحظات المندوب"] = DriverNotes;

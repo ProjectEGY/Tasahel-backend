@@ -1,237 +1,428 @@
-﻿@model PostexS.Models.ViewModels.DriverStatisticsVM
+@model PostexS.Models.ViewModels.DriverStatisticsVM
 @{
 }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
 <style>
-    body {
-        background-color: #f8f9fa;
+    .stats-page { padding: 15px; }
+    .stats-header {
+        background: linear-gradient(135deg, #1B3764, #264D8A);
+        color: #fff;
+        padding: 25px 30px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(27,55,100,0.3);
     }
+    .stats-header h3 { margin: 0; font-weight: 700; font-size: 1.4em; }
+    .stats-header p { margin: 5px 0 0; opacity: 0.8; font-size: 0.9em; }
 
-    .panel {
-        margin-top: 20px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        border-radius: 10px;
+    /* Filter */
+    .filter-bar {
+        background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
     }
+    .filter-bar label { font-weight: 600; color: #1B3764; margin: 0; white-space: nowrap; }
+    .filter-bar input[type="date"] { border: 2px solid #EAF0F9; border-radius: 8px; padding: 6px 12px; font-size: 0.9em; }
+    .filter-bar input[type="date"]:focus { border-color: #1B3764; outline: none; }
+    .filter-bar .btn-filter { background: linear-gradient(135deg, #1B3764, #264D8A); color: #fff; border: none; padding: 7px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .filter-bar .btn-filter:hover { box-shadow: 0 4px 12px rgba(27,55,100,0.3); }
+    .filter-bar .btn-quick { background: #EAF0F9; color: #1B3764; border: 2px solid #1B3764; padding: 6px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .filter-bar .btn-quick:hover { background: #1B3764; color: #fff; }
 
-    .panel-heading {
-        background-color: #007bff;
-        color: white;
-        padding: 20px;
-        border-top-left-radius: 10px;
-        border-top-right-radius: 10px;
-        font-size: 1.5em;
+    .active-filter-info { background: #EAF0F9; border-radius: 8px; padding: 8px 15px; margin-bottom: 15px; font-size: 0.9em; color: #1B3764; font-weight: 600; }
+    .active-filter-info i { color: #F5A623; margin-left: 5px; }
+
+    /* Sticky Sidebar */
+    .sidebar-sticky { position: sticky; top: 15px; }
+    .live-panel {
+        background: #fff; border-radius: 14px; box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+        overflow: hidden;
     }
-
-    .panel-title {
-        margin: 0;
+    .live-panel-header {
+        background: linear-gradient(135deg, #F5A623, #E8960F);
+        color: #fff; padding: 16px 18px; text-align: center; position: relative;
     }
+    .live-panel-header h5 { margin: 0; font-weight: 700; font-size: 1em; }
+    .live-dot { display: inline-block; width: 8px; height: 8px; background: #fff; border-radius: 50%; margin-left: 6px; animation: livePulse 1.5s ease-in-out infinite; }
+    @@keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
 
-    .stat-value {
-        font-size: 2.5em;
-        font-weight: bold;
-        color: #007bff;
-        margin-bottom: 10px;
+    .live-counter-row {
+        display: flex; justify-content: space-around; padding: 14px 10px;
+        background: linear-gradient(135deg, #142B50, #1B3764); color: #fff;
     }
+    .live-counter-item { text-align: center; }
+    .live-counter-item .lc-num { font-size: 1.6em; font-weight: 800; line-height: 1; }
+    .live-counter-item .lc-label { font-size: 0.7em; opacity: 0.8; margin-top: 2px; }
 
-    .percentage {
-        font-size: 1.2em;
-        color: #28a745;
+    .live-list { padding: 0; margin: 0; list-style: none; }
+    .live-list li {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 10px 16px; border-bottom: 1px solid #f0f2f8; font-size: 0.88em;
     }
+    .live-list li:last-child { border-bottom: none; }
+    .live-list .ll-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.85em; margin-left: 8px; flex-shrink: 0; }
+    .live-list .ll-text { flex: 1; font-weight: 600; color: #444; }
+    .live-list .ll-val { font-weight: 800; color: #1B3764; font-size: 1.1em; }
 
-    .panel-body {
-        padding: 30px;
+    .live-ready-box {
+        margin: 12px 14px; padding: 14px; background: linear-gradient(135deg, #2e7d32, #43a047);
+        border-radius: 10px; text-align: center; color: #fff;
     }
+    .live-ready-box .lr-num { font-size: 2em; font-weight: 900; line-height: 1; }
+    .live-ready-box .lr-label { font-size: 0.82em; opacity: 0.9; margin-top: 3px; }
 
-    .stat-card {
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s;
-        background-color: #ffffff;
-        padding: 20px;
-        min-height: 200px; /* حدد ارتفاع ثابت */
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+    .live-panel-footer { padding: 10px 14px 14px; }
+    .live-panel-footer a {
+        display: block; text-align: center; background: #1B3764; color: #fff; padding: 8px;
+        border-radius: 8px; font-weight: 600; font-size: 0.88em; text-decoration: none;
     }
+    .live-panel-footer a:hover { background: #264D8A; color: #fff; }
 
-        .stat-card:hover {
-            transform: translateY(-7px);
-            background-color: #79ff87;
-        }
+    /* Stat Cards */
+    .stat-card-new { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: hidden; transition: transform 0.3s, box-shadow 0.3s; margin-bottom: 15px; }
+    .stat-card-new:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(27,55,100,0.15); }
+    .stat-card-icon { display: flex; align-items: center; justify-content: center; width: 50px; height: 50px; border-radius: 12px; font-size: 1.3em; margin: 0 auto 10px; }
+    .stat-card-body { padding: 20px; text-align: center; }
+    .stat-card-body .stat-num { font-size: 2.2em; font-weight: 800; color: #1B3764; line-height: 1; margin-bottom: 5px; }
+    .stat-card-body .stat-label { font-size: 0.95em; color: #6c757d; font-weight: 600; }
+    .stat-card-body .stat-percent { font-size: 0.85em; color: #F5A623; font-weight: 700; margin-top: 3px; }
+    .stat-card-body hr { border-top: 1px solid #EAF0F9; margin: 12px 0; }
+    .stat-sub-row { display: flex; justify-content: space-around; }
+    .stat-sub-item { text-align: center; }
+    .stat-sub-item .sub-num { font-size: 1.5em; font-weight: 700; color: #264D8A; }
+    .stat-sub-item .sub-label { font-size: 0.8em; color: #999; font-weight: 600; }
 
-        .stat-card .stat-value {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #007bff;
-            margin-bottom: 10px;
-        }
+    .icon-blue { background: rgba(27,55,100,0.1); color: #1B3764; }
+    .icon-green { background: rgba(46,125,50,0.1); color: #2e7d32; }
+    .icon-red { background: rgba(211,47,47,0.1); color: #d32f2f; }
+    .icon-orange { background: rgba(245,166,35,0.1); color: #F5A623; }
+    .icon-purple { background: rgba(106,27,154,0.1); color: #6a1b9a; }
+    .icon-teal { background: rgba(0,105,92,0.1); color: #00695c; }
 
-        .stat-card .sub-title {
-            font-size: 1.2em;
-            color: #6c757d;
-            font-weight: 600;
-        }
+    /* Highlight cards */
+    .highlight-card { border-radius: 16px; padding: 25px 15px; text-align: center; color: #fff; margin-bottom: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.15); position: relative; overflow: hidden; }
+    .highlight-card::before { content:''; position:absolute; top:-25px; left:-25px; width:80px; height:80px; background:rgba(255,255,255,0.1); border-radius:50%; }
+    .highlight-card .highlight-icon { font-size: 1.8em; margin-bottom: 8px; display: block; }
+    .highlight-card .highlight-num { font-size: 3em; font-weight: 900; line-height: 1; margin-bottom: 4px; }
+    .highlight-card .highlight-label { font-size: 1em; font-weight: 600; opacity: 0.9; }
 
-        .stat-card hr {
-            border-top: 1px solid #eeeeee;
-            margin: 20px 0;
-        }
+    /* Money cards */
+    .money-card { background: linear-gradient(135deg, #1B3764, #264D8A); color: #fff; border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(27,55,100,0.2); }
+    .money-card .money-val { font-size: 1.8em; font-weight: 800; }
+    .money-card .money-label { opacity: 0.85; font-size: 0.85em; margin-top: 4px; }
+    .money-card.gold { background: linear-gradient(135deg, #F5A623, #E8960F); }
 
-        .stat-card .d-flex {
-            display: flex;
-            justify-content: space-between;
-        }
+    /* Financial / Settlements */
+    .financial-section, .settlements-section { background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    .financial-section h5, .settlements-section h5 { color: #1B3764; font-weight: 700; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #EAF0F9; }
+    .fin-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f5f5f5; font-size: 1em; }
+    .fin-row:last-child { border-bottom: none; }
+    .fin-row .fin-label { color: #555; font-weight: 600; }
+    .fin-row .fin-value { color: #1B3764; font-weight: 800; }
+    .fin-row.total { background: #EAF0F9; padding: 12px 15px; border-radius: 8px; margin-top: 8px; border-bottom: none; }
+    .fin-row.total .fin-label { color: #1B3764; font-size: 1.1em; }
+    .fin-row.total .fin-value { color: #F5A623; font-size: 1.2em; }
 
-            .stat-card .d-flex div {
-                flex: 1;
-                text-align: center;
-            }
+    .settlements-table { width: 100%; border-collapse: collapse; }
+    .settlements-table thead th { background: #1B3764; color: #fff; padding: 12px 15px; font-weight: 600; font-size: 0.9em; text-align: center; }
+    .settlements-table thead th:first-child { border-radius: 8px 0 0 0; }
+    .settlements-table thead th:last-child { border-radius: 0 8px 0 0; }
+    .settlements-table tbody td { padding: 12px 15px; text-align: center; border-bottom: 1px solid #EAF0F9; font-size: 0.95em; }
+    .settlements-table tbody tr:hover { background: #f8f9ff; }
+    .badge-type { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; }
+    .badge-deliver { background: #e8f5e9; color: #2e7d32; }
+    .badge-return { background: #fff3e0; color: #e65100; }
+    .btn-details { background: #264D8A; color: #fff; border: none; padding: 4px 12px; border-radius: 6px; font-size: 0.85em; text-decoration: none; }
+    .btn-details:hover { background: #1B3764; color: #fff; }
+    .no-data { text-align: center; padding: 30px; color: #999; font-size: 1em; }
+    .no-data i { font-size: 2em; display: block; margin-bottom: 10px; color: #ddd; }
 
-            .stat-card .d-flex .stat-value {
-                font-size: 2em;
-                margin-bottom: 5px;
-            }
-
-    .mt-4 {
-        margin-top: 1.5rem !important;
-    }
-
+    .chart-section { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 15px; }
+    .chart-section h5 { color: #1B3764; font-weight: 700; margin-bottom: 15px; }
 </style>
 
-<div class="container">
-    <div class="panel panel-primary">
-        <div class="panel-heading">
-            <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> @ViewBag.Title</h3>
+<div class="stats-page">
+    <!-- Header -->
+    <div class="stats-header">
+        <h3><i class="fa fa-motorcycle"></i> @ViewBag.Title</h3>
+        <p>إحصائيات شاملة للمندوب - الطلبات والتقفيلات والأرقام المالية</p>
+    </div>
+
+    <!-- Date Filter -->
+    <form method="get" class="filter-bar" id="filterForm">
+        <label><i class="fa fa-calendar"></i> من:</label>
+        <input type="date" name="from" id="fromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" />
+        <label><i class="fa fa-calendar"></i> إلى:</label>
+        <input type="date" name="to" id="toDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" />
+        <button type="submit" class="btn-filter"><i class="fa fa-search"></i> بحث</button>
+        <a href="javascript:void(0)" onclick="setToday()" class="btn-quick"><i class="fa fa-clock-o"></i> اليوم</a>
+        <a href="javascript:void(0)" onclick="setLastWeek()" class="btn-quick"><i class="fa fa-calendar-check-o"></i> آخر أسبوع</a>
+        <a href="@Url.Action("DriverStatistics", new { id = Context.Request.Query["id"].FirstOrDefault() ?? Context.Request.RouteValues["id"] })" class="btn-quick"><i class="fa fa-refresh"></i> الكل</a>
+    </form>
+
+    @if (Model.FromDate.HasValue || Model.ToDate.HasValue)
+    {
+        <div class="active-filter-info">
+            <i class="fa fa-filter"></i> الفلتر النشط:
+            @if (Model.FromDate.HasValue) { <span>من @Model.FromDate.Value.ToString("dd/MM/yyyy")</span> }
+            @if (Model.ToDate.HasValue) { <span>إلى @Model.ToDate.Value.ToString("dd/MM/yyyy")</span> }
         </div>
-        <div class="panel-body">
+    }
+
+    <!-- Main Layout: Content + Sticky Sidebar -->
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <!-- Highlight Cards -->
             <div class="row">
                 <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.AllOrdersCount</div>
-                            <div>إجمالي الطلبات</div>
-                        </div>
+                    <div class="highlight-card" style="background: linear-gradient(135deg, #F5A623, #E8960F);">
+                        <i class="fa fa-motorcycle highlight-icon"></i>
+                        <div class="highlight-num">@Model.CurrentOrdersCount</div>
+                        <div class="highlight-label">شحنات حالية مع المندوب</div>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.CurrentOrdersCount</div>
-                            <div>الطلبات الحالية</div>
-                        </div>
+                    <div class="highlight-card" style="background: linear-gradient(135deg, #1B3764, #264D8A);">
+                        <i class="fa fa-cubes highlight-icon"></i>
+                        <div class="highlight-num">@Model.AllOrdersCount</div>
+                        <div class="highlight-label">إجمالي الطلبات</div>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.RejectedCount</div>
-                            <div>الطلبات المرفوضة</div>
+                    <div class="highlight-card" style="background: linear-gradient(135deg, #2e7d32, #43a047);">
+                        <i class="fa fa-check-circle highlight-icon"></i>
+                        <div class="highlight-num">@Model.DeliveredCount</div>
+                        <div class="highlight-label">تم التسليم</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Stats -->
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-card-new">
+                        <div class="stat-card-body">
+                            <div class="stat-card-icon icon-green"><i class="fa fa-check-circle"></i></div>
+                            <div class="stat-num">@Model.DeliveredCount</div>
+                            <div class="stat-label">المستلمة</div>
+                            <div class="stat-percent">@Model.DeliveredPercentage.ToString("0.00")%</div>
+                            <hr />
+                            <div class="stat-sub-row">
+                                <div class="stat-sub-item">
+                                    <div class="sub-num">@Model.DeliveredFinishedCount</div>
+                                    <div class="sub-label">تم تقفيلها</div>
+                                </div>
+                                <div class="stat-sub-item">
+                                    <div class="sub-num">@(Model.DeliveredCount - Model.DeliveredFinishedCount)</div>
+                                    <div class="sub-label">لم يتم التقفيل</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card-new">
+                        <div class="stat-card-body">
+                            <div class="stat-card-icon icon-red"><i class="fa fa-times-circle"></i></div>
+                            <div class="stat-num">@Model.RejectedCount</div>
+                            <div class="stat-label">المرفوضة</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card-new">
+                        <div class="stat-card-body">
+                            <div class="stat-card-icon icon-orange"><i class="fa fa-pause-circle"></i></div>
+                            <div class="stat-num">@Model.WaitingCount</div>
+                            <div class="stat-label">المؤجلة</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card-new">
+                        <div class="stat-card-body">
+                            <div class="stat-card-icon icon-purple"><i class="fa fa-adjust"></i></div>
+                            <div class="stat-num">@Model.PartialDeliveredCount</div>
+                            <div class="stat-label">تسليم جزئي</div>
+                            <div class="stat-percent">@Model.PartialDeliveredPercentage.ToString("0.00")%</div>
+                            <hr />
+                            <div class="stat-sub-row">
+                                <div class="stat-sub-item">
+                                    <div class="sub-num">@Model.PartialReturned_ReceivedCount</div>
+                                    <div class="sub-label">تم تسليم المرتجع</div>
+                                </div>
+                                <div class="stat-sub-item">
+                                    <div class="sub-num">@(Model.PartialDeliveredCount - Model.PartialReturned_ReceivedCount)</div>
+                                    <div class="sub-label">لم يتم التسليم</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="row mt-4">
-                <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.WaitingCount</div>
-                            <div class="sub-title">الطلبات المؤجله</div>
-                            <hr>
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <div class="stat-value">@Model.Returned_ReceivedCount</div>
-                                    <div class="sub-title">تم التسليم للفرع </div>
+
+            <!-- Returns + Chart -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="stat-card-new">
+                        <div class="stat-card-body">
+                            <div class="stat-card-icon icon-teal"><i class="fa fa-undo"></i></div>
+                            <div class="stat-num">@Model.ReturnedCount</div>
+                            <div class="stat-label">إجمالي المرتجعات الكاملة</div>
+                            <div class="stat-percent">@Model.ReturnedPercentage.ToString("0.00")%</div>
+                            <hr />
+                            <div class="stat-sub-row">
+                                <div class="stat-sub-item">
+                                    <div class="sub-num">@Model.Returned_ReceivedCount</div>
+                                    <div class="sub-label">تم التسليم للفرع</div>
                                 </div>
-                                <div>
-                                    <div class="stat-value">@(Model.ReturnedCount - Model.Returned_ReceivedCount)</div>
-                                    <div class="sub-title">لم يتم التسليم</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.DeliveredCount</div>
-                            <div class="sub-title">الطلبات المستلمة</div>
-                            <div class="percentage">(@Model.DeliveredPercentage.ToString("0.00")%)</div>
-                            <hr>
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <div class="stat-value">@Model.DeliveredFinishedCount</div>
-                                    <div class="sub-title">تم تقفيلها </div>
-                                </div>
-                                <div>
-                                    <div class="stat-value">@(Model.DeliveredCount - Model.DeliveredFinishedCount)</div>
-                                    <div class="sub-title">لم يتم التقفيل</div>
+                                <div class="stat-sub-item">
+                                    <div class="sub-num">@(Model.ReturnedCount - Model.Returned_ReceivedCount)</div>
+                                    <div class="sub-label">لم يتم التسليم</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.PartialDeliveredCount</div>
-                            <div class="sub-title">الطلبات المستلمة جزئياً</div>
-                            <div class="percentage">(@Model.PartialDeliveredPercentage.ToString("0.00")%)</div>
-                            <hr>
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <div class="stat-value">@Model.PartialReturned_ReceivedCount</div>
-                                    <div class="sub-title">تم تسليم المرتجع </div>
-                                </div>
-                                <div>
-                                    <div class="stat-value">@(Model.PartialDeliveredCount - Model.PartialReturned_ReceivedCount)</div>
-                                    <div class="sub-title">لم يتم تسليم المرتجع</div>
-                                </div>
-                            </div>
-                        </div>
+                <div class="col-md-6">
+                    <div class="chart-section">
+                        <h5><i class="fa fa-bar-chart"></i> رسم بياني</h5>
+                        <canvas id="ordersChart"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="row mt-4">
+
+            <!-- Financial Summary -->
+            <div class="row">
                 <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.ReturnedCount</div>
-                            <div class="sub-title">إجمالي المرتجعات الكامله</div>
-                            <div class="percentage">(@Model.ReturnedPercentage.ToString("0.00")%)</div>
-                            <hr>
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <div class="stat-value">@Model.Returned_ReceivedCount</div>
-                                    <div class="sub-title">تم التسليم للفرع </div>
-                                </div>
-                                <div>
-                                    <div class="stat-value">@(Model.ReturnedCount - Model.Returned_ReceivedCount)</div>
-                                    <div class="sub-title">لم يتم التسليم</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="money-card"><div class="money-val"><i class="fa fa-money"></i> @Model.OrdersMoney.ToString("N0") ج</div><div class="money-label">إجمالي المبالغ المحصلة</div></div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.OrdersMoney ج</div>
-                            <div>إجمالي المبلغ</div>
-                        </div>
-                    </div>
+                    <div class="money-card gold"><div class="money-val"><i class="fa fa-truck"></i> @Model.DriverMoney.ToString("N0") ج</div><div class="money-label">إجمالي نسبة المندوب</div></div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card stat-card text-center">
-                        <div class="card-body">
-                            <div class="stat-value">@Model.DriverMoney ج</div>
-                            <div>نسبة المندوب</div>
-                        </div>
-                    </div>
+                    <div class="money-card" style="background: linear-gradient(135deg, #2e7d32, #43a047);"><div class="money-val"><i class="fa fa-building"></i> @Model.SystemMoney.ToString("N0") ج</div><div class="money-label">نسبة الشركة</div></div>
                 </div>
             </div>
-            <div class="row mt-4">
-                <div class="col-md-12">
-                    <canvas id="ordersChart"></canvas>
+
+            <!-- Financial Details -->
+            <div class="financial-section">
+                <h5><i class="fa fa-calculator"></i> التفاصيل المالية للمندوب</h5>
+                <div class="fin-row">
+                    <span class="fin-label"><i class="fa fa-tag"></i> عمولة المندوب لكل شحنة</span>
+                    <span class="fin-value">@Model.DriverDeliveryCostPerOrder.ToString("N0") ج</span>
+                </div>
+                <div class="fin-row">
+                    <span class="fin-label"><i class="fa fa-check"></i> عدد الشحنات المسلمة في الفترة</span>
+                    <span class="fin-value">@Model.DeliveredCount شحنة</span>
+                </div>
+                <div class="fin-row">
+                    <span class="fin-label"><i class="fa fa-money"></i> إجمالي مبالغ التوصيل من الطلبات</span>
+                    <span class="fin-value">@Model.TotalDriverProfit.ToString("N0") ج</span>
+                </div>
+                <div class="fin-row total">
+                    <span class="fin-label"><i class="fa fa-star"></i> صافي ربح المندوب (العمولة × الشحنات المسلمة)</span>
+                    <span class="fin-value">@((Model.DriverDeliveryCostPerOrder * Model.DeliveredCount).ToString("N0")) ج</span>
+                </div>
+            </div>
+
+            <!-- Settlements Table -->
+            <div class="settlements-section">
+                <h5><i class="fa fa-list-alt"></i> تقفيلات المندوب</h5>
+                @if (Model.Settlements != null && Model.Settlements.Count > 0)
+                {
+                    <table class="settlements-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>التاريخ</th>
+                                <th>عدد الطلبات</th>
+                                <th>المبلغ</th>
+                                <th>النوع</th>
+                                <th>تفاصيل</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ var counter = 1; }
+                            @foreach (var s in Model.Settlements)
+                            {
+                                <tr>
+                                    <td>@counter</td>
+                                    <td>@s.Date.ToString("dd/MM/yyyy hh:mm tt")</td>
+                                    <td><strong>@s.OrderCount</strong></td>
+                                    <td><strong>@s.TotalAmount.ToString("N0") ج</strong></td>
+                                    <td><span class="badge-type @(s.TransactionTypeName.Contains("تسليم") ? "badge-deliver" : "badge-return")">@s.TransactionTypeName</span></td>
+                                    <td><a href="/Orders/WalletOrdersView?walletId=@s.WalletId" target="_blank" class="btn-details"><i class="fa fa-eye"></i> عرض</a></td>
+                                </tr>
+                                counter++;
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="no-data"><i class="fa fa-inbox"></i> لا توجد تقفيلات في هذه الفترة</div>
+                }
+            </div>
+        </div>
+
+        <!-- Sticky Sidebar: Live Stats -->
+        <div class="col-md-3">
+            <div class="sidebar-sticky">
+                <div class="live-panel">
+                    <div class="live-panel-header">
+                        <h5><i class="fa fa-bolt"></i> الطلبات الحالية <span class="live-dot"></span></h5>
+                    </div>
+                    <div class="live-counter-row">
+                        <div class="live-counter-item">
+                            <div class="lc-num">@Model.LiveAllCount</div>
+                            <div class="lc-label">الإجمالي</div>
+                        </div>
+                        <div class="live-counter-item">
+                            <div class="lc-num">@Model.LiveCurrentCount</div>
+                            <div class="lc-label">مع المندوب</div>
+                        </div>
+                        <div class="live-counter-item">
+                            <div class="lc-num">@Model.LiveDeliveredCount</div>
+                            <div class="lc-label">تم التسليم</div>
+                        </div>
+                    </div>
+                    <ul class="live-list">
+                        <li>
+                            <span class="ll-icon" style="background:rgba(46,125,50,0.1);color:#2e7d32;"><i class="fa fa-check"></i></span>
+                            <span class="ll-text">مستلمة</span>
+                            <span class="ll-val">@Model.LiveDeliveredCount</span>
+                        </li>
+                        <li>
+                            <span class="ll-icon" style="background:rgba(245,166,35,0.1);color:#F5A623;"><i class="fa fa-pause"></i></span>
+                            <span class="ll-text">مؤجلة</span>
+                            <span class="ll-val">@Model.LiveWaitingCount</span>
+                        </li>
+                        <li>
+                            <span class="ll-icon" style="background:rgba(211,47,47,0.1);color:#d32f2f;"><i class="fa fa-times"></i></span>
+                            <span class="ll-text">مرفوضة</span>
+                            <span class="ll-val">@Model.LiveRejectedCount</span>
+                        </li>
+                        <li>
+                            <span class="ll-icon" style="background:rgba(0,105,92,0.1);color:#00695c;"><i class="fa fa-undo"></i></span>
+                            <span class="ll-text">مرتجعة</span>
+                            <span class="ll-val">@Model.LiveReturnedCount</span>
+                        </li>
+                        <li>
+                            <span class="ll-icon" style="background:rgba(106,27,154,0.1);color:#6a1b9a;"><i class="fa fa-adjust"></i></span>
+                            <span class="ll-text">جزئي</span>
+                            <span class="ll-val">@Model.LivePartialDeliveredCount</span>
+                        </li>
+                    </ul>
+                    <div class="live-ready-box">
+                        <div class="lr-num">@Model.LiveReadyForFinishCount</div>
+                        <div class="lr-label"><i class="fa fa-lock"></i> جاهزة للتقفيل</div>
+                    </div>
+                    <div class="live-panel-footer">
+                        <a href="@Url.Action("CurrentStatistics", "Users", new { id = Context.Request.Query["id"].FirstOrDefault() ?? Context.Request.RouteValues["id"] })" target="_blank">
+                            <i class="fa fa-external-link"></i> عرض التفاصيل الكاملة
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -239,32 +430,33 @@
 </div>
 
 <script>
-    var count = @Model.AllOrdersCount
-                                                                            var ctx = document.getElementById('ordersChart').getContext('2d');
-    var ordersChart = new Chart(ctx, {
+    function setToday() {
+        var today = new Date().toISOString().split('T')[0];
+        document.getElementById('fromDate').value = today;
+        document.getElementById('toDate').value = today;
+        document.getElementById('filterForm').submit();
+    }
+    function setLastWeek() {
+        var today = new Date();
+        var lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        document.getElementById('fromDate').value = lastWeek.toISOString().split('T')[0];
+        document.getElementById('toDate').value = today.toISOString().split('T')[0];
+        document.getElementById('filterForm').submit();
+    }
+
+    var count = @Model.AllOrdersCount;
+    var ctx = document.getElementById('ordersChart').getContext('2d');
+    new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['الطلبات الحاليه', 'طلبات تم التوصيل', 'طلبات مرفوضه', 'طلبات تسليم جزئي', 'طلبات مؤجله', 'طلبات مرتجعه'],
+            labels: ['حالية', 'مستلمة', 'مرفوضة', 'جزئي', 'مؤجلة', 'مرتجعة'],
             datasets: [{
                 label: 'جميع الطلبات: ' + count,
                 data: [@Model.CurrentOrdersCount, @Model.DeliveredCount, @Model.RejectedCount, @Model.PartialDeliveredCount, @Model.WaitingCount, @Model.ReturnedCount],
-                backgroundColor: [
-                    '#007bff',
-                    '#28a745',
-                    '#dc3545',
-                    '#ffc107',
-                    '#17a2b8',
-                    '#6c757d'
-                ]
+                backgroundColor: ['#264D8A', '#2e7d32', '#d32f2f', '#6a1b9a', '#F5A623', '#00695c'],
+                borderRadius: 6
             }]
         },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
+        options: { responsive: true, scales: { yAxes: [{ ticks: { beginAtZero: true } }] } }
     });
 </script>

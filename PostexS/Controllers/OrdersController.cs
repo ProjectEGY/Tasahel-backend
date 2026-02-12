@@ -1,4 +1,4 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Authorization;
@@ -1507,7 +1507,7 @@ namespace PostexS.Controllers
                                         await _Histories.Update(history);
                                         //                                    await _CRUDHistory.Update(history.Id);
                                     }
-                                    
+
                                     // Send WhatsApp message to sender's group when order is completed
                                     //await _wapilotService.EnqueueOrderStatusUpdateAsync(order, _userManger.GetUserId(User), "تم تقفيل الطلب");
                                 }
@@ -2601,7 +2601,7 @@ namespace PostexS.Controllers
         public IActionResult ExportToExecl(List<long> OrdersId,
             bool showProductName = false, bool showSenderPhone = false, bool showSenderName = false,
             bool showOrderCost = false, bool showDeliveryFees = false, bool showClientCode = false,
-            bool useCustomColumns = false)
+            bool showStatus = false, bool useCustomColumns = false)
         {
             List<Order> Orders = new List<Order>();
             bool auth = User.IsInRole("Client");
@@ -2626,7 +2626,8 @@ namespace PostexS.Controllers
                     ShowSenderName = showSenderName,
                     ShowOrderCost = showOrderCost,
                     ShowDeliveryFees = showDeliveryFees,
-                    ShowClientCode = showClientCode
+                    ShowClientCode = showClientCode,
+                    ShowStatus = showStatus
                 };
                 dt = ExcelExport.OrderExportWithOptions(Orders, options);
             }
@@ -2715,15 +2716,16 @@ namespace PostexS.Controllers
                         worksheet.Cell(row, c++).Value = DeliveryName;
                         worksheet.Cell(row, c++).Value = item.Notes ?? "";
 
-                        // الأعمدة الاختيارية
+                        // الأعمدة الاختيارية (سعر الشحن في صفحة الطباعة = تم تسديده - نسبة الراسل، محسوب من القيم المحفوظة)
                         if (colProductName > 0) worksheet.Cell(row, colProductName).Value = "";
                         if (colSenderPhone > 0) worksheet.Cell(row, colSenderPhone).Value = item.Client?.PhoneNumber ?? "";
                         if (colSenderName > 0) worksheet.Cell(row, colSenderName).Value = item.Client?.Name ?? "";
                         if (colOrderCost > 0) worksheet.Cell(row, colOrderCost).Value = item.Cost;
-                        if (colDeliveryFees > 0) worksheet.Cell(row, colDeliveryFees).Value = item.DeliveryFees;
+                        if (colDeliveryFees > 0)
+                            worksheet.Cell(row, colDeliveryFees).Value = item.OrderCompleted == OrderCompleted.OK ? (item.ArrivedCost - item.ClientCost) : item.DeliveryFees;
                         if (colClientCode > 0) worksheet.Cell(row, colClientCode).Value = item.ClientCode ?? "";
 
-                        // أعمدة المحفظة
+                        // أعمدة المحفظة: نسبة الراسل من DB، الباقي محسوب عند التصدير فقط
                         worksheet.Cell(row, colArrivedCost).Value = item.ArrivedCost;
                         worksheet.Cell(row, colClientCost).Value = item.ClientCost;
                         worksheet.Cell(row, colDriverNotes).Value = lastOrderNoteContent;
@@ -2813,21 +2815,23 @@ namespace PostexS.Controllers
                         worksheet.Cell(row, c++).Value = DeliveryName;
                         worksheet.Cell(row, c++).Value = item.Notes ?? "";
 
-                        // الأعمدة الاختيارية
+                        // الأعمدة الاختيارية: نسبة الراسل من DB، تكلفة الشحن = تم تسديده - نسبة الراسل، والربح منها
                         if (colProductName > 0) worksheet.Cell(row, colProductName).Value = "";
                         if (colSenderPhone > 0) worksheet.Cell(row, colSenderPhone).Value = item.Client?.PhoneNumber ?? "";
                         if (colSenderName > 0) worksheet.Cell(row, colSenderName).Value = item.Client?.Name ?? "";
                         if (colOrderCost > 0) worksheet.Cell(row, colOrderCost).Value = item.Cost;
-                        if (colDeliveryFeesOpt > 0) worksheet.Cell(row, colDeliveryFeesOpt).Value = item.DeliveryFees;
+                        if (colDeliveryFeesOpt > 0)
+                            worksheet.Cell(row, colDeliveryFeesOpt).Value = item.OrderCompleted == OrderCompleted.OK ? (item.ArrivedCost - item.ClientCost) : item.DeliveryFees;
                         if (colClientCode > 0) worksheet.Cell(row, colClientCode).Value = item.ClientCode ?? "";
 
-                        // أعمدة المحفظة (أدمن)
+                        // أعمدة المحفظة: نسبة الراسل من DB، تكلفة الشحن والربح محسوبان عند التصدير فقط
                         worksheet.Cell(row, colArrivedCost).Value = item.ArrivedCost;
                         worksheet.Cell(row, colClientCost).Value = item.ClientCost;
                         worksheet.Cell(row, colDriverNotes).Value = lastOrderNoteContent;
                         worksheet.Cell(row, colDriverCommission).Value = item.DeliveryCost;
-                        worksheet.Cell(row, colNetProfit).Value = item.DeliveryFees - item.DeliveryCost;
-
+                        double calculatedDeliveryFees = item.OrderCompleted == OrderCompleted.OK ? (item.ArrivedCost - item.ClientCost) : item.DeliveryFees;
+                        double netProfit = calculatedDeliveryFees - item.DeliveryCost;
+                        worksheet.Cell(row, colNetProfit).Value = netProfit;
                         row++;
                     }
 
@@ -3094,7 +3098,7 @@ namespace PostexS.Controllers
 
             return RedirectToAction(nameof(PrintClientOrders), new { Id = deliveryId, message = "تم تنفيذ العملية بنجاح" });
         }
-        
+
         private string GetStatusInArabic(OrderStatus status)
         {
             return status switch

@@ -1226,7 +1226,7 @@ namespace PostexS.Controllers
             return View(model);
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
-        public async Task<IActionResult> Statistics(string id)
+        public async Task<IActionResult> Statistics(string id, DateTime? from, DateTime? to)
         {
             if (!await _user.IsExist(x => x.Id == id && x.UserType == UserType.Client))
             {
@@ -1235,15 +1235,24 @@ namespace PostexS.Controllers
             var user = _user.Get(x => x.Id == id).First();
             DriverStatisticsVM model = new DriverStatisticsVM();
             model.Name = user.Name;
+            model.FromDate = from;
+            model.ToDate = to;
             ViewBag.Title = "إحصائيات الراسل : " + model.Name;
             if (user != null)
             {
-                //عدد الطلبات الحاليه
+                // الطلبات الحالية (بدون فلتر تاريخ - لقطة حالية)
                 model.CurrentOrdersCount = _orders.Get(x => x.ClientId == id &&
                         (x.Status == OrderStatus.Assigned || x.Status == OrderStatus.Waiting)
                         && !x.IsDeleted).Count();
+
                 var orders = _orders.Get(x =>
-       (x.Status != OrderStatus.PartialReturned) && !x.IsDeleted && x.ClientId == id).ToList();
+                    (x.Status != OrderStatus.PartialReturned) && !x.IsDeleted && x.ClientId == id).ToList();
+
+                // فلتر بالتاريخ
+                if (from.HasValue)
+                    orders = orders.Where(x => x.CreateOn >= from.Value.Date).ToList();
+                if (to.HasValue)
+                    orders = orders.Where(x => x.CreateOn < to.Value.Date.AddDays(1)).ToList();
 
                 model.ReturnedCount = orders.Count(x => x.Status == OrderStatus.Returned);
                 model.PartialDeliveredCount = orders.Count(x => x.Status == OrderStatus.PartialDelivered);
@@ -1267,11 +1276,28 @@ namespace PostexS.Controllers
                     model.DeliveredPercentage = (double)model.DeliveredCount / model.AllOrdersCount * 100;
                     model.ReturnedPercentage = (double)model.ReturnedCount / model.AllOrdersCount * 100;
                 }
+
+                // Live stats (بدون فلتر - الطلبات الحالية غير المقفلة)
+                var liveOrders = _orders.Get(x =>
+                    (x.Status == OrderStatus.Delivered || x.Status == OrderStatus.Waiting
+                    || x.Status == OrderStatus.Rejected || x.Status == OrderStatus.PartialDelivered
+                    || x.Status == OrderStatus.Returned)
+                    && !x.Finished && !x.IsDeleted && x.ClientId == id).ToList();
+                model.LiveCurrentCount = model.CurrentOrdersCount;
+                model.LiveDeliveredCount = liveOrders.Count(x => x.Status == OrderStatus.Delivered);
+                model.LiveWaitingCount = liveOrders.Count(x => x.Status == OrderStatus.Waiting);
+                model.LiveRejectedCount = liveOrders.Count(x => x.Status == OrderStatus.Rejected);
+                model.LiveReturnedCount = liveOrders.Count(x => x.Status == OrderStatus.Returned);
+                model.LivePartialDeliveredCount = liveOrders.Count(x => x.Status == OrderStatus.PartialDelivered);
+                model.LiveReadyForFinishCount = liveOrders.Count(x =>
+                    (x.Status == OrderStatus.Delivered || x.Status == OrderStatus.PartialDelivered
+                    || x.Status == OrderStatus.Returned) && !x.Finished);
+                model.LiveAllCount = model.LiveCurrentCount + liveOrders.Count;
             }
             return View(model);
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
-        public async Task<IActionResult> DriverStatistics(string id)
+        public async Task<IActionResult> DriverStatistics(string id, DateTime? from, DateTime? to)
         {
             if (!await _user.IsExist(x => x.Id == id && x.UserType == UserType.Driver))
             {
@@ -1280,15 +1306,25 @@ namespace PostexS.Controllers
             var user = _user.Get(x => x.Id == id).First();
             DriverStatisticsVM model = new DriverStatisticsVM();
             model.Name = user.Name;
+            model.FromDate = from;
+            model.ToDate = to;
+            model.DriverDeliveryCostPerOrder = user.DeliveryCost ?? 0;
             ViewBag.Title = "إحصائيات المندوب : " + model.Name;
             if (user != null)
             {
-                //عدد الطلبات الحاليه
+                // الطلبات الحالية مع المندوب (بدون فلتر تاريخ)
                 model.CurrentOrdersCount = _orders.Get(x => x.DeliveryId == id &&
                         (x.Status == OrderStatus.Assigned || x.Status == OrderStatus.Waiting)
                         && !x.IsDeleted).Count();
+
                 var orders = _orders.Get(x =>
-       (x.Status != OrderStatus.PartialReturned) && !x.IsDeleted && x.DeliveryId == id).ToList();
+                    (x.Status != OrderStatus.PartialReturned) && !x.IsDeleted && x.DeliveryId == id).ToList();
+
+                // فلتر بالتاريخ
+                if (from.HasValue)
+                    orders = orders.Where(x => x.CreateOn >= from.Value.Date).ToList();
+                if (to.HasValue)
+                    orders = orders.Where(x => x.CreateOn < to.Value.Date.AddDays(1)).ToList();
 
                 model.ReturnedCount = orders.Count(x => x.Status == OrderStatus.Returned);
                 model.PartialDeliveredCount = orders.Count(x => x.Status == OrderStatus.PartialDelivered);
@@ -1305,6 +1341,8 @@ namespace PostexS.Controllers
                 var DriverMoney = orders.Where(x => x.Status != OrderStatus.PartialReturned).Sum(x => x.DeliveryCost);
                 model.DriverMoney = DriverMoney;
                 model.SystemMoney = OrdersMoney - DriverMoney;
+                model.TotalDriverProfit = DriverMoney;
+
                 // حساب النسب المئوية
                 if (model.AllOrdersCount > 0)
                 {
@@ -1312,6 +1350,42 @@ namespace PostexS.Controllers
                     model.DeliveredPercentage = (double)model.DeliveredCount / model.AllOrdersCount * 100;
                     model.ReturnedPercentage = (double)model.ReturnedCount / model.AllOrdersCount * 100;
                 }
+
+                // تقفيلات المندوب (Settlements)
+                var wallets = _wallet.Get(x =>
+                    (x.TransactionType == TransactionType.OrderComplete || x.TransactionType == TransactionType.OrderReturnedComplete)
+                    && x.ActualUserId == id).ToList();
+
+                if (from.HasValue)
+                    wallets = wallets.Where(x => x.CreateOn >= from.Value.Date).ToList();
+                if (to.HasValue)
+                    wallets = wallets.Where(x => x.CreateOn < to.Value.Date.AddDays(1)).ToList();
+
+                model.Settlements = wallets.OrderByDescending(x => x.CreateOn).Select(w => new DriverSettlementVM
+                {
+                    WalletId = w.Id,
+                    Date = w.CreateOn,
+                    OrderCount = _orders.Get(x => x.CompletedId == w.Id || x.ReturnedCompletedId == w.Id).Count(),
+                    TotalAmount = w.Amount,
+                    TransactionTypeName = w.TransactionType == TransactionType.OrderComplete ? "تقفيل تسليم" : "تقفيل مرتجع"
+                }).ToList();
+
+                // Live stats (بدون فلتر تاريخ - الطلبات الحالية غير المقفلة)
+                var liveOrders = _orders.Get(x =>
+                    (x.Status == OrderStatus.Delivered || x.Status == OrderStatus.Waiting
+                    || x.Status == OrderStatus.Rejected || x.Status == OrderStatus.PartialDelivered
+                    || x.Status == OrderStatus.Returned)
+                    && !x.Finished && !x.IsDeleted && x.DeliveryId == id).ToList();
+                model.LiveCurrentCount = model.CurrentOrdersCount;
+                model.LiveDeliveredCount = liveOrders.Count(x => x.Status == OrderStatus.Delivered);
+                model.LiveWaitingCount = liveOrders.Count(x => x.Status == OrderStatus.Waiting);
+                model.LiveRejectedCount = liveOrders.Count(x => x.Status == OrderStatus.Rejected);
+                model.LiveReturnedCount = liveOrders.Count(x => x.Status == OrderStatus.Returned);
+                model.LivePartialDeliveredCount = liveOrders.Count(x => x.Status == OrderStatus.PartialDelivered);
+                model.LiveReadyForFinishCount = liveOrders.Count(x =>
+                    (x.Status == OrderStatus.Delivered || x.Status == OrderStatus.PartialDelivered
+                    || x.Status == OrderStatus.Returned) && !x.Finished);
+                model.LiveAllCount = model.LiveCurrentCount + liveOrders.Count;
             }
             return View(model);
         }

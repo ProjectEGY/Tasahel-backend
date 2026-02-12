@@ -12,7 +12,10 @@
       "Bash(git checkout:*)",
       "Bash(dir \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\MohammedSharabash\\\\Elamr-express-backend-\" /s /b /ad)",
       "Bash(dir:*)",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(Select-String -Pattern \"error|Build succeeded|Build FAILED|Warning|Error\")",
+      "Bash(ls \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\ProjectEGY\\\\Tasahel-backend\\\\PostexS\\\\wwwroot\\\\Content\\\\Images\"\" 2>/dev/null || echo \"Not found\"; ls \"C:UsersiTsourcereposProjectEGYTasahel-backendPostexSwwwrootImages\"\")"
     ]
   }
 }
