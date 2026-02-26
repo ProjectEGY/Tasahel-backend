@@ -36,6 +36,8 @@ namespace PostexS.Models.Data
         public DbSet<LandingStatistic> LandingStatistics { get; set; }
         public DbSet<LandingTestimonial> LandingTestimonials { get; set; }
         public DbSet<LandingPartner> LandingPartners { get; set; }
+        public DbSet<CourierOrderSheet> CourierOrderSheets { get; set; }
+        public DbSet<CourierOrderSheetItem> CourierOrderSheetItems { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ApplicationUser>().

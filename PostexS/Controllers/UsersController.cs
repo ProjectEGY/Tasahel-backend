@@ -59,12 +59,15 @@ namespace PostexS.Controllers
         private readonly IWhatsAppBotCloudService _whatsAppBotCloudService;
         private readonly IWhaStackService _whaStackService;
         private readonly IWhatsAppProviderService _providerService;
+        private readonly IGeneric<CourierOrderSheet> _courierOrderSheet;
+        private readonly IGeneric<CourierOrderSheetItem> _courierOrderSheetItem;
 
         public UsersController(UserManager<ApplicationUser> userManger, IGeneric<ApplicationUser> users, IGeneric<OrderOperationHistory> histories,
             ICRUD<OrderOperationHistory> CRUDhistory, IGeneric<Order> orders, IGeneric<Branch> branch, RoleManager<IdentityRole> roleManager,
             IGeneric<Wallet> wallet, ICRUD<Order> CRUD, IWalletService walletService,
             IOrderService orderService, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IGeneric<Location> locations, IGeneric<OrderNotes> orderNotes, IWebHostEnvironment webHostEnvironment, IWapilotService wapilotService, IWhatsAppBotCloudService whatsAppBotCloudService,
-            IWhaStackService whaStackService, IWhatsAppProviderService providerService)
+            IWhaStackService whaStackService, IWhatsAppProviderService providerService,
+            IGeneric<CourierOrderSheet> courierOrderSheet, IGeneric<CourierOrderSheetItem> courierOrderSheetItem)
         {
             _userManger = userManger;
             _user = users;
@@ -86,6 +89,8 @@ namespace PostexS.Controllers
             _whatsAppBotCloudService = whatsAppBotCloudService;
             _whaStackService = whaStackService;
             _providerService = providerService;
+            _courierOrderSheet = courierOrderSheet;
+            _courierOrderSheetItem = courierOrderSheetItem;
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin,TrackingAdmin")]
         public async Task<IActionResult> Index(string q, string? message, bool deleted = false, long BranchId = -1)
@@ -1576,6 +1581,27 @@ namespace PostexS.Controllers
                             }
                         }
                     }
+                    // حفظ قائمة الأوردرات المحملة على المندوب
+                    if (OrdersPrint.Count > 0)
+                    {
+                        var sheet = new CourierOrderSheet
+                        {
+                            CourierId = model.UserId,
+                            CreatedById = _userManger.GetUserId(User),
+                            TotalOrders = OrdersPrint.Count
+                        };
+                        await _courierOrderSheet.Add(sheet);
+
+                        foreach (var orderId in OrdersPrint)
+                        {
+                            await _courierOrderSheetItem.Add(new CourierOrderSheetItem
+                            {
+                                SheetId = sheet.Id,
+                                OrderId = orderId
+                            });
+                        }
+                    }
+
                     scope.Complete();
                     //print ecxll sheet
                     string message = "تم تحميل عدد " + OrdersPrint.Count() + " طلب على المندوب : " + user.Name;

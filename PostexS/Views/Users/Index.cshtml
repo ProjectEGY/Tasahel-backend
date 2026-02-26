@@ -558,6 +558,8 @@
                                                                                                             <a asp-action="FinshedReturnedOrders" class="btn btn-danger" asp-controller="users" asp-route-id="@item.Id">تقفيل المرتجعات</a>
                                                                                                             <span>|</span>
                                             }     <a asp-action="Users" asp-controller="Orders" asp-route-id="@item.Id" asp-route-type="d">طلبات المندوب</a>
+                                                                                                            <span>|</span>
+                                                                                                            <a asp-action="CourierSheets" asp-controller="Orders" asp-route-courierId="@item.Id">قوائم الشيتات</a>
 
                                         }
                                         else if (item.UserType == PostexS.Models.Enums.UserType.Client)

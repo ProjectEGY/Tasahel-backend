@@ -15,7 +15,9 @@
       "Bash(sort:*)",
       "Bash(dotnet restore:*)",
       "Bash(Select-String -Pattern \"error|Build succeeded|Build FAILED|Warning|Error\")",
-      "Bash(ls \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\ProjectEGY\\\\Tasahel-backend\\\\PostexS\\\\wwwroot\\\\Content\\\\Images\"\" 2>/dev/null || echo \"Not found\"; ls \"C:UsersiTsourcereposProjectEGYTasahel-backendPostexSwwwrootImages\"\")"
+      "Bash(ls \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\ProjectEGY\\\\Tasahel-backend\\\\PostexS\\\\wwwroot\\\\Content\\\\Images\"\" 2>/dev/null || echo \"Not found\"; ls \"C:UsersiTsourcereposProjectEGYTasahel-backendPostexSwwwrootImages\"\")",
+      "Bash(find:*)",
+      "Bash(Select-String -Pattern \"error|Build succeeded|Build FAILED|Warning\\(s\\)|Error\\(s\\)\")"
     ]
   }
 }

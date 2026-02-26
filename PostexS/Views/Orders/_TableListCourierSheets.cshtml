@@ -1,0 +1,45 @@
+@model List<PostexS.Models.Domain.CourierOrderSheet>
+@{
+    Layout = null;
+}
+
+@foreach (var item in Model)
+{
+    var CreatedOn = TimeZoneInfo.ConvertTimeFromUtc(item.CreateOn, TimeZoneInfo.FindSystemTimeZoneById("Sudan Standard Time"));
+    <tr>
+        <td>@item.Id</td>
+        <td>
+            @if (item.Courier != null)
+            {
+                <span>@item.Courier.Name</span>
+            }
+            else
+            {
+                <span>-</span>
+            }
+        </td>
+        <td>@item.TotalOrders</td>
+        <td>
+            @CreatedOn.ToString("dd MMMM yyyy")<br />
+            @CreatedOn.ToString("hh:mm tt")
+        </td>
+        <td>
+            @if (item.CreatedBy != null)
+            {
+                <span>@item.CreatedBy.Name</span>
+            }
+            else
+            {
+                <span>-</span>
+            }
+        </td>
+        <td>
+            <a class="btn btn-success" href="/Orders/CourierSheetDetails?id=@item.Id">
+                <i class="fa fa-eye"></i> التفاصيل
+            </a>
+            <a class="btn btn-warning" href="javascript:void(0)" onclick="openExcelExport(@item.Id)">
+                <i class="fa fa-file-excel"></i> Excel
+            </a>
+        </td>
+    </tr>
+}

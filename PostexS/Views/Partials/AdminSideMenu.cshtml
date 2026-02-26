@@ -100,6 +100,11 @@
                             <i class="fa fa-home"></i> <span>مخزن المرتجعات</span>
                         </a>
                     </li>
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("orders/couriersheets") ? "active" : "")">
+                        <a href="@Url.Action("CourierSheets", "Orders")">
+                            <i class="fa fa-list-alt"></i> <span>قوائم تحميل المندوبين</span>
+                        </a>
+                    </li>
                 }
             }
             @* <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("video") ? "active" : "")">

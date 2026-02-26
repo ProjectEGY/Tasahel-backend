@@ -67,9 +67,12 @@ namespace PostexS.Controllers
         private readonly IWapilotService _wapilotService;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly IGeneric<CourierOrderSheet> _courierOrderSheet;
+        private readonly IGeneric<CourierOrderSheetItem> _courierOrderSheetItem;
         public OrdersController(IGeneric<ApplicationUser> users, IGeneric<Order> orders, IGeneric<OrderOperationHistory> histories
             , ICRUD<Order> CRUD, ICRUD<OrderOperationHistory> CRUDhistory, IGeneric<OrderNotes> notes, IGeneric<Branch> branch,
-            IOrderService orderService, IGeneric<OrderTransferrHistory> TransferHistories, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IWebHostEnvironment webHostEnvironment, UserManager<ApplicationUser> userManger, IGeneric<OrderNotes> OrderNotes, IGeneric<Wallet> wallet, IWapilotService wapilotService, IHttpClientFactory httpClientFactory, IServiceScopeFactory serviceScopeFactory)
+            IOrderService orderService, IGeneric<OrderTransferrHistory> TransferHistories, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IWebHostEnvironment webHostEnvironment, UserManager<ApplicationUser> userManger, IGeneric<OrderNotes> OrderNotes, IGeneric<Wallet> wallet, IWapilotService wapilotService, IHttpClientFactory httpClientFactory, IServiceScopeFactory serviceScopeFactory,
+            IGeneric<CourierOrderSheet> courierOrderSheet, IGeneric<CourierOrderSheetItem> courierOrderSheetItem)
         {
             _orderService = orderService;
             _users = users;
@@ -90,6 +93,8 @@ namespace PostexS.Controllers
             _wapilotService = wapilotService;
             _httpClientFactory = httpClientFactory;
             _serviceScopeFactory = serviceScopeFactory;
+            _courierOrderSheet = courierOrderSheet;
+            _courierOrderSheetItem = courierOrderSheetItem;
         }
 
         [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin,TrackingAdmin")]
@@ -3536,5 +3541,109 @@ namespace PostexS.Controllers
 
             return Ok(new { success = true, message = "تم تحديث حالة الطباعة بنجاح" });
         }
+
+        #region قوائم تحميل المندوبين
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
+        public async Task<IActionResult> CourierSheets(string courierId = "0", DateTime? FilterTime = null, DateTime? FilterTimeTo = null, int pageNumber = 1, int pageSize = 50)
+        {
+            var drivers = _users.Get(x => !x.IsDeleted && x.UserType == Models.Enums.UserType.Driver).ToList();
+            ViewBag.Drivers = drivers;
+            ViewBag.CourierId = courierId;
+            ViewBag.FilterTime = FilterTime;
+            ViewBag.FilterTimeTo = FilterTimeTo;
+
+            bool filterByCourier = courierId != "0" && !string.IsNullOrEmpty(courierId);
+            var filterTimeDate = FilterTime.HasValue ? FilterTime.Value.Date : DateTime.MinValue;
+            var filterTimeToDate = FilterTimeTo.HasValue ? FilterTimeTo.Value.Date.AddDays(1) : DateTime.MaxValue;
+
+            Expression<Func<CourierOrderSheet, bool>> filter = x => !x.IsDeleted
+                && (!filterByCourier || x.CourierId == courierId)
+                && (!FilterTime.HasValue || x.CreateOn >= filterTimeDate)
+                && (!FilterTimeTo.HasValue || x.CreateOn <= filterTimeToDate);
+
+            Func<IQueryable<CourierOrderSheet>, IOrderedQueryable<CourierOrderSheet>> orderBy = o => o.OrderByDescending(c => c.Id);
+            var sheets = await PagedList<CourierOrderSheet>.CreateAsync(
+                _courierOrderSheet.GetAllAsIQueryable(filter, orderBy, "Courier,CreatedBy"),
+                pageNumber, pageSize);
+
+            return View(sheets);
+        }
+
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
+        public IActionResult GetItemsCourierSheets(string courierId = "0", DateTime? FilterTime = null, DateTime? FilterTimeTo = null, int pageNumber = 1, int pageSize = 50)
+        {
+            bool filterByCourier = courierId != "0" && !string.IsNullOrEmpty(courierId);
+            var filterTimeDate = FilterTime.HasValue ? FilterTime.Value.Date : DateTime.MinValue;
+            var filterTimeToDate = FilterTimeTo.HasValue ? FilterTimeTo.Value.Date.AddDays(1) : DateTime.MaxValue;
+
+            Expression<Func<CourierOrderSheet, bool>> filter = x => !x.IsDeleted
+                && (!filterByCourier || x.CourierId == courierId)
+                && (!FilterTime.HasValue || x.CreateOn >= filterTimeDate)
+                && (!FilterTimeTo.HasValue || x.CreateOn <= filterTimeToDate);
+
+            Func<IQueryable<CourierOrderSheet>, IOrderedQueryable<CourierOrderSheet>> orderBy = o => o.OrderByDescending(c => c.Id);
+            var sheets = _courierOrderSheet.GetAllAsIQueryable(filter, orderBy, "Courier,CreatedBy")
+                .Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+
+            return PartialView("_TableListCourierSheets", sheets);
+        }
+
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
+        public async Task<IActionResult> GetPaginationCourierSheets(string courierId = "0", DateTime? FilterTime = null, DateTime? FilterTimeTo = null, int pageNumber = 1, int pageSize = 50)
+        {
+            bool filterByCourier = courierId != "0" && !string.IsNullOrEmpty(courierId);
+            var filterTimeDate = FilterTime.HasValue ? FilterTime.Value.Date : DateTime.MinValue;
+            var filterTimeToDate = FilterTimeTo.HasValue ? FilterTimeTo.Value.Date.AddDays(1) : DateTime.MaxValue;
+
+            Expression<Func<CourierOrderSheet, bool>> filter = x => !x.IsDeleted
+                && (!filterByCourier || x.CourierId == courierId)
+                && (!FilterTime.HasValue || x.CreateOn >= filterTimeDate)
+                && (!FilterTimeTo.HasValue || x.CreateOn <= filterTimeToDate);
+
+            Func<IQueryable<CourierOrderSheet>, IOrderedQueryable<CourierOrderSheet>> orderBy = o => o.OrderByDescending(c => c.Id);
+            var sheets = await PagedList<CourierOrderSheet>.CreateAsync(
+                _courierOrderSheet.GetAllAsIQueryable(filter, orderBy, "Courier,CreatedBy"),
+                pageNumber, pageSize);
+
+            var paginationVM = new PaginationVM()
+            {
+                PageIndex = sheets.PageIndex,
+                TotalPages = sheets.TotalPages,
+                PreviousPage = sheets.PreviousPage,
+                NextPage = sheets.NextPage,
+                GetItemsUrl = "/Orders/GetItemsCourierSheets",
+                GetPaginationUrl = "/Orders/GetPaginationCourierSheets",
+                ItemsCount = sheets.ItemsCount,
+                StartIndex = sheets.StartIndex,
+                EndIndex = sheets.EndIndex
+            };
+            return PartialView("_Pagination3", paginationVM);
+        }
+
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
+        public IActionResult CourierSheetDetails(long id)
+        {
+            var sheet = _courierOrderSheet.GetAllAsIQueryable(x => x.Id == id && !x.IsDeleted, null, "Courier,CreatedBy").FirstOrDefault();
+            if (sheet == null)
+                return NotFound();
+
+            var items = _courierOrderSheetItem.GetAllAsIQueryable(x => x.SheetId == id && !x.IsDeleted, null, "Order,Order.Client,Order.Delivery,Order.Branch").ToList();
+            ViewBag.Sheet = sheet;
+            return View(items);
+        }
+
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
+        public IActionResult ExportSheetExcel(long id,
+            bool showProductName = false, bool showSenderPhone = false, bool showSenderName = false,
+            bool showOrderCost = false, bool showDeliveryFees = false, bool showClientCode = false,
+            bool useCustomColumns = false)
+        {
+            var items = _courierOrderSheetItem.GetAllAsIQueryable(x => x.SheetId == id && !x.IsDeleted, null, null).ToList();
+            var orderIds = items.Select(x => x.OrderId).ToList();
+
+            return ExportToExecl(orderIds, showProductName, showSenderPhone, showSenderName,
+                showOrderCost, showDeliveryFees, showClientCode, useCustomColumns: useCustomColumns);
+        }
+        #endregion
     }
 }
