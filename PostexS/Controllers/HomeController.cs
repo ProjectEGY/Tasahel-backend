@@ -649,7 +649,7 @@ namespace PostexS.Controllers
                 Address = Address.Trim(),
                 UserType = UserType.Client,
                 BranchId = branch.Id,
-                IsPending = true,
+                IsPending = false,
                 SecurityStamp = Guid.NewGuid().ToString(),
                 EmailConfirmed = true
             };

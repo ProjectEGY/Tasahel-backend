@@ -4,6 +4,8 @@
       <AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>
       <UserSecretsId>1dbf307f-10e7-4c70-aba6-98ae60545af0</UserSecretsId>
     <ServerGarbageCollection>false</ServerGarbageCollection>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="BarCode" Version="2023.5.1" />

@@ -141,8 +141,10 @@ namespace PostexS
                     Version = "v1",
                     Description =
                         "جميع واجهات Tasahel Express في صفحة واحدة:\n\n" +
-                        "- Sender API (مفاتيح API: X-Public-Key, X-Private-Key)\n" +
-                        "- Driver & Mobile API (JWT Bearer Token عبر /api/Account/Login)\n\n" +
+                        "- **تطبيق الراسل** - Sender App (JWT Bearer Token عبر /api/SenderApp/Login)\n" +
+                        "- **تطبيق المندوب** - Driver App (JWT Bearer Token عبر /api/Account/Login)\n" +
+                        "- **ربط الأنظمة الخارجية** - External API (مفاتيح API: X-Public-Key, X-Private-Key)\n\n" +
+                        "⚠️ توكن الراسل لا يعمل على APIs المندوب والعكس.\n\n" +
                         "استخدم زر **Authorize** لإرسال الـ Headers أو الـ Bearer Token تلقائياً.",
                     Contact = new OpenApiContact
                     {
@@ -155,13 +157,44 @@ namespace PostexS
                 c.DocInclusionPredicate((docName, apiDesc) =>
                 {
                     if (apiDesc.ActionDescriptor is Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor cad)
-                        return cad.ControllerTypeInfo?.Namespace == "PostexS.Controllers.API";
+                        return cad.ControllerTypeInfo?.Namespace?.StartsWith("PostexS.Controllers.API") == true;
                     return false;
                 });
 
                 // Resolve conflicting actions and schema IDs
                 c.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
                 c.CustomSchemaIds(type => type.FullName);
+
+                // تنظيم الـ APIs في مجموعات واضحة بأسماء عربية
+                c.TagActionsBy(api =>
+                {
+                    if (api.ActionDescriptor is Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor cad)
+                    {
+                        return cad.ControllerName switch
+                        {
+                            // تطبيق المندوب
+                            "Account" => new[] { "المندوب - الحساب والبروفايل" },
+                            "DriverOrders" => new[] { "المندوب - الطلبات" },
+                            "DriverStatistics" => new[] { "المندوب - الإحصائيات والتقارير" },
+                            "Orders" => new[] { "المندوب - عمليات الطلبات (تسليم/إرجاع)" },
+                            "Notification" => new[] { "المندوب - الإشعارات" },
+                            // تطبيق الراسل
+                            "SenderApp" => new[] { "الراسل - تطبيق الراسل" },
+                            // ربط الأنظمة الخارجية
+                            "Sender" => new[] { "ربط الأنظمة الخارجية - External API" },
+                            // عامة
+                            "ContactUs" => new[] { "تواصل معنا" },
+                            "ImageKit" => new[] { "رفع الصور" },
+                            _ => new[] { cad.ControllerName }
+                        };
+                    }
+                    return new[] { api.HttpMethod };
+                });
+
+                // Include XML comments for API descriptions
+                var xmlFile = System.IO.Path.Combine(AppContext.BaseDirectory, "TasahelExpress.xml");
+                if (System.IO.File.Exists(xmlFile))
+                    c.IncludeXmlComments(xmlFile);
 
                 // Header parameters filter (Latitude/Longitude with default values)
                 c.OperationFilter<Filters.AddHeaderParametersFilter>();

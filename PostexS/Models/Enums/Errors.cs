@@ -25,6 +25,10 @@ namespace PostexS.Models.Enums
         PublicKeyIsInvalid,
         PrivateKeyIsInvalid,
         PrivateKeyIsWrongOrPublicKeyIsWrong,
-        //ReturnedImageIsRequired,
+        OrderCannotBeEdited,
+        OrderCannotBeCancelled,
+        PhoneAlreadyRegistered,
+        UserNotApproved,
+        InvalidUserType,
     }
 }
