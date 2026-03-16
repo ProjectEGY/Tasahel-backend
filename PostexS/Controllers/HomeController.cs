@@ -230,7 +230,7 @@ namespace PostexS.Controllers
             {
                 return BadRequest();
             }
-            var user = await _signInManager.PasswordSignInAsync(Model.Email, Model.Password, false, false);
+            var user = await _signInManager.PasswordSignInAsync(Model.Email, Model.Password, true, false);
             if (user.Succeeded)
             {
                 var currentUser = _user.Get(x => x.Email.Trim().ToLower()

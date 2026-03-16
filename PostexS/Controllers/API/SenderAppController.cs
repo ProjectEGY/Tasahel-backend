@@ -255,7 +255,7 @@ namespace PostexS.Controllers.API
                 return StatusCode((int)HttpStatusCode.Forbidden, _baseResponse);
             }
 
-            if (user.IsPending)
+            if (!user.IsPending)
             {
                 _baseResponse.ErrorCode = Errors.UserNotApproved;
                 _baseResponse.ErrorMessage = "الحساب في انتظار الموافقة";
@@ -270,7 +270,7 @@ namespace PostexS.Controllers.API
             }
 
             var branch = _branches.Get(x => x.Id == user.BranchId).FirstOrDefault();
-            var dto = new SenderAppProfileDto(user, branch?.Name);
+            var dto = new SenderAppProfileDto(user, branch);
             dto.Token = await GenerateToken(user);
 
             _baseResponse.Data = dto;
@@ -281,7 +281,8 @@ namespace PostexS.Controllers.API
         /// تسجيل حساب راسل جديد - إنشاء حساب جديد برقم الهاتف وكلمة السر والبيانات الشخصية
         /// </summary>
         /// <remarks>
-        /// ينشئ حساب من نوع Client ويرجع بيانات البروفايل مع JWT Token.
+        /// ينشئ حساب من نوع Client ويكون في انتظار موافقة الأدمن.
+        /// لا يرجع Token - الراسل لازم يستنى الموافقة ويسجل دخول بعدها.
         /// الحقول المطلوبة: Name, Phone, Password, BranchId.
         /// الحقول الاختيارية: Email, WhatsappPhone, Address.
         /// </remarks>
@@ -325,11 +326,7 @@ namespace PostexS.Controllers.API
                 return StatusCode((int)HttpStatusCode.BadRequest, _baseResponse);
             }
 
-            var branch = _branches.Get(x => x.Id == user.BranchId).FirstOrDefault();
-            var dto = new SenderAppProfileDto(user, branch?.Name);
-            dto.Token = await GenerateToken(user);
-
-            _baseResponse.Data = dto;
+            _baseResponse.ErrorMessage = "تم إنشاء الحساب بنجاح وهو في انتظار موافقة الإدارة";
             return Ok(_baseResponse);
         }
 
@@ -418,7 +415,7 @@ namespace PostexS.Controllers.API
             if (errorResult != null) return errorResult;
 
             var branch = _branches.Get(x => x.Id == user.BranchId).FirstOrDefault();
-            var dto = new SenderAppProfileDto(user, branch?.Name);
+            var dto = new SenderAppProfileDto(user, branch);
 
             _baseResponse.Data = dto;
             return Ok(_baseResponse);
@@ -451,7 +448,7 @@ namespace PostexS.Controllers.API
             await _user.Update(user);
 
             var branch = _branches.Get(x => x.Id == user.BranchId).FirstOrDefault();
-            var profileDto = new SenderAppProfileDto(user, branch?.Name);
+            var profileDto = new SenderAppProfileDto(user, branch);
 
             _baseResponse.Data = profileDto;
             return Ok(_baseResponse);

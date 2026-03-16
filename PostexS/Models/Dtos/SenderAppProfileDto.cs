@@ -11,8 +11,7 @@ namespace PostexS.Models.Dtos
         public string WhatsappPhone { get; set; }
         public string Address { get; set; }
         public double Wallet { get; set; }
-        public long BranchId { get; set; }
-        public string BranchName { get; set; }
+        public BranchDto Branch { get; set; }
         public bool HideSenderName { get; set; }
         public bool HideSenderPhone { get; set; }
         public bool HideSenderCode { get; set; }
@@ -20,7 +19,7 @@ namespace PostexS.Models.Dtos
 
         public SenderAppProfileDto() { }
 
-        public SenderAppProfileDto(ApplicationUser user, string branchName = null)
+        public SenderAppProfileDto(ApplicationUser user, Branch branch = null)
         {
             Id = user.Id;
             Name = user.Name;
@@ -29,8 +28,7 @@ namespace PostexS.Models.Dtos
             WhatsappPhone = user.WhatsappPhone;
             Address = user.Address;
             Wallet = user.Wallet;
-            BranchId = user.BranchId;
-            BranchName = branchName;
+            Branch = new BranchDto(branch);
             HideSenderName = user.HideSenderName;
             HideSenderPhone = user.HideSenderPhone;
             HideSenderCode = user.HideSenderCode;

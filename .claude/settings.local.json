@@ -20,7 +20,11 @@
       "Bash(Select-String -Pattern \"error|Build succeeded|Build FAILED|Warning\\(s\\)|Error\\(s\\)\")",
       "Bash(grep -l \"public.*async Task.*IActionResult\\\\|public.*Task.*IActionResult\\\\|public.*IActionResult\" *.cs)",
       "Bash(mv DriverBaseController.cs DriverOrdersController.cs DriverStatisticsController.cs AccountController.cs NotificationController.cs DriverApp/)",
-      "Bash(mv OrdersController.cs DriverApp/DriverOrderActionsController.cs)"
+      "Bash(mv OrdersController.cs DriverApp/DriverOrderActionsController.cs)",
+      "Bash(xargs grep:*)",
+      "Bash(python3 -c \":*)",
+      "Bash(powershell -Command \"[System.IO.File]::ReadAllText\\(''PostexS/Views/Users/PendingIndex.cshtml'', [System.Text.Encoding]::UTF8\\) | Set-Variable content; [System.IO.File]::WriteAllText\\(''PostexS/Views/Users/PendingIndex.cshtml'', $content, [System.Text.UTF8Encoding]::new\\($true\\)\\)\")",
+      "Bash(powershell -File:*)"
     ]
   }
 }

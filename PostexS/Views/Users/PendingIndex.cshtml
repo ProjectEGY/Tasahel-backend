@@ -1,33 +1,126 @@
 ﻿@model IEnumerable<PostexS.Models.Domain.ApplicationUser>
 @{
-    ViewData["Title"] = "PendingIndex";
+    ViewData["Title"] = "طلبات الاشتراك";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-        <div class="table-responsive">
-            <table id="table" cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered table-hover">
-                <thead>
-                    <tr>
-                        <th style="text-align:center">اسم الراسل</th>
-                       
-                        <th style="text-align:center ">التحكم</th>
-                    </tr>
-                </thead>
-                <tbody style="text-align:center">
-                    @foreach (var item in Model)
-                    {
-                    <tr>
-                        <td>
-                            @item.Name
-                        </td>
-                    
-                        <td>
-                        <a href="@Url.Action("Accpet","Users",new{UserId=item.Id})" class="btn btn-success"><i class="fa fa-edit"></i></a>
-                        </td>
-                    </tr>
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-fw fa-user-plus"></i> @ViewData["Title"]</h3>
+    </div>
+    <div class="panel-body">
+        <a class="btn btn-default mb-5" href="@Url.Action("Index", "Users", new { q = "c" })">
+            <i class="fa fa-arrow-right"></i> العودة للراسلين
+        </a>
+
+        @if (!Model.Any())
+        {
+            <div class="alert alert-info text-center" style="margin-top: 15px;">
+                <i class="fa fa-info-circle"></i> لا توجد طلبات اشتراك حاليا
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive" style="margin-top: 15px;">
+                <table id="tablePending" cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th style="text-align:center">#</th>
+                            <th style="text-align:center">اسم الراسل</th>
+                            <th style="text-align:center">رقم الهاتف</th>
+                            <th style="text-align:center">رقم الواتساب</th>
+                            <th style="text-align:center">الايميل</th>
+                            <th style="text-align:center">الفرع</th>
+                            <th style="text-align:center">العنوان</th>
+                            <th style="text-align:center">التحكم</th>
+                        </tr>
+                    </thead>
+                    <tbody style="text-align:center">
+                        @{ int counter = 1; }
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@(counter++)</td>
+                                <td>@item.Name</td>
+                                <td>@item.PhoneNumber</td>
+                                <td>@item.WhatsappPhone</td>
+                                <td>@item.Email</td>
+                                <td>@item.Branch?.Name</td>
+                                <td>@item.Address</td>
+                                <td>
+                                    <button type="button" class="btn btn-success btn-sm" onclick="AcceptUser('@item.Id', '@item.Name')" title="قبول">
+                                        <i class="fa fa-check"></i> قبول
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-sm" onclick="RejectUser('@item.Id', '@item.Name')" title="رفض" style="margin-top: 3px;">
+                                        <i class="fa fa-times"></i> رفض
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        $('#tablePending').DataTable({
+            "pageLength": 25,
+            "language": {
+                "lengthMenu": "عرض _MENU_ عناصر لكل صفحة",
+                "zeroRecords": "لا توجد طلبات اشتراك",
+                "info": "عرض صفحة _PAGE_ من _PAGES_",
+                "infoEmpty": "لا توجد بيانات",
+                "infoFiltered": "(تمت التصفية من _MAX_ إجمالي السجلات)",
+                "search": "بحث:",
+                "paginate": {
+                    "next": "التالي",
+                    "previous": "السابق"
+                }
+            }
+        });
+    });
+
+    function AcceptUser(userId, userName) {
+        swal({
+            title: "تأكيد القبول",
+            text: "هل تريد قبول طلب اشتراك " + userName + "؟",
+            icon: "success",
+            buttons: ["إلغاء", "قبول"]
+        }).then((willAccept) => {
+            if (willAccept) {
+                window.location.href = '@Url.Action("Accpet", "Users")?UserId=' + userId;
+            }
+        });
+    }
+
+    function RejectUser(userId, userName) {
+        swal({
+            title: "تأكيد الرفض",
+            text: "هل تريد رفض طلب اشتراك " + userName + "؟ سيتم حذف الحساب.",
+            icon: "warning",
+            dangerMode: true,
+            buttons: ["إلغاء", "رفض"]
+        }).then((willReject) => {
+            if (willReject) {
+                $.ajax({
+                    type: "Get",
+                    url: '/Users/Delete?id=' + userId,
+                    success: function (data) {
+                        if (data.success) {
+                            toastr.success("تم رفض طلب الاشتراك بنجاح");
+                            setTimeout(function () { location.reload(); }, 1500);
+                        } else {
+                            toastr.error(data.message || "حدث خطأ");
+                        }
+                    },
+                    error: function () {
+                        toastr.error("حدث خطأ في الاتصال بالسيرفر");
                     }
-                </tbody>
-            </table>
-        </div>
-
-
+                });
+            }
+        });
+    }
+</script>
