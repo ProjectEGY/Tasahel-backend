@@ -25,6 +25,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.DataProtection;
+using System.IO;
+
 namespace PostexS
 {
     public class Startup
@@ -39,6 +42,13 @@ namespace PostexS
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            // Persist data protection keys so cookies survive app restarts/deployments
+            var keysDir = Path.Combine(Directory.GetCurrentDirectory(), "DataProtection-Keys");
+            Directory.CreateDirectory(keysDir);
+            services.AddDataProtection()
+                .PersistKeysToFileSystem(new DirectoryInfo(keysDir))
+                .SetApplicationName("Tasahel-Express");
+
             services.AddSession(options =>
             {
                 options.Cookie.Name = "MySession";
