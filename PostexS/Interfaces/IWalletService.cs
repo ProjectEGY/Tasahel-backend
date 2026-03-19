@@ -10,5 +10,6 @@ namespace PostexS.Interfaces
     public interface IWalletService
     {
         IEnumerable<Wallet> GetList(Expression<Func<Wallet, bool>> expression);
+        IEnumerable<Order> GetWalletOrdersList(Expression<Func<Wallet, bool>> expression);
     }
 }

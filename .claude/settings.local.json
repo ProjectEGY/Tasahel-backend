@@ -24,7 +24,10 @@
       "Bash(xargs grep:*)",
       "Bash(python3 -c \":*)",
       "Bash(powershell -Command \"[System.IO.File]::ReadAllText\\(''PostexS/Views/Users/PendingIndex.cshtml'', [System.Text.Encoding]::UTF8\\) | Set-Variable content; [System.IO.File]::WriteAllText\\(''PostexS/Views/Users/PendingIndex.cshtml'', $content, [System.Text.UTF8Encoding]::new\\($true\\)\\)\")",
-      "Bash(powershell -File:*)"
+      "Bash(powershell -File:*)",
+      "Bash(cp \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\MohammedSharabash\\\\Elamr-express-backend-\\\\PostexS\\\\Views\\\\Reports\\\\ExportOrders.cshtml\" \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\ProjectEGY\\\\Tasahel-backend\\\\PostexS\\\\Views\\\\Reports\\\\ExportOrders.cshtml\")",
+      "Bash(cp \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\MohammedSharabash\\\\Elamr-express-backend-\\\\PostexS\\\\Views\\\\Reports\\\\ExportUnsettledOrders.cshtml\" \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\ProjectEGY\\\\Tasahel-backend\\\\PostexS\\\\Views\\\\Reports\\\\ExportUnsettledOrders.cshtml\")",
+      "Bash(cp \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\MohammedSharabash\\\\Elamr-express-backend-\\\\PostexS\\\\Views\\\\Reports\\\\ExportWallets.cshtml\" \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\ProjectEGY\\\\Tasahel-backend\\\\PostexS\\\\Views\\\\Reports\\\\ExportWallets.cshtml\")"
     ]
   }
 }

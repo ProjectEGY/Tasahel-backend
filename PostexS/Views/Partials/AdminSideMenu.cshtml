@@ -39,6 +39,22 @@
 
                 </a>
             </li>
+            @if (User.IsInRole("Admin") || User.IsInRole("HighAdmin") || User.IsInRole("TrustAdmin") || User.IsInRole("Accountant"))
+            {
+                <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("reports") ? "active" : "")" style="background: linear-gradient(135deg, #1a5276, #2e86c1); border-radius: 5px; margin: 5px 10px;">
+                    <a href="#" style="color: #fff !important;">
+                        <i class="fa fa-file-excel-o" style="color: #27ae60;"></i>
+                        <span>بيانات Excel</span>
+                        <small class="label pull-left bg-green" style="margin-top: 3px;">جديد</small>
+                        <i class="fa fa-angle-left pull-left"></i>
+                    </a>
+                    <ul class="treeview-menu" style="background: #1a3c5e;">
+                        <li><a href="@Url.Action("ExportOrders", "Reports")" style="color: #ddd;"><i class="fa fa-file-excel-o" style="color: #27ae60;"></i> جميع الطلبات</a></li>
+                        <li><a href="@Url.Action("ExportUnsettledOrders", "Reports")" style="color: #ddd;"><i class="fa fa-file-excel-o" style="color: #e74c3c;"></i> طلبات تم تقفيلها ولم يتم تسويتها</a></li>
+                        <li><a href="@Url.Action("ExportWallets", "Reports")" style="color: #ddd;"><i class="fa fa-file-excel-o" style="color: #f39c12;"></i> طلبات تم تسويتها</a></li>
+                    </ul>
+                </li>
+            }
             @if (User.IsInRole("Admin") || User.IsInRole("HighAdmin")@* || User.IsInRole("Accountant") *@ || User.IsInRole("TrustAdmin"))
             {
                 <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("branchs") ? "active" : "")">

@@ -22,5 +22,14 @@ namespace PostexS.Services
         {
             return _context.Wallets.Where(expression).Include(x => x.ActualUser).OrderByDescending(x=>x.Id);
         }
+
+        public IEnumerable<Order> GetWalletOrdersList(Expression<Func<Wallet, bool>> expression)
+        {
+            return _context.Wallets
+                .Where(expression)
+                .OrderByDescending(x => x.Id)
+                .SelectMany(x => x.Orders).Include(a => a.Client)
+                .ToList();
+        }
     }
 }

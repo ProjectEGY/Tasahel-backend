@@ -33,8 +33,9 @@
                         إحصائيات الطلبات الحاليه للمندوب
                         <i class="fa fa-line-chart"></i>
                     </a>
-                    @*                     <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>
-                    *@
+                    <button type="button" class="btn btn-info" data-toggle="modal" data-target="#transferOrdersModal">
+                        <i class="fa fa-exchange"></i> تحويل الطلبات لمندوب آخر
+                    </button>
                 </h4>
             </div><!-- /.box-header -->
             <div class="box-body no-print">
@@ -418,8 +419,59 @@
     $(document).ready(function () {
         // عند فتح المودال، حدد جميع الخيارات
         $('#finishAllOrdersModal').on('show.bs.modal', function () {
-            $('#OrdersSelect option').prop('selected', true); // تحديد جميع الطلبات
-            $('#OrdersSelect').trigger('change'); // تحديث الـ select2
+            $('#OrdersSelect option').prop('selected', true);
+            $('#OrdersSelect').trigger('change');
+        });
+
+        // عند فتح مودال التحويل، إعادة تعيين الاختيارات
+        $('#transferOrdersModal').on('show.bs.modal', function () {
+            $('#OrdersSelectTransfer option').prop('selected', false);
+            $('#OrdersSelectTransfer').trigger('change');
         });
     });
 </script>
+
+<!-- Transfer Orders Modal -->
+<div id="transferOrdersModal" class="modal fade" role="dialog">
+    <div class="modal-dialog" style="width:auto!important;margin:100px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title"><i class="fa fa-exchange"></i> تحويل الطلبات إلى مندوب آخر</h4>
+            </div>
+            <div class="modal-body">
+                <form asp-action="TransferOrders" asp-controller="Orders" method="post">
+                    <input name="CurrentDeliveryId" value="@userID" hidden>
+
+                    <div class="form-group">
+                        <label for="OrdersSelectTransfer"><i class="fa fa-list"></i> اختر الطلبات:</label>
+                        <select name="OrdersIds" id="OrdersSelectTransfer" class="form-control select2" multiple="multiple" style="width:100%">
+                            @foreach (var order in Model)
+                            {
+                                <option value="@order.Id">@order.Code - @order.TotalCost جنيه</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label for="NewDeliveryId"><i class="fa fa-motorcycle"></i> اختر المندوب الجديد:</label>
+                        <select name="NewDeliveryId" id="NewDeliveryId" class="form-control select2" required style="width:100%">
+                            <option value="">-- اختر مندوب --</option>
+                            @foreach (var driver in (List<PostexS.Models.Domain.ApplicationUser>)ViewBag.Drivers)
+                            {
+                                <option value="@driver.Id">@driver.Name - @driver.PhoneNumber</option>
+                            }
+                        </select>
+                    </div>
+
+                    <button class="btn btn-primary" type="submit" style="margin-top: 15px;">
+                        <i class="fa fa-exchange"></i> تحويل
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>

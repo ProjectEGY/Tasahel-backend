@@ -1,0 +1,66 @@
+﻿@model PostexS.Models.ViewModels.ReportVM
+@{
+    ViewBag.Title = "تصدير الطلبات غير المسواة";
+}
+
+<div class="container mt-5">
+    <div class="card shadow-lg p-4">
+        <h2 class="text-center mb-4 text-danger">🚫 تصدير الطلبات التي تم تقفيلها ولم يتم تسويتها</h2>
+
+        @* @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success text-center">
+                @TempData["SuccessMessage"]
+            </div>
+        } *@
+
+        <form method="post" action="@Url.Action("ExportUnsettledOrders", "Reports")">
+            <div class="row g-3">
+                <!-- من تاريخ -->
+                <div class="col-md-6">
+                    <label for="fromDate" class="form-label fw-bold">📅 من تاريخ:</label>
+                    <input type="date" id="fromDate" asp-for="fromDate" class="form-control" required />
+                </div>
+
+                <!-- إلى تاريخ -->
+                <div class="col-md-6">
+                    <label for="toDate" class="form-label fw-bold">📅 إلى تاريخ:</label>
+                    <input type="date" id="toDate" asp-for="toDate" class="form-control" required />
+                </div>
+
+            </div>
+
+            <!-- زر التصدير -->
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-lg btn-danger px-4">
+                    📥 تحميل التقرير
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const fromDateInput = document.getElementById("fromDate");
+        const toDateInput = document.getElementById("toDate");
+
+        function getTodayDate() {
+            return new Date().toISOString().split('T')[0]; // يحصل على اليوم فقط
+        }
+
+        fromDateInput.value = getTodayDate();
+        toDateInput.value = getTodayDate();
+
+        fromDateInput.addEventListener("change", function () {
+            if (fromDateInput.value) {
+                fromDateInput.value = fromDateInput.value; // تأكيد عدم إضافة وقت
+            }
+        });
+
+        toDateInput.addEventListener("change", function () {
+            if (toDateInput.value) {
+                toDateInput.value = toDateInput.value; // تأكيد عدم إضافة وقت
+            }
+        });
+    });
+</script>

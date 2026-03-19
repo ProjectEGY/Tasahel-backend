@@ -72,7 +72,7 @@ namespace PostexS.Controllers
 
             UserType type = userType == "driver" ? UserType.Driver : UserType.Client;
 
-            var query = _user.Get(x => !x.IsDeleted && x.UserType == type);
+            var query = _user.GetAllAsIQueryable(x => !x.IsDeleted && x.UserType == type);
 
             // HighAdmin يشوف فرعه بس
             if (isHighAdmin)
@@ -87,10 +87,16 @@ namespace PostexS.Controllers
             // بحث بالاسم أو رقم الهاتف
             if (!string.IsNullOrEmpty(term))
             {
-                query = query.Where(x => x.Name.Contains(term) || x.PhoneNumber.Contains(term));
+                query = query.Where(x =>
+                    (x.Name != null && x.Name.Contains(term)) ||
+                    (x.PhoneNumber != null && x.PhoneNumber.Contains(term)));
             }
 
-            var users = query.Select(x => new { id = x.Id, text = x.Name + " - " + x.PhoneNumber }).Take(50).ToList();
+            var users = query
+                .Select(x => new { id = x.Id, text = (x.Name ?? "") + " - " + (x.PhoneNumber ?? "") })
+                .Take(50)
+                .ToList();
+
             return Json(new { results = users });
         }
 

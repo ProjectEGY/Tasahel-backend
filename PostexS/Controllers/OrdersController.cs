@@ -1242,6 +1242,18 @@ namespace PostexS.Controllers
             ViewBag.Id = Id;
             ViewBag.message = message;
 
+            // قائمة المناديب لتحويل الطلبات
+            var currentDriver = _users.Get(x => x.Id == Id).FirstOrDefault();
+            if (currentDriver != null)
+            {
+                ViewBag.Drivers = _users.Get(x => !x.IsDeleted && x.UserType == UserType.Driver
+                    && x.Id != Id && x.BranchId == currentDriver.BranchId).ToList();
+            }
+            else
+            {
+                ViewBag.Drivers = new List<ApplicationUser>();
+            }
+
             var baseQuery = _orders.GetAllAsIQueryable()
                 .Include(x => x.Client)
                 .Include(x => x.Delivery)
@@ -1268,6 +1280,78 @@ namespace PostexS.Controllers
             ViewBag.SearchCode = searchCode;
 
             return View(pagedOrders);
+        }
+
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
+        [HttpPost]
+        public async Task<IActionResult> TransferOrders(string CurrentDeliveryId, long[] OrdersIds, string NewDeliveryId)
+        {
+            List<long> OrdersTransferred = new List<long>();
+            using (var scope = new TransactionScope(TransactionScopeOption.Required,
+                new TransactionOptions { IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted, Timeout = TimeSpan.FromMinutes(10) },
+                TransactionScopeAsyncFlowOption.Enabled))
+            {
+                try
+                {
+                    var newDriver = await _users.GetSingle(x => x.Id == NewDeliveryId);
+                    if (newDriver == null || newDriver.UserType != UserType.Driver)
+                    {
+                        return RedirectToAction(nameof(PrintClientOrders), new { Id = CurrentDeliveryId, message = "المندوب الجديد غير صالح" });
+                    }
+
+                    foreach (var orderId in OrdersIds)
+                    {
+                        var order = await _orders.GetSingle(x => x.Id == orderId, "Client,Branch");
+                        if (IsValidOrderForTransfer(order, newDriver))
+                        {
+                            order.DeliveryId = NewDeliveryId;
+                            order.LastUpdated = DateTime.Now.ToUniversalTime();
+                            if (await _orders.Update(order))
+                            {
+                                OrdersTransferred.Add(orderId);
+                                await UpdateOrderHistoryForTransfer(order.OrderOperationHistoryId);
+                            }
+                        }
+                    }
+
+                    scope.Complete();
+                    if (OrdersTransferred.Count > 0)
+                    {
+                        string message = $"تم تحويل عدد {OrdersTransferred.Count} طلب إلى المندوب: {newDriver.Name}";
+                        return RedirectToAction(nameof(PrintClientOrders), new { Id = CurrentDeliveryId, message });
+                    }
+                    else
+                    {
+                        return RedirectToAction(nameof(PrintClientOrders), new { Id = CurrentDeliveryId, message = "حدث خطأ أثناء التحويل" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return RedirectToAction(nameof(PrintClientOrders), new { Id = CurrentDeliveryId, message = "حدث خطأ أثناء التحويل" });
+                }
+            }
+        }
+
+        private async Task UpdateOrderHistoryForTransfer(long? orderHistoryId)
+        {
+            if (orderHistoryId.HasValue)
+            {
+                var history = await _Histories.GetObj(x => x.Id == orderHistoryId);
+                if (history != null)
+                {
+                    history.Assign_To_Driver_UserId = _userManger.GetUserId(User);
+                    history.Assign_To_DriverDate = DateTime.Now.ToUniversalTime();
+                    await _Histories.Update(history);
+                }
+            }
+        }
+
+        private bool IsValidOrderForTransfer(Order order, ApplicationUser newDriver)
+        {
+            return order != null &&
+                    !order.IsDeleted && !order.Pending &&
+                   ((order.BranchId == newDriver.BranchId && order.Client.BranchId == newDriver.BranchId) ||
+                    (order.BranchId == newDriver.BranchId && order.TransferredConfirmed));
         }
 
         [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin")]
