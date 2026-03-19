@@ -122,25 +122,13 @@ namespace PostexS
             services.AddScoped<IWhatsAppProviderService, WhatsAppProviderService>();
             services.AddHostedService<WhatsAppQueueProcessor>();
 
-            // Bind Firebase configuration from appsettings.json
-            var firebaseConfig = Configuration.GetSection("FireBase").Get<FirebaseConfig>();
-
-            if (firebaseConfig == null)
-            {
-                throw new Exception("Firebase configuration is missing in appsettings.json");
-            }
-
-            // Serialize the FirebaseConfig object to JSON
-            var firebaseConfigJson = JsonConvert.SerializeObject(firebaseConfig);
-
-            // Initialize Firebase App
-            FirebaseApp.Create(new AppOptions()
-            {
-                Credential = GoogleCredential.FromJson(firebaseConfigJson)
-            });
-
-            // Register Firebase Messaging as a singleton if needed
-            services.AddSingleton(FirebaseMessaging.DefaultInstance);
+            // Initialize Dual Firebase Apps (Captain + Customer)
+            var appDataPath = Path.Combine(Directory.GetCurrentDirectory(), "AppData");
+            var firebaseService = new FirebaseMessagingService(
+                captainJsonPath: Path.Combine(appDataPath, "tasahelcaptain-firebase-adminsdk-fbsvc-67c9aecb97.json"),
+                customerJsonPath: Path.Combine(appDataPath, "tasahel-customer-firebase-adminsdk-fbsvc-0edf4b6a99.json")
+            );
+            services.AddSingleton(firebaseService);
 
             // Swagger Configuration - single document that contains all APIs
             services.AddSwaggerGen(c =>

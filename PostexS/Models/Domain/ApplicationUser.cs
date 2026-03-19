@@ -22,7 +22,7 @@ namespace PostexS.Models.Domain
         public UserType UserType { get; set; }
         //public Site site { get; set; } = Site.Domain;
         public bool IsDeleted { get; set; }
-        public bool IsPending { get; set; } = false;
+        public bool IsApproved { get; set; } = false;
         public double Wallet { get; set; }
         public double? DeliveryCost { get; set; }
         public string WhatsappPhone { get; set; }

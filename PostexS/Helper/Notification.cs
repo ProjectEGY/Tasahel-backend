@@ -1,4 +1,4 @@
-﻿using FirebaseAdmin.Messaging;
+using FirebaseAdmin.Messaging;
 using PostexS.Interfaces;
 using PostexS.Models.Domain;
 using System.Collections.Generic;
@@ -10,11 +10,13 @@ public class SendNotification
 {
     private readonly IGeneric<DeviceTokens> _pushNotification;
     private readonly IGeneric<Notification> _notification;
+    private readonly FirebaseMessaging _firebaseMessaging;
 
-    public SendNotification(IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification)
+    public SendNotification(IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, FirebaseMessaging firebaseMessaging)
     {
         _pushNotification = pushNotification;
         _notification = notification;
+        _firebaseMessaging = firebaseMessaging;
     }
 
     public async Task SendToAllSpecificAndroidUserDevices(string userId, string title, string messageBody, bool sendToAll = false, long id = -1, string Image = null)
@@ -36,16 +38,12 @@ public class SendNotification
             }
             else
             {
-                // Handle cases where the user has no device tokens (like admins)
-                // Send notification to admins without device tokens
-                // Optionally, log that the user has no tokens, but we still need to notify them
                 await SendAdminNotificationWithoutDeviceToken(userId, title, messageBody, id, Image);
             }
         }
 
         if (users == null || users.Count == 0)
         {
-            // Optionally, log that no users were found
             return;
         }
 
@@ -67,17 +65,13 @@ public class SendNotification
 
             try
             {
-                // Send message via Firebase
-                string response = await FirebaseMessaging.DefaultInstance.SendAsync(messageToSend);
-                // Optionally, log the response
+                string response = await _firebaseMessaging.SendAsync(messageToSend);
             }
             catch (FirebaseMessagingException ex)
             {
                 // Handle or log the error
-                // Example: Console.WriteLine($"Error sending message: {ex.Message}");
             }
 
-            // Add notification to your database
             await _notification.Add(new Notification()
             {
                 UserId = userId,
@@ -88,10 +82,9 @@ public class SendNotification
             });
         }
     }
+
     public async Task SendAdminNotificationWithoutDeviceToken(string userId, string title, string messageBody, long id, string Image = null)
     {
-        // Handle admins who don't have a device token, e.g., send email or web notification
-        // Example: Add to database for web-based notification or send email to admin
         await _notification.Add(new Notification()
         {
             UserId = userId,
@@ -100,9 +93,5 @@ public class SendNotification
             IsSeen = false,
             ImageUrl = Image,
         });
-
-        // Optionally, send an email or other type of notification
-        // await SendEmailNotificationToAdmin(userId, title, messageBody);
     }
-
 }

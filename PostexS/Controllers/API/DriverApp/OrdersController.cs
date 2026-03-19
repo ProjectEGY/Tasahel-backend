@@ -21,6 +21,7 @@ using PostexS.Interfaces;
 using PostexS.Models.Domain;
 using PostexS.Models.Dtos;
 using PostexS.Models.Enums;
+using PostexS.Services;
 using ZXing;
 using ZXing.Common;
 using Location = PostexS.Models.Domain.Location;
@@ -44,9 +45,10 @@ namespace PostexS.Controllers.API
         private readonly IWapilotService _wapilotService;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly FirebaseMessagingService _firebaseService;
 
         public OrdersController(IGeneric<Notification> notification, IGeneric<DeviceTokens> pushNotification, IGeneric<Order> order, IGeneric<ApplicationUser> user,
-            IGeneric<OrderNotes> orderNotes, IGeneric<Location> locations, IWebHostEnvironment webHostEnvironment, ICRUD<Order> CRUD, IGeneric<OrderOperationHistory> histories, IWapilotService wapilotService, IHttpClientFactory httpClientFactory, IServiceScopeFactory serviceScopeFactory)
+            IGeneric<OrderNotes> orderNotes, IGeneric<Location> locations, IWebHostEnvironment webHostEnvironment, ICRUD<Order> CRUD, IGeneric<OrderOperationHistory> histories, IWapilotService wapilotService, IHttpClientFactory httpClientFactory, IServiceScopeFactory serviceScopeFactory, FirebaseMessagingService firebaseService)
         {
             _user = user;
             _order = order;
@@ -61,6 +63,7 @@ namespace PostexS.Controllers.API
             _wapilotService = wapilotService;
             _httpClientFactory = httpClientFactory;
             _serviceScopeFactory = serviceScopeFactory;
+            _firebaseService = firebaseService;
         }
         [HttpPut("Finshed")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
@@ -431,7 +434,7 @@ namespace PostexS.Controllers.API
                 $"\n رقم الهاتف : {Captian.PhoneNumber}," +
                 $"\n ملاحظات المندوب : {note} .";
 
-            var send = new SendNotification(_pushNotification, _notification);
+            var send = new SendNotification(_pushNotification, _notification, _firebaseService.CustomerMessaging);
             await send.SendToAllSpecificAndroidUserDevices(order.ClientId, Title, Body, Image: order.Returned_Image);
 
             return true;

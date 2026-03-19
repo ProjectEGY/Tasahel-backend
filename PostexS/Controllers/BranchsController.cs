@@ -34,9 +34,10 @@ namespace PostexS.Controllers
         private readonly IOrderService _orderService;
         private IGeneric<DeviceTokens> _pushNotification;
         private IGeneric<Notification> _notification;
+        private readonly FirebaseMessagingService _firebaseService;
 
         public BranchsController(UserManager<ApplicationUser> userManger, ICRUD<OrderOperationHistory> CRUDhistory, IGeneric<OrderOperationHistory> histories, IGeneric<OrderTransferrHistory> TransferHistories
-            , IOrderService orderService, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IGeneric<Branch> branch, IGeneric<Order> orders, ICRUD<Branch> CRUD, IGeneric<ApplicationUser> users)
+            , IOrderService orderService, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IGeneric<Branch> branch, IGeneric<Order> orders, ICRUD<Branch> CRUD, IGeneric<ApplicationUser> users, FirebaseMessagingService firebaseService)
         {
             _orderService = orderService;
             _branch = branch;
@@ -49,7 +50,7 @@ namespace PostexS.Controllers
             _userManger = userManger;
             _notification = notification;
             _pushNotification = pushNotification;
-
+            _firebaseService = firebaseService;
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,TrustAdmin")]
         public async Task<IActionResult> Index(string q)
@@ -112,7 +113,7 @@ namespace PostexS.Controllers
                 WhatsappPhone = model.Whatsapp,
                 UserType = UserType.HighAdmin,
                 BranchId = model.Id,
-                IsPending = true
+                IsApproved = true
             };
 
             var result = await _userManger.CreateAsync(user, "123456");
@@ -858,7 +859,7 @@ namespace PostexS.Controllers
                 Title = $"مرتجعات جديده محولة للفرع";
                 Body = $"مرتجعات محوله في الطريق الي الفرع , تم تحويل مرتجعات جديده من فرع الي الفرع لديك , يرجي مراجعتها عند الوصول وتأكيد استلامها .";
             }
-            var send = new SendNotification(_pushNotification, _notification);
+            var send = new SendNotification(_pushNotification, _notification, _firebaseService.CaptainMessaging);
             foreach (var admin in BranchAdmins)
             {
                 await send.SendToAllSpecificAndroidUserDevices(admin.Id, Title, Body);
@@ -877,7 +878,7 @@ namespace PostexS.Controllers
                 Title = $"إلغاء تحويل مرتجع للفرع";
                 Body = $"تم إلغاء تحويل المرتجع {Code} الي الفرع لديك";
             }
-            var send = new SendNotification(_pushNotification, _notification);
+            var send = new SendNotification(_pushNotification, _notification, _firebaseService.CaptainMessaging);
             foreach (var admin in BranchAdmins)
             {
                 await send.SendToAllSpecificAndroidUserDevices(admin.Id, Title, Body);
@@ -897,7 +898,7 @@ namespace PostexS.Controllers
                 Title = $"تأكيد إستلام مرتجعات محولة";
                 Body = $"تم تأكيد إستلام المرتجعات المحوله من فرعنا ";
             }
-            var send = new SendNotification(_pushNotification, _notification);
+            var send = new SendNotification(_pushNotification, _notification, _firebaseService.CaptainMessaging);
             foreach (var admin in BranchAdmins)
             {
                 await send.SendToAllSpecificAndroidUserDevices(admin.Id, Title, Body);

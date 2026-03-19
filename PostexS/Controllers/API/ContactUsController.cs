@@ -29,9 +29,9 @@ namespace PostexS.Controllers.API
             var branchs = _branch.Get(x => !x.IsDeleted).ToList();
             var contactus = await _contactUs.GetObj(x => !x.IsDeleted);
             var dto = new ContactUsDto();
-            dto.FaceBook = contactus.FaceBook;
-            dto.Twitter = contactus.Twitter;
-            dto.Instgram = contactus.Instgram;
+            dto.FaceBook = contactus?.FaceBook;
+            dto.Twitter = contactus?.Twitter;
+            dto.Instgram = contactus?.Instgram;
             foreach(var item in branchs)
             {
                 dto.Branchs.Add(new BranchsDto()
@@ -47,7 +47,7 @@ namespace PostexS.Controllers.API
             }
             baseResponse.Data = dto;
             return Ok(baseResponse);
-            
+
         }
     }
 }

@@ -13,6 +13,7 @@ using PostexS.Models.Data;
 using PostexS.Models.Domain;
 using PostexS.Models.Dtos;
 using PostexS.Models.Enums;
+using PostexS.Services;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -69,10 +70,11 @@ namespace PostexS.Controllers
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IGeneric<CourierOrderSheet> _courierOrderSheet;
         private readonly IGeneric<CourierOrderSheetItem> _courierOrderSheetItem;
+        private readonly FirebaseMessagingService _firebaseService;
         public OrdersController(IGeneric<ApplicationUser> users, IGeneric<Order> orders, IGeneric<OrderOperationHistory> histories
             , ICRUD<Order> CRUD, ICRUD<OrderOperationHistory> CRUDhistory, IGeneric<OrderNotes> notes, IGeneric<Branch> branch,
             IOrderService orderService, IGeneric<OrderTransferrHistory> TransferHistories, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IWebHostEnvironment webHostEnvironment, UserManager<ApplicationUser> userManger, IGeneric<OrderNotes> OrderNotes, IGeneric<Wallet> wallet, IWapilotService wapilotService, IHttpClientFactory httpClientFactory, IServiceScopeFactory serviceScopeFactory,
-            IGeneric<CourierOrderSheet> courierOrderSheet, IGeneric<CourierOrderSheetItem> courierOrderSheetItem)
+            IGeneric<CourierOrderSheet> courierOrderSheet, IGeneric<CourierOrderSheetItem> courierOrderSheetItem, FirebaseMessagingService firebaseService)
         {
             _orderService = orderService;
             _users = users;
@@ -95,6 +97,7 @@ namespace PostexS.Controllers
             _serviceScopeFactory = serviceScopeFactory;
             _courierOrderSheet = courierOrderSheet;
             _courierOrderSheetItem = courierOrderSheetItem;
+            _firebaseService = firebaseService;
         }
 
         [Authorize(Roles = "Admin,HighAdmin,Accountant,Client,TrustAdmin,TrackingAdmin")]
@@ -2023,7 +2026,7 @@ namespace PostexS.Controllers
                 Title = $"مرتجعات جديده محولة للفرع";
                 Body = $"مرتجعات محوله في الطريق الي الفرع , تم تحويل مرتجعات جديده من فرع الي الفرع لديك , يرجي مراجعتها عند الوصول وتأكيد استلامها .";
             }
-            var send = new SendNotification(_pushNotification, _notification);
+            var send = new SendNotification(_pushNotification, _notification, _firebaseService.CaptainMessaging);
             foreach (var admin in BranchAdmins)
             {
                 await send.SendToAllSpecificAndroidUserDevices(admin.Id, Title, Body);
@@ -2415,7 +2418,7 @@ namespace PostexS.Controllers
                 var Title = $"طلب جديد للراسل : {user.Name}";
                 var Body = $"قام الراسل : {user.Name}  برفع طلب جديد , وكود الطلب هو : {model.Code}";
 
-                var send = new SendNotification(_pushNotification, _notification);
+                var send = new SendNotification(_pushNotification, _notification, _firebaseService.CaptainMessaging);
                 foreach (var admin in BranchAdmins)
                 {
                     await send.SendToAllSpecificAndroidUserDevices(admin.Id, Title, Body);
@@ -3211,7 +3214,7 @@ namespace PostexS.Controllers
                 $"\n رقم الهاتف : {Captian.PhoneNumber}," +
                 $"\n ملاحظات المندوب : {note} .";
 
-            var send = new SendNotification(_pushNotification, _notification);
+            var send = new SendNotification(_pushNotification, _notification, _firebaseService.CustomerMessaging);
             await send.SendToAllSpecificAndroidUserDevices(order.ClientId, Title, Body, Image: image);
 
             return true;

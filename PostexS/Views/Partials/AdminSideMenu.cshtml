@@ -151,11 +151,11 @@
                         <i class="fa fa-archive"></i> <span>ارشيف تسوية المرتجعات</span>
                     </a>
                 </li>
-                @if (!User.IsInRole("Accountant") && !User.IsInRole("HighAdmin"))
+                @if (!User.IsInRole("Accountant"))
                 {
                     <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("notification") ? "active" : "")">
-                        <a href="@Url.Action("Index", "Notification", new {q = "a"})">
-                            <i class="fa fa-bullhorn"></i> <span>الاشعارات</span>
+                        <a href="@Url.Action("Index", "Notification")">
+                            <i class="fa fa-bullhorn"></i> <span>الإشعارات</span>
                         </a>
                     </li>
 

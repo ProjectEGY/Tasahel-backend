@@ -255,7 +255,7 @@ namespace PostexS.Controllers.API
                 return StatusCode((int)HttpStatusCode.Forbidden, _baseResponse);
             }
 
-            if (!user.IsPending)
+            if (!user.IsApproved)      //  IsApproved  معناه انه متوافق عليه ,لانها معكوسه في التطبيق
             {
                 _baseResponse.ErrorCode = Errors.UserNotApproved;
                 _baseResponse.ErrorMessage = "الحساب في انتظار الموافقة";
@@ -315,7 +315,7 @@ namespace PostexS.Controllers.API
                 Address = model.Address,
                 BranchId = model.BranchId,
                 UserType = UserType.Client,
-                IsPending = false,
+                IsApproved = false, // الحساب هيكون في انتظار موافقة الأدمن
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);

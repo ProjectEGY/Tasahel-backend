@@ -61,13 +61,14 @@ namespace PostexS.Controllers
         private readonly IWhatsAppProviderService _providerService;
         private readonly IGeneric<CourierOrderSheet> _courierOrderSheet;
         private readonly IGeneric<CourierOrderSheetItem> _courierOrderSheetItem;
+        private readonly FirebaseMessagingService _firebaseService;
 
         public UsersController(UserManager<ApplicationUser> userManger, IGeneric<ApplicationUser> users, IGeneric<OrderOperationHistory> histories,
             ICRUD<OrderOperationHistory> CRUDhistory, IGeneric<Order> orders, IGeneric<Branch> branch, RoleManager<IdentityRole> roleManager,
             IGeneric<Wallet> wallet, ICRUD<Order> CRUD, IWalletService walletService,
             IOrderService orderService, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IGeneric<Location> locations, IGeneric<OrderNotes> orderNotes, IWebHostEnvironment webHostEnvironment, IWapilotService wapilotService, IWhatsAppBotCloudService whatsAppBotCloudService,
             IWhaStackService whaStackService, IWhatsAppProviderService providerService,
-            IGeneric<CourierOrderSheet> courierOrderSheet, IGeneric<CourierOrderSheetItem> courierOrderSheetItem)
+            IGeneric<CourierOrderSheet> courierOrderSheet, IGeneric<CourierOrderSheetItem> courierOrderSheetItem, FirebaseMessagingService firebaseService)
         {
             _userManger = userManger;
             _user = users;
@@ -91,6 +92,7 @@ namespace PostexS.Controllers
             _providerService = providerService;
             _courierOrderSheet = courierOrderSheet;
             _courierOrderSheetItem = courierOrderSheetItem;
+            _firebaseService = firebaseService;
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin,TrackingAdmin")]
         public async Task<IActionResult> Index(string q, string? message, bool deleted = false, long BranchId = -1)
@@ -151,12 +153,12 @@ namespace PostexS.Controllers
                 if (deleted)
                 {
                     ViewBag.deleted = 1;
-                    return View(_user.Get(x => x.UserType == UserType.Client && x.IsPending == true
+                    return View(_user.Get(x => x.UserType == UserType.Client && x.IsApproved == true
                 && (BranchId == -1 ? true : x.BranchId == BranchId)
                 && x.IsDeleted && !x.Branch.IsDeleted).ToList());
                 }
 
-                return View(_user.Get(x => x.UserType == UserType.Client && x.IsPending == true
+                return View(_user.Get(x => x.UserType == UserType.Client && x.IsApproved == true
                 && (BranchId == -1 ? true : x.BranchId == BranchId)
                 && !x.IsDeleted && !x.Branch.IsDeleted).ToList());
             }
@@ -196,7 +198,7 @@ namespace PostexS.Controllers
         {
             ViewBag.q = "c";
 
-            return View(_user.Get(x => x.UserType == UserType.Client && x.IsPending == false
+            return View(_user.Get(x => x.UserType == UserType.Client && x.IsApproved == false
             && !x.IsDeleted).ToList());
 
         }
@@ -204,7 +206,7 @@ namespace PostexS.Controllers
         public async Task<IActionResult> Accpet(string UserId)
         {
             var user = await _user.GetObj(x => x.Id == UserId);
-            user.IsPending = true;
+            user.IsApproved = true;
             if (user.UserType == UserType.Driver)
                 user.Tracking = true;
             if (!await _user.Update(user))
@@ -262,7 +264,7 @@ namespace PostexS.Controllers
                 WhatsappPhone = model.WhatsappPhone,
                 UserType = model.UserType == UserType.subAdmin ? UserType.Admin : model.UserType,
                 BranchId = model.BranchId,
-                IsPending = true
+                IsApproved = true
 
             };
             if (user.UserType == UserType.Driver)
@@ -2148,7 +2150,7 @@ namespace PostexS.Controllers
                         var Title = $"طلبات جديده للراسل :{user.Name}";
                         var Body = $"قام الراسل : {user.Name} . برفع طلبات جديده عن طريق الاكسيل شيت , يرجي مراجعتها .  ";
 
-                        var send = new SendNotification(_pushNotification, _notification);
+                        var send = new SendNotification(_pushNotification, _notification, _firebaseService.CaptainMessaging);
                         foreach (var admin in BranchAdmins)
                         {
                             await send.SendToAllSpecificAndroidUserDevices(admin.Id, Title, Body);
@@ -2240,7 +2242,7 @@ namespace PostexS.Controllers
                                                 Address = reader.GetValue(4).ToString(),
                                                 UserType = model.UserType,
                                                 SecurityStamp = Guid.NewGuid().ToString(),
-                                                IsPending = true
+                                                IsApproved = true
                                             });
 
                                         }

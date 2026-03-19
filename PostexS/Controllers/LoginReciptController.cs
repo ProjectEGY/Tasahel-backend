@@ -79,7 +79,7 @@ namespace PostexS.Controllers
                 WhatsappPhone = model.WhatsappPhone,
                 UserType = UserType.Client,
                 BranchId = model.BranchId,
-                IsPending=false
+                IsApproved=false
                 
             };
             //var file = HttpContext.Request.Form.Files.GetFile("IdentityFrontPhoto");
