@@ -727,6 +727,263 @@ namespace PostexS.Services
         }
 
         #endregion
+
+        #region Session Management (QR Code Flow)
+
+        public async Task<WhaStackCreateSessionResult> CreateSessionAsync(string name)
+        {
+            var settings = await GetSettingsAsync();
+            var result = new WhaStackCreateSessionResult();
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                var baseUrl = settings.BaseUrl.TrimEnd('/');
+                var url = $"{baseUrl}/sessions";
+
+                _logger.LogInformation("WhaStack: Creating new session with name '{Name}' via {Url}", name, url);
+
+                var jsonBody = new { name = name };
+
+                using var jsonContent = new StringContent(
+                    JsonSerializer.Serialize(jsonBody),
+                    System.Text.Encoding.UTF8,
+                    "application/json"
+                );
+
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
+
+                using var response = await client.PostAsync(url, jsonContent);
+
+                result.StatusCode = (int)response.StatusCode;
+                result.ResponseBody = await response.Content.ReadAsStringAsync();
+                result.Success = response.IsSuccessStatusCode;
+
+                if (response.IsSuccessStatusCode)
+                {
+                    try
+                    {
+                        var jsonResponse = JsonDocument.Parse(result.ResponseBody);
+
+                        if (jsonResponse.RootElement.TryGetProperty("data", out var dataElement))
+                        {
+                            if (dataElement.TryGetProperty("session_id", out var sidElement))
+                                result.SessionId = sidElement.GetString();
+                            else if (dataElement.TryGetProperty("id", out var idElement))
+                                result.SessionId = idElement.GetString();
+                        }
+                        else if (jsonResponse.RootElement.TryGetProperty("session_id", out var sidElement))
+                        {
+                            result.SessionId = sidElement.GetString();
+                        }
+                        else if (jsonResponse.RootElement.TryGetProperty("id", out var idElement))
+                        {
+                            result.SessionId = idElement.GetString();
+                        }
+
+                        _logger.LogInformation("WhaStack: Session created successfully. SessionId={SessionId}", result.SessionId);
+                    }
+                    catch (Exception parseEx)
+                    {
+                        _logger.LogWarning(parseEx, "WhaStack: Could not parse create session response: {Response}", result.ResponseBody);
+                    }
+                }
+                else
+                {
+                    result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
+                    _logger.LogWarning("WhaStack create session failed: {Error}", result.ErrorMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+                _logger.LogError(ex, "Error creating WhaStack session");
+            }
+
+            return result;
+        }
+
+        public async Task<WhaStackQrResult> GetSessionQrAsync(string sessionId)
+        {
+            var settings = await GetSettingsAsync();
+            var result = new WhaStackQrResult();
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                var baseUrl = settings.BaseUrl.TrimEnd('/');
+                var url = $"{baseUrl}/sessions/{Uri.EscapeDataString(sessionId)}/qr";
+
+                _logger.LogInformation("WhaStack: Getting QR for session {SessionId} via {Url}", sessionId, url);
+
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
+
+                using var response = await client.GetAsync(url);
+
+                result.StatusCode = (int)response.StatusCode;
+                result.ResponseBody = await response.Content.ReadAsStringAsync();
+                result.Success = response.IsSuccessStatusCode;
+
+                if (response.IsSuccessStatusCode)
+                {
+                    try
+                    {
+                        var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
+
+                        if (contentType.StartsWith("image/"))
+                        {
+                            var imageBytes = await response.Content.ReadAsByteArrayAsync();
+                            result.QrCode = $"data:{contentType};base64,{Convert.ToBase64String(imageBytes)}";
+                        }
+                        else
+                        {
+                            var jsonResponse = JsonDocument.Parse(result.ResponseBody);
+
+                            if (jsonResponse.RootElement.TryGetProperty("data", out var dataElement))
+                            {
+                                if (dataElement.TryGetProperty("qr", out var qrElement))
+                                    result.QrCode = qrElement.GetString();
+                                else if (dataElement.TryGetProperty("qr_code", out var qrcElement))
+                                    result.QrCode = qrcElement.GetString();
+                                else if (dataElement.TryGetProperty("image", out var imgElement))
+                                    result.QrCode = imgElement.GetString();
+                            }
+                            else if (jsonResponse.RootElement.TryGetProperty("qr", out var qrElement))
+                            {
+                                result.QrCode = qrElement.GetString();
+                            }
+                            else if (jsonResponse.RootElement.TryGetProperty("qr_code", out var qrcElement))
+                            {
+                                result.QrCode = qrcElement.GetString();
+                            }
+                        }
+
+                        _logger.LogInformation("WhaStack: QR code retrieved successfully for session {SessionId}", sessionId);
+                    }
+                    catch (Exception parseEx)
+                    {
+                        _logger.LogWarning(parseEx, "WhaStack: Could not parse QR response: {Response}", result.ResponseBody);
+                    }
+                }
+                else
+                {
+                    result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
+                    _logger.LogWarning("WhaStack get QR failed: {Error}", result.ErrorMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+                _logger.LogError(ex, "Error getting WhaStack QR for session {SessionId}", sessionId);
+            }
+
+            return result;
+        }
+
+        public async Task<WhaStackStatusResult> GetSessionStatusAsync(string sessionId)
+        {
+            var settings = await GetSettingsAsync();
+            var result = new WhaStackStatusResult();
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                var baseUrl = settings.BaseUrl.TrimEnd('/');
+                var url = $"{baseUrl}/sessions/{Uri.EscapeDataString(sessionId)}/status";
+
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
+
+                using var response = await client.GetAsync(url);
+
+                result.StatusCode = (int)response.StatusCode;
+                result.ResponseBody = await response.Content.ReadAsStringAsync();
+                result.Success = response.IsSuccessStatusCode;
+
+                if (response.IsSuccessStatusCode)
+                {
+                    try
+                    {
+                        var jsonResponse = JsonDocument.Parse(result.ResponseBody);
+
+                        JsonElement root = jsonResponse.RootElement;
+
+                        if (root.TryGetProperty("data", out var dataElement))
+                            root = dataElement;
+
+                        if (root.TryGetProperty("status", out var statusElement))
+                            result.Status = statusElement.GetString();
+                        else if (root.TryGetProperty("state", out var stateElement))
+                            result.Status = stateElement.GetString();
+
+                        if (root.TryGetProperty("phone", out var phoneElement))
+                            result.PhoneNumber = phoneElement.GetString();
+                        else if (root.TryGetProperty("phone_number", out var pnElement))
+                            result.PhoneNumber = pnElement.GetString();
+                    }
+                    catch (Exception parseEx)
+                    {
+                        _logger.LogWarning(parseEx, "WhaStack: Could not parse status response: {Response}", result.ResponseBody);
+                    }
+                }
+                else
+                {
+                    result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+                _logger.LogError(ex, "Error getting WhaStack session status for {SessionId}", sessionId);
+            }
+
+            return result;
+        }
+
+        public async Task<WhaStackSendResult> ReconnectSessionAsync(string sessionId)
+        {
+            var settings = await GetSettingsAsync();
+            var result = new WhaStackSendResult();
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                var baseUrl = settings.BaseUrl.TrimEnd('/');
+                var url = $"{baseUrl}/sessions/{Uri.EscapeDataString(sessionId)}/reconnect";
+
+                _logger.LogInformation("WhaStack: Reconnecting session {SessionId} via {Url}", sessionId, url);
+
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
+
+                using var response = await client.PostAsync(url, null);
+
+                result.StatusCode = (int)response.StatusCode;
+                result.ResponseBody = await response.Content.ReadAsStringAsync();
+                result.Success = response.IsSuccessStatusCode;
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
+                    _logger.LogWarning("WhaStack reconnect session failed: {Error}", result.ErrorMessage);
+                }
+                else
+                {
+                    _logger.LogInformation("WhaStack: Session {SessionId} reconnected successfully", sessionId);
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+                _logger.LogError(ex, "Error reconnecting WhaStack session {SessionId}", sessionId);
+            }
+
+            return result;
+        }
+
+        #endregion
     }
 
 }

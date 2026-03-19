@@ -26,6 +26,12 @@ namespace PostexS.Interfaces
 
         // Sessions
         Task<WhaStackSessionsResult> GetSessionsAsync();
+
+        // Session Management (QR Code Flow)
+        Task<WhaStackCreateSessionResult> CreateSessionAsync(string name);
+        Task<WhaStackQrResult> GetSessionQrAsync(string sessionId);
+        Task<WhaStackStatusResult> GetSessionStatusAsync(string sessionId);
+        Task<WhaStackSendResult> ReconnectSessionAsync(string sessionId);
     }
 
     public class WhaStackSessionInfo
@@ -68,6 +74,34 @@ namespace PostexS.Interfaces
         public bool Success { get; set; }
         public int? TotalQuota { get; set; }
         public int? RemainingQuota { get; set; }
+        public string ResponseBody { get; set; }
+        public int StatusCode { get; set; }
+        public string ErrorMessage { get; set; }
+    }
+
+    public class WhaStackCreateSessionResult
+    {
+        public bool Success { get; set; }
+        public string SessionId { get; set; }
+        public string ResponseBody { get; set; }
+        public int StatusCode { get; set; }
+        public string ErrorMessage { get; set; }
+    }
+
+    public class WhaStackQrResult
+    {
+        public bool Success { get; set; }
+        public string QrCode { get; set; }
+        public string ResponseBody { get; set; }
+        public int StatusCode { get; set; }
+        public string ErrorMessage { get; set; }
+    }
+
+    public class WhaStackStatusResult
+    {
+        public bool Success { get; set; }
+        public string Status { get; set; }
+        public string PhoneNumber { get; set; }
         public string ResponseBody { get; set; }
         public int StatusCode { get; set; }
         public string ErrorMessage { get; set; }

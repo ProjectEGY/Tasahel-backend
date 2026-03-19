@@ -637,6 +637,122 @@ namespace PostexS.Controllers
             });
         }
 
+        // POST: Create WhaStack Session
+        [HttpPost]
+        public async Task<IActionResult> CreateWhaStackSession(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                name = "Tasahel_" + DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+            }
+
+            var result = await _whaStackService.CreateSessionAsync(name);
+
+            return Json(new
+            {
+                success = result.Success,
+                sessionId = result.SessionId,
+                message = result.Success
+                    ? $"تم إنشاء الجلسة بنجاح: {result.SessionId}"
+                    : $"فشل إنشاء الجلسة: {result.ErrorMessage}",
+                response = result.ResponseBody,
+                statusCode = result.StatusCode
+            });
+        }
+
+        // POST: Get QR Code for WhaStack Session
+        [HttpPost]
+        public async Task<IActionResult> GetWhaStackSessionQr(string sessionId)
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                return Json(new { success = false, message = "برجاء تحديد الـ Session ID" });
+            }
+
+            var result = await _whaStackService.GetSessionQrAsync(sessionId);
+
+            return Json(new
+            {
+                success = result.Success,
+                qrCode = result.QrCode,
+                message = result.Success
+                    ? "تم جلب الـ QR Code بنجاح"
+                    : $"فشل جلب الـ QR Code: {result.ErrorMessage}",
+                response = result.ResponseBody,
+                statusCode = result.StatusCode
+            });
+        }
+
+        // POST: Get WhaStack Session Status
+        [HttpPost]
+        public async Task<IActionResult> GetWhaStackSessionStatus(string sessionId)
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                return Json(new { success = false, message = "برجاء تحديد الـ Session ID" });
+            }
+
+            var result = await _whaStackService.GetSessionStatusAsync(sessionId);
+
+            return Json(new
+            {
+                success = result.Success,
+                status = result.Status,
+                phoneNumber = result.PhoneNumber,
+                message = result.Success
+                    ? $"حالة الجلسة: {result.Status}"
+                    : $"فشل جلب حالة الجلسة: {result.ErrorMessage}",
+                response = result.ResponseBody,
+                statusCode = result.StatusCode
+            });
+        }
+
+        // POST: Reconnect WhaStack Session
+        [HttpPost]
+        public async Task<IActionResult> ReconnectWhaStackSession(string sessionId)
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                return Json(new { success = false, message = "برجاء تحديد الـ Session ID" });
+            }
+
+            var result = await _whaStackService.ReconnectSessionAsync(sessionId);
+
+            return Json(new
+            {
+                success = result.Success,
+                message = result.Success
+                    ? "تم إعادة الاتصال بنجاح"
+                    : $"فشل إعادة الاتصال: {result.ErrorMessage}",
+                response = result.ResponseBody,
+                statusCode = result.StatusCode
+            });
+        }
+
+        // POST: Save WhaStack Session ID (after successful QR scan)
+        [HttpPost]
+        public async Task<IActionResult> SaveWhaStackSessionId(string sessionId)
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                return Json(new { success = false, message = "برجاء تحديد الـ Session ID" });
+            }
+
+            var userId = _userManager.GetUserId(User);
+            var settings = await _whaStackService.GetSettingsAsync();
+            settings.SessionId = sessionId;
+
+            var result = await _whaStackService.UpdateSettingsAsync(settings, userId);
+
+            return Json(new
+            {
+                success = result,
+                message = result
+                    ? $"تم حفظ الـ Session ID بنجاح: {sessionId}"
+                    : "فشل حفظ الـ Session ID"
+            });
+        }
+
         #endregion
     }
 }

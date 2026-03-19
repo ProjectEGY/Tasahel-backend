@@ -676,6 +676,76 @@
                     </div>
                 }
 
+                <!-- WhaStack QR Code Management -->
+                <div class="panel panel-default" style="margin-top: 20px;">
+                    <div class="panel-heading">
+                        <h4 class="panel-title"><i class="fa fa-qrcode"></i> ربط واتساب - QR Code</h4>
+                    </div>
+                    <div class="panel-body">
+                        <!-- Session Status Indicator -->
+                        <div id="whaStackSessionStatusBar" class="alert alert-info" style="display: none;">
+                            <i class="fa fa-circle" id="whaStackStatusIcon"></i>
+                            <span id="whaStackStatusText">جاري التحقق من حالة الاتصال...</span>
+                            <span id="whaStackStatusPhone" style="margin-right: 15px; font-weight: bold;"></span>
+                        </div>
+
+                        <!-- Disconnected Warning -->
+                        <div id="whaStackDisconnectedAlert" class="alert alert-danger" style="display: none;">
+                            <i class="fa fa-exclamation-triangle"></i>
+                            <strong>تنبيه!</strong> الجلسة غير متصلة. يرجى إعادة مسح الـ QR Code للاتصال مرة أخرى.
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5><i class="fa fa-plus-circle"></i> إنشاء جلسة جديدة ومسح QR</h5>
+                                <div class="form-group">
+                                    <label>اسم الجلسة (اختياري)</label>
+                                    <input type="text" id="whaStackNewSessionName" class="form-control" placeholder="مثال: Tasahel_Session" />
+                                    <small class="text-muted">سيتم إنشاء اسم تلقائي إذا تركته فارغاً</small>
+                                </div>
+                                <div style="margin-bottom: 15px;">
+                                    <button type="button" id="btnCreateWhaStackSession" class="btn btn-primary btn-lg">
+                                        <i class="fa fa-plus"></i> إنشاء جلسة جديدة
+                                    </button>
+                                    <button type="button" id="btnReconnectWhaStack" class="btn btn-warning btn-lg" style="display: none;">
+                                        <i class="fa fa-refresh"></i> إعادة الاتصال
+                                    </button>
+                                    <button type="button" id="btnCheckWhaStackStatus" class="btn btn-info">
+                                        <i class="fa fa-signal"></i> فحص الحالة
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <!-- QR Code Display -->
+                                <div id="whaStackQrContainer" style="display: none; text-align: center; padding: 20px; border: 2px dashed #337ab7; border-radius: 10px; background: #f9f9f9;">
+                                    <h5 style="color: #337ab7; margin-bottom: 15px;">
+                                        <i class="fa fa-mobile"></i> امسح الـ QR Code بواسطة واتساب
+                                    </h5>
+                                    <div id="whaStackQrImage" style="margin: 10px auto;">
+                                        <img id="whaStackQrImg" src="" alt="QR Code" style="max-width: 280px; max-height: 280px; border: 3px solid #333; border-radius: 8px;" />
+                                    </div>
+                                    <div id="whaStackQrLoading" style="display: none; padding: 40px;">
+                                        <i class="fa fa-spinner fa-spin fa-3x" style="color: #337ab7;"></i>
+                                        <p style="margin-top: 10px; color: #666;">جاري تحميل الـ QR Code...</p>
+                                    </div>
+                                    <p style="color: #888; font-size: 12px; margin-top: 10px;">
+                                        افتح واتساب > الأجهزة المرتبطة > ربط جهاز > امسح الكود
+                                    </p>
+                                </div>
+                                <!-- Connected Success -->
+                                <div id="whaStackConnectedBox" style="display: none; text-align: center; padding: 30px; border: 2px solid #28a745; border-radius: 10px; background: #d4edda;">
+                                    <i class="fa fa-check-circle fa-4x" style="color: #28a745;"></i>
+                                    <h4 style="color: #28a745; margin-top: 15px;">متصل بنجاح!</h4>
+                                    <p id="whaStackConnectedPhone" style="font-size: 18px; font-weight: bold;"></p>
+                                    <p style="color: #666;">تم حفظ الـ Session ID تلقائياً</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="whaStackQrResult" class="alert" style="display:none; margin-top: 15px;"></div>
+                    </div>
+                </div>
+
                 <!-- WhaStack Test Section -->
                 <div class="panel panel-default" style="margin-top: 20px;">
                     <div class="panel-heading">
@@ -1156,6 +1226,259 @@
                     btn.prop('disabled', false).html(originalHtml);
                 });
             });
+
+            // ==========================================
+            // WhaStack QR Code Management
+            // ==========================================
+            var qrPollingInterval = null;
+            var statusMonitorInterval = null;
+            var currentQrSessionId = null;
+
+            function showQrResult(success, message) {
+                var resultDiv = $('#whaStackQrResult');
+                resultDiv.removeClass('alert-success alert-danger alert-warning');
+                resultDiv.addClass(success ? 'alert-success' : 'alert-danger');
+                resultDiv.html('<i class="fa fa-' + (success ? 'check' : 'times') + '"></i> ' + message).show();
+            }
+
+            function updateStatusBar(status, phone) {
+                var bar = $('#whaStackSessionStatusBar');
+                var icon = $('#whaStackStatusIcon');
+                var text = $('#whaStackStatusText');
+                var phoneSpan = $('#whaStackStatusPhone');
+
+                bar.show();
+
+                var sl = (status || '').toLowerCase();
+                if (sl === 'connected' || sl === 'active' || sl === 'online') {
+                    bar.removeClass('alert-info alert-danger alert-warning').addClass('alert-success');
+                    icon.css('color', '#28a745');
+                    text.text('متصل');
+                    $('#whaStackDisconnectedAlert').hide();
+                    $('#btnReconnectWhaStack').hide();
+                } else if (sl === 'disconnected' || sl === 'offline') {
+                    bar.removeClass('alert-info alert-success alert-warning').addClass('alert-danger');
+                    icon.css('color', '#dc3545');
+                    text.text('غير متصل');
+                    $('#whaStackDisconnectedAlert').show();
+                    $('#btnReconnectWhaStack').show();
+                } else if (sl === 'qr_pending' || sl === 'connecting' || sl === 'pending') {
+                    bar.removeClass('alert-info alert-success alert-danger').addClass('alert-warning');
+                    icon.css('color', '#ffc107');
+                    text.text('في انتظار مسح الـ QR Code...');
+                    $('#whaStackDisconnectedAlert').hide();
+                } else {
+                    bar.removeClass('alert-success alert-danger alert-warning').addClass('alert-info');
+                    icon.css('color', '#17a2b8');
+                    text.text('حالة: ' + (status || 'غير معروف'));
+                }
+
+                if (phone) {
+                    phoneSpan.text('الرقم: ' + phone).show();
+                } else {
+                    phoneSpan.hide();
+                }
+            }
+
+            function startQrPolling(sessionId) {
+                stopQrPolling();
+                currentQrSessionId = sessionId;
+
+                qrPollingInterval = setInterval(function () {
+                    $.post('@Url.Action("GetWhaStackSessionStatus")', { sessionId: sessionId }, function (response) {
+                        if (response.success) {
+                            updateStatusBar(response.status, response.phoneNumber);
+
+                            var sl = (response.status || '').toLowerCase();
+                            if (sl === 'connected' || sl === 'active' || sl === 'online') {
+                                stopQrPolling();
+                                onSessionConnected(sessionId, response.phoneNumber);
+                            }
+                        }
+                    });
+                }, 5000);
+            }
+
+            function stopQrPolling() {
+                if (qrPollingInterval) {
+                    clearInterval(qrPollingInterval);
+                    qrPollingInterval = null;
+                }
+            }
+
+            function startStatusMonitor(sessionId) {
+                stopStatusMonitor();
+
+                statusMonitorInterval = setInterval(function () {
+                    $.post('@Url.Action("GetWhaStackSessionStatus")', { sessionId: sessionId }, function (response) {
+                        if (response.success) {
+                            updateStatusBar(response.status, response.phoneNumber);
+
+                            var sl = (response.status || '').toLowerCase();
+                            if (sl === 'disconnected' || sl === 'offline') {
+                                $('#whaStackConnectedBox').hide();
+                                $('#whaStackQrContainer').hide();
+                                currentQrSessionId = sessionId;
+                            }
+                        }
+                    });
+                }, 30000);
+            }
+
+            function stopStatusMonitor() {
+                if (statusMonitorInterval) {
+                    clearInterval(statusMonitorInterval);
+                    statusMonitorInterval = null;
+                }
+            }
+
+            function onSessionConnected(sessionId, phone) {
+                $.post('@Url.Action("SaveWhaStackSessionId")', { sessionId: sessionId }, function (response) {
+                    if (response.success) {
+                        $('#WhaStackSettings_SessionId').val(sessionId);
+                        showQrResult(true, response.message);
+                    } else {
+                        showQrResult(false, response.message);
+                    }
+                });
+
+                $('#whaStackQrContainer').hide();
+                $('#whaStackConnectedBox').show();
+                $('#whaStackConnectedPhone').text(phone || sessionId);
+                $('#whaStackDisconnectedAlert').hide();
+                $('#btnReconnectWhaStack').hide();
+
+                startStatusMonitor(sessionId);
+            }
+
+            function loadQrCode(sessionId) {
+                $('#whaStackQrContainer').show();
+                $('#whaStackConnectedBox').hide();
+                $('#whaStackQrImg').hide();
+                $('#whaStackQrLoading').show();
+
+                $.post('@Url.Action("GetWhaStackSessionQr")', { sessionId: sessionId }, function (response) {
+                    $('#whaStackQrLoading').hide();
+                    if (response.success && response.qrCode) {
+                        var src = response.qrCode;
+                        if (!src.startsWith('data:')) {
+                            if (src.startsWith('http')) {
+                                // Direct URL
+                            } else {
+                                src = 'data:image/png;base64,' + src;
+                            }
+                        }
+                        $('#whaStackQrImg').attr('src', src).show();
+                        showQrResult(true, 'تم تحميل الـ QR Code - امسحه بواسطة واتساب');
+                        startQrPolling(sessionId);
+                    } else {
+                        showQrResult(false, response.message || 'فشل تحميل الـ QR Code');
+                    }
+                }).fail(function () {
+                    $('#whaStackQrLoading').hide();
+                    showQrResult(false, 'حدث خطأ أثناء تحميل الـ QR Code');
+                });
+            }
+
+            // Create New Session
+            $('#btnCreateWhaStackSession').click(function () {
+                var btn = $(this);
+                var originalHtml = btn.html();
+                var name = $('#whaStackNewSessionName').val().trim();
+
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الإنشاء...');
+                stopQrPolling();
+                stopStatusMonitor();
+
+                $.post('@Url.Action("CreateWhaStackSession")', { name: name }, function (response) {
+                    if (response.success && response.sessionId) {
+                        showQrResult(true, response.message);
+                        loadQrCode(response.sessionId);
+                    } else {
+                        showQrResult(false, response.message || 'فشل إنشاء الجلسة');
+                    }
+                    btn.prop('disabled', false).html(originalHtml);
+                }).fail(function () {
+                    showQrResult(false, 'حدث خطأ أثناء إنشاء الجلسة - تأكد من ادخال الـ API Key وحفظ الاعدادات أولاً');
+                    btn.prop('disabled', false).html(originalHtml);
+                });
+            });
+
+            // Reconnect Session
+            $('#btnReconnectWhaStack').click(function () {
+                var btn = $(this);
+                var originalHtml = btn.html();
+                var sessionId = currentQrSessionId || $('#WhaStackSettings_SessionId').val();
+
+                if (!sessionId) {
+                    showQrResult(false, 'لا يوجد Session ID للاتصال - أنشئ جلسة جديدة أولاً');
+                    return;
+                }
+
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري إعادة الاتصال...');
+                stopStatusMonitor();
+
+                $.post('@Url.Action("ReconnectWhaStackSession")', { sessionId: sessionId }, function (response) {
+                    if (response.success) {
+                        showQrResult(true, response.message);
+                        loadQrCode(sessionId);
+                    } else {
+                        showQrResult(false, response.message || 'فشل إعادة الاتصال');
+                    }
+                    btn.prop('disabled', false).html(originalHtml);
+                }).fail(function () {
+                    showQrResult(false, 'حدث خطأ أثناء إعادة الاتصال');
+                    btn.prop('disabled', false).html(originalHtml);
+                });
+            });
+
+            // Check Status manually
+            $('#btnCheckWhaStackStatus').click(function () {
+                var btn = $(this);
+                var originalHtml = btn.html();
+                var sessionId = currentQrSessionId || $('#WhaStackSettings_SessionId').val();
+
+                if (!sessionId) {
+                    showQrResult(false, 'لا يوجد Session ID - أنشئ جلسة جديدة أو اختر جلسة من القائمة');
+                    return;
+                }
+
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الفحص...');
+
+                $.post('@Url.Action("GetWhaStackSessionStatus")', { sessionId: sessionId }, function (response) {
+                    if (response.success) {
+                        updateStatusBar(response.status, response.phoneNumber);
+
+                        var sl = (response.status || '').toLowerCase();
+                        if (sl === 'connected' || sl === 'active' || sl === 'online') {
+                            onSessionConnected(sessionId, response.phoneNumber);
+                        }
+                        showQrResult(true, response.message);
+                    } else {
+                        showQrResult(false, response.message || 'فشل فحص الحالة');
+                    }
+                    btn.prop('disabled', false).html(originalHtml);
+                }).fail(function () {
+                    showQrResult(false, 'حدث خطأ أثناء فحص الحالة');
+                    btn.prop('disabled', false).html(originalHtml);
+                });
+            });
+
+            // Auto-check status on page load if session ID exists
+            var initialSessionId = '@(Model.WhaStackSettings?.SessionId ?? "")';
+            if (initialSessionId) {
+                $.post('@Url.Action("GetWhaStackSessionStatus")', { sessionId: initialSessionId }, function (response) {
+                    if (response.success) {
+                        currentQrSessionId = initialSessionId;
+                        updateStatusBar(response.status, response.phoneNumber);
+
+                        var sl = (response.status || '').toLowerCase();
+                        if (sl === 'connected' || sl === 'active' || sl === 'online') {
+                            startStatusMonitor(initialSessionId);
+                        }
+                    }
+                });
+            }
 
             function showResult(provider, success, message) {
                 var resultDiv = provider === 'wapilot' ? $('#wapilotTestResult') :
