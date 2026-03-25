@@ -27,7 +27,11 @@
       "Bash(powershell -File:*)",
       "Bash(cp \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\MohammedSharabash\\\\Elamr-express-backend-\\\\PostexS\\\\Views\\\\Reports\\\\ExportOrders.cshtml\" \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\ProjectEGY\\\\Tasahel-backend\\\\PostexS\\\\Views\\\\Reports\\\\ExportOrders.cshtml\")",
       "Bash(cp \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\MohammedSharabash\\\\Elamr-express-backend-\\\\PostexS\\\\Views\\\\Reports\\\\ExportUnsettledOrders.cshtml\" \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\ProjectEGY\\\\Tasahel-backend\\\\PostexS\\\\Views\\\\Reports\\\\ExportUnsettledOrders.cshtml\")",
-      "Bash(cp \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\MohammedSharabash\\\\Elamr-express-backend-\\\\PostexS\\\\Views\\\\Reports\\\\ExportWallets.cshtml\" \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\ProjectEGY\\\\Tasahel-backend\\\\PostexS\\\\Views\\\\Reports\\\\ExportWallets.cshtml\")"
+      "Bash(cp \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\MohammedSharabash\\\\Elamr-express-backend-\\\\PostexS\\\\Views\\\\Reports\\\\ExportWallets.cshtml\" \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\ProjectEGY\\\\Tasahel-backend\\\\PostexS\\\\Views\\\\Reports\\\\ExportWallets.cshtml\")",
+      "Bash(route)",
+      "Bash(http)",
+      "Bash(grep -n \"enum Errors\" /c/Users/iT/source/repos/ProjectEGY/Tasahel-backend/PostexS/Models/Enums/*.cs)",
+      "Bash(grep -r \"\\\\[Route\\\\|api/\" /c/Users/iT/source/repos/ProjectEGY/Tasahel-backend/PostexS/Controllers/API/DriverApp/*.cs)"
     ]
   }
 }

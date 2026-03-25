@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -108,17 +109,63 @@ namespace PostexS.Controllers.API
         }
 
         /// <summary>
-        /// حالة تتبع الموقع
+        /// الحصول على حالة التتبع وسجل نقاط التتبع مع فلتر بالتاريخ
         /// </summary>
         [HttpGet("GetTracking")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> GetTracking([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude, string lang = "en")
+        public async Task<IActionResult> GetTracking(
+            DateTime? from,
+            DateTime? to,
+            string lang = "en")
         {
             var (user, errorResult) = await GetCurrentDriverAsync();
             if (errorResult != null) return errorResult;
 
+            TimeZoneInfo egyptTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+            DateTime egyptNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, egyptTimeZone);
+
+            DateTime filterFrom = from ?? egyptNow.Date;
+            DateTime filterTo = to ?? egyptNow.Date.AddDays(1);
+
+            var locations = _locations.GetAllAsIQueryable(
+                x => !x.IsDeleted && x.DeliveryId == user.Id
+                    && x.CreateOn >= filterFrom && x.CreateOn < filterTo,
+                orderby: q => q.OrderByDescending(x => x.CreateOn))
+                .Select(x => new LocationDto(x))
+                .ToList();
+
+            baseResponse.Data = new
+            {
+                isTracking = user.Tracking,
+                currentLatitude = user.Latitude,
+                currentLongitude = user.Longitude,
+                locations = locations
+            };
+            return Ok(baseResponse);
+        }
+
+        /// <summary>
+        /// تحديث موقع المندوب
+        /// </summary>
+        [HttpPut("UpdateLocation")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> UpdateLocation([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude, string lang = "en")
+        {
+            var (user, errorResult) = await GetCurrentDriverAsync();
+            if (errorResult != null) return errorResult;
+
+            if (!latitude.HasValue || !longitude.HasValue)
+            {
+                baseResponse.ErrorCode = Errors.TheModelIsInvalid;
+                return StatusCode((int)HttpStatusCode.BadRequest, baseResponse);
+            }
+
             await UpdateLocationIfProvided(latitude, longitude, user);
-            baseResponse.Data = user.Tracking;
+            baseResponse.Data = new
+            {
+                latitude = user.Latitude,
+                longitude = user.Longitude
+            };
             return Ok(baseResponse);
         }
 
@@ -127,7 +174,7 @@ namespace PostexS.Controllers.API
         /// </summary>
         [HttpPut("UpdateProfile")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> UpdateProfile([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude, UpdateUserDto dto, string lang = "en")
+        public async Task<IActionResult> UpdateProfile(/*[FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude,*/ UpdateUserDto dto, string lang = "en")
         {
             var (user, errorResult) = await GetCurrentDriverAsync();
             if (errorResult != null) return errorResult;
@@ -144,7 +191,7 @@ namespace PostexS.Controllers.API
             await _user.Update(user);
             var userdto = _user.Get(x => x.Id == user.Id).First();
             var response = new LoginDto(userdto);
-            await UpdateLocationIfProvided(latitude, longitude, user);
+            //await UpdateLocationIfProvided(latitude, longitude, user);
             baseResponse.Data = response;
             return Ok(baseResponse);
         }
