@@ -11,8 +11,6 @@ namespace PostexS.Models.Dtos
         [Required]
         public string Phone { get; set; }
         [Required]
-        [StringLength(100, MinimumLength = 6)]
-        [DataType(DataType.Password)]
         public string Password { get; set; }
     }
 }
