@@ -2113,7 +2113,7 @@ namespace PostexS.Controllers
             var send = new SendNotification(_pushNotification, _notification, _firebaseService.CaptainMessaging);
             foreach (var admin in BranchAdmins)
             {
-                await send.SendToAllSpecificAndroidUserDevices(admin.Id, Title, Body);
+                await send.SendToAllSpecificAndroidUserDevices(admin.Id, Title, Body, notificationType: "admin");
             }
             return true;
         }
@@ -2505,7 +2505,7 @@ namespace PostexS.Controllers
                 var send = new SendNotification(_pushNotification, _notification, _firebaseService.CaptainMessaging);
                 foreach (var admin in BranchAdmins)
                 {
-                    await send.SendToAllSpecificAndroidUserDevices(admin.Id, Title, Body);
+                    await send.SendToAllSpecificAndroidUserDevices(admin.Id, Title, Body, notificationType: "admin");
                 }
             }
 
@@ -3299,7 +3299,7 @@ namespace PostexS.Controllers
                 $"\n ملاحظات المندوب : {note} .";
 
             var send = new SendNotification(_pushNotification, _notification, _firebaseService.CustomerMessaging);
-            await send.SendToAllSpecificAndroidUserDevices(order.ClientId, Title, Body, Image: image);
+            await send.SendToAllSpecificAndroidUserDevices(order.ClientId, Title, Body, Image: image, notificationType: "order_status");
 
             return true;
         }

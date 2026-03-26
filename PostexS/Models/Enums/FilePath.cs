@@ -4,6 +4,7 @@
     {
         Users,
         OrderReturns,
-        Landing
+        Landing,
+        Notifications
     }
 }

@@ -19,12 +19,23 @@ namespace PostexS.Controllers
         }
         public async Task<IActionResult> Index()
         {
-            return View(_terms.Get(x=>!x.IsDeleted).First());
+            var terms = _terms.Get(x => !x.IsDeleted).FirstOrDefault();
+            if (terms == null)
+            {
+                terms = new TermsAndCondition { Arabic = "", English = "" };
+                await _terms.Add(terms);
+            }
+            return View(terms);
         }
-        public IActionResult webView(string lang="ar")
+        public IActionResult webView(string lang = "ar")
         {
             ViewBag.lang = lang;
-            return View(_terms.Get(x => !x.IsDeleted).First());
+            var terms = _terms.Get(x => !x.IsDeleted).FirstOrDefault();
+            if (terms == null)
+            {
+                terms = new TermsAndCondition { Arabic = "", English = "" };
+            }
+            return View(terms);
         }
         [HttpPost]
         public async Task<IActionResult> Index(TermsAndCondition model)

@@ -971,6 +971,34 @@ namespace PostexS.Controllers
                             // Don't fail the operation if WhatsApp queueing fails
                         }
 
+                        // إشعار للراسلين بالتسوية
+                        try
+                        {
+                            var settledOrders = _orders.GetAllAsIQueryable(filter: x => OrderId.Contains(x.Id), IncludeProperties: "Client").ToList();
+                            var clientGroups = settledOrders.GroupBy(x => x.ClientId);
+                            var sendNotify = new SendNotification(_pushNotification, _notification, _firebaseService.CustomerMessaging);
+                            foreach (var group in clientGroups)
+                            {
+                                var notifyType = Returned ? "return_settlement" : "settlement";
+                                var notifyTitle = Returned ? "تسوية مرتجعات" : "تسوية طلبات";
+                                var notifyBody = Returned
+                                    ? $"تمت تسوية {group.Count()} مرتجع. رقم التسوية: {wallet.Id}"
+                                    : $"تمت تسوية {group.Count()} طلب. رقم التسوية: {wallet.Id}";
+                                await sendNotify.SendToAllSpecificAndroidUserDevices(group.Key, notifyTitle, notifyBody, notificationType: notifyType);
+                            }
+                        }
+                        catch { }
+
+                        // إشعار للمندوب بالتقفيلة
+                        try
+                        {
+                            var driverSettleTitle = "تقفيلة جديدة";
+                            var driverSettleBody = $"تمت تقفيلة لطلباتك. رقم التقفيلة: {wallet.Id}، المبلغ: {wallet.Amount}";
+                            var sendDriver = new SendNotification(_pushNotification, _notification, _firebaseService.CaptainMessaging);
+                            await sendDriver.SendToAllSpecificAndroidUserDevices(wallet.ActualUserId, driverSettleTitle, driverSettleBody, notificationType: "settlement");
+                        }
+                        catch { }
+
                         return RedirectToAction(nameof(Index), new { q = "d" });
                     }
                     else
@@ -1095,6 +1123,31 @@ namespace PostexS.Controllers
                     {
                         // Don't fail the operation if WhatsApp queueing fails
                     }
+
+                    // إشعار للراسلين بتسوية المرتجعات
+                    try
+                    {
+                        var settledOrders = _orders.GetAllAsIQueryable(filter: x => OrderId.Contains(x.Id), IncludeProperties: "Client").ToList();
+                        var clientGroups = settledOrders.GroupBy(x => x.ClientId);
+                        var sendNotify = new SendNotification(_pushNotification, _notification, _firebaseService.CustomerMessaging);
+                        foreach (var group in clientGroups)
+                        {
+                            var notifyTitle = "تسوية مرتجعات";
+                            var notifyBody = $"تمت تسوية {group.Count()} مرتجع. رقم التسوية: {wallet.Id}";
+                            await sendNotify.SendToAllSpecificAndroidUserDevices(group.Key, notifyTitle, notifyBody, notificationType: "return_settlement");
+                        }
+                    }
+                    catch { }
+
+                    // إشعار للمندوب بالتقفيلة
+                    try
+                    {
+                        var driverSettleTitle = "تقفيلة جديدة";
+                        var driverSettleBody = $"تمت تقفيلة لطلباتك. رقم التقفيلة: {wallet.Id}، المبلغ: {wallet.Amount}";
+                        var sendDriver = new SendNotification(_pushNotification, _notification, _firebaseService.CaptainMessaging);
+                        await sendDriver.SendToAllSpecificAndroidUserDevices(wallet.ActualUserId, driverSettleTitle, driverSettleBody, notificationType: "settlement");
+                    }
+                    catch { }
 
                     return RedirectToAction(nameof(Index), new { q = "d" });
                 }
@@ -1605,6 +1658,20 @@ namespace PostexS.Controllers
                     }
 
                     scope.Complete();
+
+                    // إشعار للمندوب بالطلبات الجديدة
+                    if (OrdersPrint.Count > 0)
+                    {
+                        try
+                        {
+                            var notifyTitle = $"طلبات جديدة";
+                            var notifyBody = $"تم تحميل عدد {OrdersPrint.Count} طلب جديد عليك.";
+                            var send = new SendNotification(_pushNotification, _notification, _firebaseService.CaptainMessaging);
+                            await send.SendToAllSpecificAndroidUserDevices(model.UserId, notifyTitle, notifyBody, notificationType: "new_orders");
+                        }
+                        catch { }
+                    }
+
                     //print ecxll sheet
                     string message = "تم تحميل عدد " + OrdersPrint.Count() + " طلب على المندوب : " + user.Name;
                     if (OrdersPrint.Count() > 0)
@@ -2153,7 +2220,7 @@ namespace PostexS.Controllers
                         var send = new SendNotification(_pushNotification, _notification, _firebaseService.CaptainMessaging);
                         foreach (var admin in BranchAdmins)
                         {
-                            await send.SendToAllSpecificAndroidUserDevices(admin.Id, Title, Body);
+                            await send.SendToAllSpecificAndroidUserDevices(admin.Id, Title, Body, notificationType: "admin");
                         }
                     }
 

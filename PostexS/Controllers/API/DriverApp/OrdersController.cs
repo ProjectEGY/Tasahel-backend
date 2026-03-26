@@ -435,7 +435,7 @@ namespace PostexS.Controllers.API
                 $"\n ملاحظات المندوب : {note} .";
 
             var send = new SendNotification(_pushNotification, _notification, _firebaseService.CustomerMessaging);
-            await send.SendToAllSpecificAndroidUserDevices(order.ClientId, Title, Body, Image: order.Returned_Image);
+            await send.SendToAllSpecificAndroidUserDevices(order.ClientId, Title, Body, Image: order.Returned_Image, notificationType: "order_status");
 
             return true;
         }

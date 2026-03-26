@@ -195,6 +195,11 @@
                             <i class="fas fa-pen"></i> <span>الشروط و الأحكام</span>
                         </a>
                     </li>
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("privacypolicy") ? "active" : "")">
+                        <a href="@Url.Action("Index", "PrivacyPolicy")">
+                            <i class="fas fa-shield-alt"></i> <span>سياسة الخصوصية</span>
+                        </a>
+                    </li>
                 }
             }
             @if (User.IsInRole("Admin"))

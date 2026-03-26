@@ -19,7 +19,7 @@ public class SendNotification
         _firebaseMessaging = firebaseMessaging;
     }
 
-    public async Task SendToAllSpecificAndroidUserDevices(string userId, string title, string messageBody, bool sendToAll = false, long id = -1, string Image = null)
+    public async Task SendToAllSpecificAndroidUserDevices(string userId, string title, string messageBody, bool sendToAll = false, long id = -1, string Image = null, string notificationType = "general")
     {
         List<DeviceTokens> users = new List<DeviceTokens>();
 
@@ -38,7 +38,9 @@ public class SendNotification
             }
             else
             {
+                // المستخدم مسجل بس مفيش device token - نحفظ الإشعار في الداتابيز بس
                 await SendAdminNotificationWithoutDeviceToken(userId, title, messageBody, id, Image);
+                return;
             }
         }
 
@@ -47,6 +49,17 @@ public class SendNotification
             return;
         }
 
+        // نحفظ الإشعار في الداتابيز الأول (مرة واحدة بس مش لكل device)
+        await _notification.Add(new Notification()
+        {
+            UserId = userId,
+            Body = messageBody,
+            Title = title,
+            IsSeen = false,
+            ImageUrl = Image,
+        });
+
+        // نبعت Push Notification لكل device token
         foreach (var user in users)
         {
             var messageToSend = new Message()
@@ -56,10 +69,12 @@ public class SendNotification
                 {
                     Title = title,
                     Body = messageBody,
+                    ImageUrl = Image,
                 },
                 Data = new Dictionary<string, string>()
                 {
-                    { "id", id.ToString() }
+                    { "id", id.ToString() },
+                    { "type", notificationType }
                 }
             };
 
@@ -67,19 +82,25 @@ public class SendNotification
             {
                 string response = await _firebaseMessaging.SendAsync(messageToSend);
             }
+            catch (FirebaseMessagingException ex) when (ex.MessagingErrorCode == MessagingErrorCode.Unregistered)
+            {
+                // التوكن مش صالح - نحذفه عشان ما نبعتلوش تاني
+                user.IsDeleted = true;
+                await _pushNotification.Update(user);
+            }
             catch (FirebaseMessagingException ex)
             {
-                // Handle or log the error
+                // أي خطأ تاني من Firebase - نسجله ونكمل للأجهزة التانية
+                System.Diagnostics.Debug.WriteLine($"Firebase Error for user {userId}, token {user.Token}: {ex.MessagingErrorCode} - {ex.Message}");
             }
-
-            await _notification.Add(new Notification()
+            catch (System.Exception ex)
             {
-                UserId = userId,
-                Body = messageBody,
-                Title = title,
-                IsSeen = false,
-                ImageUrl = Image,
-            });
+                // خطأ عام (مثل Invalid JWT Signature) - credentials غير صالحة
+                System.Diagnostics.Debug.WriteLine($"FCM Credential Error: {ex.Message}");
+                // نكمل - الإشعار اتحفظ في الداتابيز على الأقل
+                // لكن ما نقدرش نبعت push - محتاج تجديد المفاتيح
+                break; // مفيش فايدة نكمل لو الـ credentials باظت
+            }
         }
     }
 

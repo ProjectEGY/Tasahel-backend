@@ -1088,6 +1088,39 @@ namespace PostexS.Migrations
                     b.ToTable("OrderTransferrHistories");
                 });
 
+            modelBuilder.Entity("PostexS.Models.Domain.PrivacyPolicy", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<string>("Arabic")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreateOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("English")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsModified")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PrivacyPolicies");
+                });
+
             modelBuilder.Entity("PostexS.Models.Domain.TermsAndCondition", b =>
                 {
                     b.Property<long>("Id")

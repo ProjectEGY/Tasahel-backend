@@ -26,6 +26,9 @@ namespace PostexS.Helper
                 case FilePath.Landing:
                     folderName = Path.Combine(_hostEnvironment.WebRootPath, "Images", "Landing");
                     break;
+                case FilePath.Notifications:
+                    folderName = Path.Combine(_hostEnvironment.WebRootPath, "Images", "Notifications");
+                    break;
 
             }
             string extension = Path.GetExtension(file.FileName);
@@ -67,6 +70,9 @@ namespace PostexS.Helper
                     case FilePath.Landing:
                         folderPath = Path.Combine(_hostEnvironment.WebRootPath, "Images", "Landing");
                         break;
+                    case FilePath.Notifications:
+                        folderPath = Path.Combine(_hostEnvironment.WebRootPath, "Images", "Notifications");
+                        break;
 
                 }
                 if (!Directory.Exists(folderPath))
@@ -87,6 +93,8 @@ namespace PostexS.Helper
                     return "/Images/OrderReturns/";
                 case FilePath.Landing:
                     return "/Images/Landing/";
+                case FilePath.Notifications:
+                    return "/Images/Notifications/";
 
                 default:
                     return null;

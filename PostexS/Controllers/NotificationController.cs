@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -25,9 +27,11 @@ namespace PostexS.Controllers
         private readonly IGeneric<Branch> _branch;
         private readonly UserManager<ApplicationUser> _userManger;
         private readonly FirebaseMessagingService _firebaseService;
+        private readonly IWebHostEnvironment _hostEnvironment;
 
         public NotificationController(IGeneric<Notification> notification, UserManager<ApplicationUser> userManger, IGeneric<ApplicationUser> user,
-            IGeneric<DeviceTokens> pushNotification, FirebaseMessagingService firebaseService, IGeneric<Branch> branch)
+            IGeneric<DeviceTokens> pushNotification, FirebaseMessagingService firebaseService, IGeneric<Branch> branch,
+            IWebHostEnvironment hostEnvironment)
         {
             _notification = notification;
             _pushNotification = pushNotification;
@@ -35,6 +39,7 @@ namespace PostexS.Controllers
             _userManger = userManger;
             _firebaseService = firebaseService;
             _branch = branch;
+            _hostEnvironment = hostEnvironment;
         }
 
         public async Task<IActionResult> Index()
@@ -67,83 +72,172 @@ namespace PostexS.Controllers
         [HttpGet]
         public async Task<IActionResult> SearchUsers(string term, long branchId, string userType)
         {
-            var currentUser = await _userManger.GetUserAsync(User);
-            var isHighAdmin = User.IsInRole("HighAdmin");
-
-            UserType type = userType == "driver" ? UserType.Driver : UserType.Client;
-
-            var query = _user.GetAllAsIQueryable(x => !x.IsDeleted && x.UserType == type);
-
-            // HighAdmin يشوف فرعه بس
-            if (isHighAdmin)
+            try
             {
-                query = query.Where(x => x.BranchId == currentUser.BranchId);
+                var currentUser = await _userManger.GetUserAsync(User);
+                var isHighAdmin = User.IsInRole("HighAdmin");
+
+                UserType type = userType == "driver" ? UserType.Driver : UserType.Client;
+
+                // استخدام UserManager.Users مباشرة بدل الـ Generic Repository
+                var query = _userManger.Users
+                    .Where(x => !x.IsDeleted && x.UserType == type);
+
+                // HighAdmin يشوف فرعه بس
+                if (isHighAdmin)
+                {
+                    query = query.Where(x => x.BranchId == currentUser.BranchId);
+                }
+                else if (branchId > 0)
+                {
+                    query = query.Where(x => x.BranchId == branchId);
+                }
+
+                // بحث بالاسم أو رقم الهاتف
+                if (!string.IsNullOrEmpty(term))
+                {
+                    term = term.Trim();
+                    query = query.Where(x =>
+                        (x.Name != null && x.Name.Contains(term)) ||
+                        (x.PhoneNumber != null && x.PhoneNumber.Contains(term)));
+                }
+
+                var users = query
+                    .Select(x => new { id = x.Id, text = (x.Name ?? "") + " - " + (x.PhoneNumber ?? "") })
+                    .Take(50)
+                    .ToList();
+
+                return Json(new { results = users });
             }
-            else if (branchId > 0)
+            catch (Exception ex)
             {
-                query = query.Where(x => x.BranchId == branchId);
+                return Json(new { results = new object[0], error = ex.Message });
             }
+        }
 
-            // بحث بالاسم أو رقم الهاتف
-            if (!string.IsNullOrEmpty(term))
+        /// <summary>
+        /// اختبار اتصال Firebase - يتحقق من صلاحية الـ credentials
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> TestFirebase()
+        {
+            var results = new Dictionary<string, object>();
+
+            // اختبار Captain (Driver) Firebase
+            try
             {
-                query = query.Where(x =>
-                    (x.Name != null && x.Name.Contains(term)) ||
-                    (x.PhoneNumber != null && x.PhoneNumber.Contains(term)));
+                // نبعت رسالة وهمية لتوكن مش موجود - لو رجع Unregistered يبقى الاتصال شغال
+                var testMessage = new FirebaseAdmin.Messaging.Message()
+                {
+                    Token = "test_invalid_token_for_connectivity_check",
+                    Notification = new FirebaseAdmin.Messaging.Notification()
+                    {
+                        Title = "Test",
+                        Body = "Test"
+                    }
+                };
+                await _firebaseService.CaptainMessaging.SendAsync(testMessage);
+                results["captain"] = new { status = "OK", message = "متصل بنجاح" };
+            }
+            catch (FirebaseAdmin.Messaging.FirebaseMessagingException fex)
+            {
+                // لو رجع خطأ Firebase عادي (مثل UNREGISTERED أو INVALID_ARGUMENT) يبقى الاتصال شغال
+                results["captain"] = new { status = "OK", message = $"الاتصال شغال - {fex.MessagingErrorCode}" };
+            }
+            catch (Exception ex)
+            {
+                // لو رجع خطأ credentials يبقى المفتاح باظ
+                results["captain"] = new { status = "FAILED", message = $"❌ مفتاح المندوب باظ: {ex.Message}" };
             }
 
-            var users = query
-                .Select(x => new { id = x.Id, text = (x.Name ?? "") + " - " + (x.PhoneNumber ?? "") })
-                .Take(50)
-                .ToList();
+            // اختبار Customer (Sender) Firebase
+            try
+            {
+                var testMessage = new FirebaseAdmin.Messaging.Message()
+                {
+                    Token = "test_invalid_token_for_connectivity_check",
+                    Notification = new FirebaseAdmin.Messaging.Notification()
+                    {
+                        Title = "Test",
+                        Body = "Test"
+                    }
+                };
+                await _firebaseService.CustomerMessaging.SendAsync(testMessage);
+                results["customer"] = new { status = "OK", message = "متصل بنجاح" };
+            }
+            catch (FirebaseAdmin.Messaging.FirebaseMessagingException fex)
+            {
+                results["customer"] = new { status = "OK", message = $"الاتصال شغال - {fex.MessagingErrorCode}" };
+            }
+            catch (Exception ex)
+            {
+                results["customer"] = new { status = "FAILED", message = $"❌ مفتاح الراسل باظ: {ex.Message}" };
+            }
 
-            return Json(new { results = users });
+            return Json(results);
         }
 
         [HttpPost]
-        public async Task<ActionResult> Create(List<string> Users, string Body, string Title, string targetType)
+        public async Task<ActionResult> Create(List<string> Users, string Body, string Title, string targetType, IFormFile Image)
         {
             if (string.IsNullOrEmpty(Title) || string.IsNullOrEmpty(Body))
             {
-                TempData["SentError"] = true;
-                return RedirectToAction(nameof(Index));
+                return Json(new { success = false, message = "العنوان والمحتوى مطلوبين" });
             }
 
-            // تحديد الـ Firebase instance حسب نوع المستخدم
-            var firebaseInstance = targetType == "driver"
-                ? _firebaseService.CaptainMessaging
-                : _firebaseService.CustomerMessaging;
-
-            var send = new SendNotification(_pushNotification, _notification, firebaseInstance);
-
-            if (Users == null || Users.Count == 0)
+            try
             {
-                // إرسال للكل من نفس النوع
-                var currentUser = await _userManger.GetUserAsync(User);
-                var isHighAdmin = User.IsInRole("HighAdmin");
-                UserType type = targetType == "driver" ? UserType.Driver : UserType.Client;
-
-                var allUsers = _user.Get(x => !x.IsDeleted && x.UserType == type);
-                if (isHighAdmin)
+                // رفع الصورة لو موجودة
+                string imageUrl = null;
+                if (Image != null && Image.Length > 0)
                 {
-                    allUsers = allUsers.Where(x => x.BranchId == currentUser.BranchId);
+                    var fileName = await MediaControl.Upload(Models.Enums.FilePath.Notifications, Image, _hostEnvironment);
+                    imageUrl = $"{Request.Scheme}://{Request.Host}/Images/Notifications/{fileName}";
                 }
 
-                foreach (var user in allUsers.ToList())
+                // تحديد الـ Firebase instance حسب نوع المستخدم
+                var firebaseInstance = targetType == "driver"
+                    ? _firebaseService.CaptainMessaging
+                    : _firebaseService.CustomerMessaging;
+
+                var send = new SendNotification(_pushNotification, _notification, firebaseInstance);
+                int sentCount = 0;
+
+                if (Users == null || Users.Count == 0)
                 {
-                    await send.SendToAllSpecificAndroidUserDevices(user.Id, Title, Body);
+                    // إرسال للكل من نفس النوع
+                    var currentUser = await _userManger.GetUserAsync(User);
+                    var isHighAdmin = User.IsInRole("HighAdmin");
+                    UserType type = targetType == "driver" ? UserType.Driver : UserType.Client;
+
+                    var allUsers = _userManger.Users.Where(x => !x.IsDeleted && x.UserType == type);
+                    if (isHighAdmin)
+                    {
+                        allUsers = allUsers.Where(x => x.BranchId == currentUser.BranchId);
+                    }
+
+                    foreach (var user in allUsers.ToList())
+                    {
+                        await send.SendToAllSpecificAndroidUserDevices(user.Id, Title, Body, Image: imageUrl, notificationType: "admin");
+                        sentCount++;
+                    }
                 }
+                else
+                {
+                    foreach (var item in Users)
+                    {
+                        await send.SendToAllSpecificAndroidUserDevices(item, Title, Body, Image: imageUrl, notificationType: "admin");
+                        sentCount++;
+                    }
+                }
+
+                var targetName = targetType == "driver" ? "مندوب" : "راسل";
+                return Json(new { success = true, message = $"تم إرسال الإشعار بنجاح لعدد {sentCount} {targetName}" });
             }
-            else
+            catch (Exception ex)
             {
-                foreach (var item in Users)
-                {
-                    await send.SendToAllSpecificAndroidUserDevices(item, Title, Body);
-                }
+                return Json(new { success = false, message = "حدث خطأ أثناء الإرسال: " + ex.Message });
             }
-
-            TempData["SentSuccess"] = true;
-            return RedirectToAction(nameof(Index));
         }
 
         public ActionResult All(int? page)

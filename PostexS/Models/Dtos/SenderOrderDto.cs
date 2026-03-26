@@ -23,10 +23,11 @@ namespace PostexS.Models.Dtos
         public DateTime? LastUpdated { get; set; }
         public string DeliveryAgentName { get; set; }
         public string DeliveryAgentPhone { get; set; }
+        public bool IsTrackable { get; set; }
 
         public SenderOrderDto() { }
 
-        public SenderOrderDto(Order order, string deliveryName = null, string deliveryPhone = null)
+        public SenderOrderDto(Order order, string deliveryName = null, string deliveryPhone = null, bool isTrackable = false)
         {
             OrderCode = order.Code;
             ReceiverName = order.ClientName;
@@ -45,6 +46,7 @@ namespace PostexS.Models.Dtos
             LastUpdated = order.LastUpdated;
             DeliveryAgentName = deliveryName;
             DeliveryAgentPhone = deliveryPhone;
+            IsTrackable = isTrackable;
         }
 
         private static string GetStatusInArabic(OrderStatus status)

@@ -37,6 +37,7 @@ namespace PostexS.Controllers.API
         private readonly IGeneric<Wallet> _wallets;
         private readonly IGeneric<ContactUs> _contactUs;
         private readonly IGeneric<Branch> _branches;
+        private readonly IGeneric<Location> _locations;
         private readonly ICRUD<Order> _CRUD;
         private readonly IConfiguration _configuration;
         private readonly BaseResponse _baseResponse;
@@ -51,6 +52,7 @@ namespace PostexS.Controllers.API
             IGeneric<Wallet> wallets,
             IGeneric<ContactUs> contactUs,
             IGeneric<Branch> branches,
+            IGeneric<Location> locations,
             ICRUD<Order> CRUD,
             IConfiguration configuration)
         {
@@ -63,6 +65,7 @@ namespace PostexS.Controllers.API
             _wallets = wallets;
             _contactUs = contactUs;
             _branches = branches;
+            _locations = locations;
             _CRUD = CRUD;
             _configuration = configuration;
             _baseResponse = new BaseResponse();
@@ -652,15 +655,70 @@ namespace PostexS.Controllers.API
                 .Take(pageSize)
                 .ToList();
 
+            var trackableStatuses = new[] { OrderStatus.Assigned, OrderStatus.Waiting };
+
             var orderDtos = orders.Select(o => new SenderOrderDto(
                 o,
                 o.Delivery?.Name,
-                o.Delivery?.PhoneNumber
+                o.Delivery?.PhoneNumber,
+                isTrackable: o.Delivery != null
+                    && o.Delivery.Tracking
+                    && trackableStatuses.Contains(o.Status)
             )).ToList();
 
             var response = new PaginatedResponse<SenderOrderDto>(orderDtos, pageNumber, pageSize, totalCount);
 
             _baseResponse.Data = response;
+            return Ok(_baseResponse);
+        }
+
+        /// <summary>
+        /// مواقع المناديب الحالية - يرجع الإحداثيات الحالية لكل مندوب عنده شحنات حالية (Assigned أو Waiting) مع التتبع مفعّل
+        /// </summary>
+        /// <remarks>
+        /// يحتاج JWT Token. بيرجع قائمة بكل المناديب اللي عندهم شحنات حالية للراسل،
+        /// مع موقع كل مندوب وعدد الشحنات اللي معاه وأكوادها.
+        /// مفيد لعرض كل المناديب على الخريطة مرة واحدة.
+        /// </remarks>
+        [HttpGet("DriversLocations")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> DriversLocations()
+        {
+            var (user, errorResult) = await GetCurrentSenderAsync();
+            if (errorResult != null) return errorResult;
+
+            var trackableStatuses = new[] { OrderStatus.Assigned, OrderStatus.Waiting };
+
+            var activeOrders = _orders.GetAllAsIQueryable(
+                filter: x => x.ClientId == user.Id
+                    && !x.IsDeleted
+                    && trackableStatuses.Contains(x.Status)
+                    && x.DeliveryId != null,
+                IncludeProperties: "Delivery")
+                .ToList();
+
+            var driversData = activeOrders
+                .Where(o => o.Delivery != null && o.Delivery.Tracking)
+                .GroupBy(o => o.DeliveryId)
+                .Select(g =>
+                {
+                    var driver = g.First().Delivery;
+                    return new
+                    {
+                        DriverName = driver.Name,
+                        Latitude = driver.Latitude,
+                        Longitude = driver.Longitude,
+                        OrdersCount = g.Count(),
+                        Orders = g.Select(o => new
+                        {
+                            OrderCode = o.Code,
+                            ReceiverName = o.ClientName,
+                            Status = o.Status.ToString()
+                        })
+                    };
+                }).ToList();
+
+            _baseResponse.Data = driversData;
             return Ok(_baseResponse);
         }
 
@@ -703,6 +761,85 @@ namespace PostexS.Controllers.API
                 dto.Timeline = BuildTimeline(order.OrderOperationHistory);
 
             _baseResponse.Data = dto;
+            return Ok(_baseResponse);
+        }
+
+        /// <summary>
+        /// تتبع المندوب - يرجع كل نقاط تحرك المندوب من وقت استلام الشحنة لحد دلوقتي
+        /// </summary>
+        /// <remarks>
+        /// يحتاج JWT Token. التتبع متاح فقط لو:
+        /// 1. الشحنة معينة لمندوب
+        /// 2. المندوب مفعّل عليه التتبع من الأدمن
+        /// 3. الشحنة في حالة (Assigned أو Waiting) - يعني لسه مع المندوب
+        ///
+        /// بيرجع كل الإحداثيات من وقت ما المندوب استلم الشحنة (Assign_To_DriverDate) لحد الوقت الحالي،
+        /// بالإضافة لموقع المندوب الحالي.
+        /// </remarks>
+        /// <param name="code">كود الشحنة (مثال: Tas123)</param>
+        [HttpGet("Orders/{code}/TrackDriver")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> TrackDriver([FromRoute] string code)
+        {
+            var (user, errorResult) = await GetCurrentSenderAsync();
+            if (errorResult != null) return errorResult;
+
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                _baseResponse.ErrorCode = Errors.TheModelIsInvalid;
+                _baseResponse.ErrorMessage = "كود الشحنة مطلوب";
+                return StatusCode((int)HttpStatusCode.BadRequest, _baseResponse);
+            }
+
+            var order = await _orders.GetSingle(
+                x => x.Code == code && x.ClientId == user.Id && !x.IsDeleted,
+                includeProperties: "Delivery,OrderOperationHistory");
+
+            if (order == null)
+            {
+                _baseResponse.ErrorCode = Errors.TheOrderNotExistOrDeleted;
+                _baseResponse.ErrorMessage = "الشحنة غير موجودة";
+                return StatusCode((int)HttpStatusCode.NotFound, _baseResponse);
+            }
+
+            var trackableStatuses = new[] { OrderStatus.Assigned, OrderStatus.Waiting };
+
+            if (order.Delivery == null || !trackableStatuses.Contains(order.Status))
+            {
+                _baseResponse.ErrorCode = Errors.TheOrderNotExistOrDeleted;
+                _baseResponse.ErrorMessage = "التتبع غير متاح - الشحنة ليست مع المندوب حالياً";
+                return StatusCode((int)HttpStatusCode.BadRequest, _baseResponse);
+            }
+
+            if (!order.Delivery.Tracking)
+            {
+                _baseResponse.ErrorCode = Errors.TheOrderNotExistOrDeleted;
+                _baseResponse.ErrorMessage = "التتبع غير مفعّل لهذا المندوب";
+                return StatusCode((int)HttpStatusCode.BadRequest, _baseResponse);
+            }
+
+            // جلب تاريخ تعيين المندوب على الشحنة
+            var assignedDate = order.OrderOperationHistory?.Assign_To_DriverDate ?? order.CreateOn;
+
+            // جلب كل نقاط التتبع من وقت الاستلام لحد دلوقتي
+            var locations = _locations.Get(x =>
+                x.DeliveryId == order.DeliveryId
+                && x.CreateOn >= assignedDate
+                && !x.IsDeleted)
+                .OrderByDescending(x => x.CreateOn)
+                .Select(x => new LocationDto(x))
+                .ToList();
+
+            _baseResponse.Data = new
+            {
+                DriverName = order.Delivery.Name,
+                CurrentLatitude = order.Delivery.Latitude,
+                CurrentLongitude = order.Delivery.Longitude,
+                OrderCode = order.Code,
+                OrderStatus = order.Status.ToString(),
+                AssignedDate = assignedDate,
+                Locations = locations
+            };
             return Ok(_baseResponse);
         }
 

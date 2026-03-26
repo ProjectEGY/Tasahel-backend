@@ -5,130 +5,340 @@
     var currentBranchId = (long)ViewBag.CurrentBranchId;
 }
 
-<div class="panel panel-primary">
-    <div class="panel-heading">
-        <h3 class="panel-title"><i class="fa fa-fw fa-bullhorn"></i> @ViewData["Title"]</h3>
+<style>
+    .notif-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        padding: 30px;
+        margin-bottom: 20px;
+    }
+    .notif-header {
+        background: linear-gradient(135deg, #1a73e8, #0d47a1);
+        color: #fff;
+        border-radius: 12px 12px 0 0;
+        padding: 20px 30px;
+        margin: -30px -30px 25px -30px;
+        text-align: center;
+    }
+    .notif-header h3 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: bold;
+    }
+    .notif-header p {
+        margin: 8px 0 0;
+        opacity: 0.85;
+        font-size: 13px;
+    }
+    .notif-tabs {
+        display: flex;
+        gap: 0;
+        margin-bottom: 25px;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 2px solid #1a73e8;
+    }
+    .notif-tab {
+        flex: 1;
+        text-align: center;
+        padding: 14px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 15px;
+        transition: all 0.3s;
+        background: #fff;
+        color: #1a73e8;
+        border: none;
+    }
+    .notif-tab.active {
+        background: #1a73e8;
+        color: #fff;
+    }
+    .notif-tab:hover:not(.active) {
+        background: #e8f0fe;
+    }
+    .notif-tab i {
+        margin-left: 6px;
+    }
+    .form-section {
+        margin-bottom: 20px;
+    }
+    .form-section label {
+        font-weight: bold;
+        margin-bottom: 8px;
+        display: block;
+        color: #333;
+        font-size: 14px;
+    }
+    .form-section label i {
+        color: #1a73e8;
+        margin-left: 5px;
+    }
+    .form-section label small {
+        font-weight: normal;
+        color: #999;
+    }
+    .form-section .form-control {
+        border-radius: 8px;
+        border: 1.5px solid #ddd;
+        padding: 10px 14px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+    }
+    .form-section .form-control:focus {
+        border-color: #1a73e8;
+        box-shadow: 0 0 0 3px rgba(26,115,232,0.1);
+    }
+    .btn-send {
+        border-radius: 10px;
+        padding: 14px 40px;
+        font-size: 16px;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s;
+        width: 100%;
+    }
+    .btn-send-driver {
+        background: linear-gradient(135deg, #27ae60, #1e8449);
+        color: #fff;
+    }
+    .btn-send-driver:hover {
+        background: linear-gradient(135deg, #2ecc71, #27ae60);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+    .btn-send-client {
+        background: linear-gradient(135deg, #1a73e8, #0d47a1);
+        color: #fff;
+    }
+    .btn-send-client:hover {
+        background: linear-gradient(135deg, #4285f4, #1a73e8);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+    .img-preview-box {
+        border: 2px dashed #ddd;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        min-height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fafafa;
+    }
+    .img-preview-box img {
+        max-height: 100px;
+        border-radius: 8px;
+    }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* Loader Overlay */
+    .send-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 99999;
+        justify-content: center;
+        align-items: center;
+    }
+    .send-overlay.show {
+        display: flex;
+    }
+    .send-loader-box {
+        background: #fff;
+        border-radius: 16px;
+        padding: 40px 50px;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .send-loader-box .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #e0e0e0;
+        border-top: 5px solid #1a73e8;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 20px;
+    }
+    .send-loader-box p {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+        margin: 0;
+    }
+    .send-loader-box small {
+        color: #999;
+        display: block;
+        margin-top: 8px;
+    }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Result Toast */
+    .result-toast {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-100px);
+        z-index: 100000;
+        padding: 18px 35px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: bold;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        transition: transform 0.4s ease;
+        min-width: 300px;
+        text-align: center;
+    }
+    .result-toast.show {
+        transform: translateX(-50%) translateY(0);
+    }
+    .result-toast.success {
+        background: #27ae60;
+        color: #fff;
+    }
+    .result-toast.error {
+        background: #e74c3c;
+        color: #fff;
+    }
+</style>
+
+<!-- Loader Overlay -->
+<div class="send-overlay" id="sendOverlay">
+    <div class="send-loader-box">
+        <div class="spinner"></div>
+        <p id="loaderText">جاري إرسال الإشعارات...</p>
+        <small>برجاء عدم غلق الصفحة</small>
     </div>
-    <div class="panel-body">
+</div>
 
-        @if (TempData["SentSuccess"] != null)
-        {
-            <div class="alert alert-success text-center" style="margin-bottom: 15px;">
-                <i class="fa fa-check-circle"></i> تم إرسال الإشعار بنجاح
-            </div>
-        }
-        @if (TempData["SentError"] != null)
-        {
-            <div class="alert alert-danger text-center" style="margin-bottom: 15px;">
-                <i class="fa fa-exclamation-circle"></i> برجاء التأكد من صحة المدخلات (العنوان والمحتوى مطلوبين)
-            </div>
-        }
+<!-- Result Toast -->
+<div class="result-toast" id="resultToast"></div>
 
-        <div class="alert alert-warning" style="margin-bottom: 20px;">
-            <i class="fa fa-info-circle"></i>
-            برجاء عدم غلق الصفحة عند إرسال الإشعار حيث أنه من الممكن أن يستغرق الإرسال بعض الدقائق.
+<div class="notif-card">
+    <div class="notif-header">
+        <h3><i class="fa fa-bullhorn"></i> إرسال الإشعارات</h3>
+        <p>أرسل إشعارات للمناديب أو الراسلين مع إمكانية إرفاق صورة</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="notif-tabs">
+        <div class="notif-tab active" data-tab="tab-drivers" onclick="switchTab(this)">
+            <i class="fa fa-motorcycle"></i> إرسال للمناديب
         </div>
-
-        <!-- تبويبات المناديب والراسلين -->
-        <ul class="nav nav-tabs" role="tablist" style="margin-bottom: 20px;">
-            <li role="presentation" class="active">
-                <a href="#tab-drivers" aria-controls="tab-drivers" role="tab" data-toggle="tab">
-                    <i class="fa fa-motorcycle"></i> إرسال للمناديب
-                </a>
-            </li>
-            <li role="presentation">
-                <a href="#tab-clients" aria-controls="tab-clients" role="tab" data-toggle="tab">
-                    <i class="fa fa-user"></i> إرسال للراسلين
-                </a>
-            </li>
-        </ul>
-
-        <div class="tab-content">
-            <!-- تبويب المناديب -->
-            <div role="tabpanel" class="tab-pane active" id="tab-drivers">
-                @using (Html.BeginForm("Create", "Notification", FormMethod.Post))
-                {
-                    <input type="hidden" name="targetType" value="driver" />
-                    <div class="row" style="margin-bottom: 15px;">
-                        @if (!isHighAdmin)
-                        {
-                            <div class="col-md-4">
-                                <label><i class="fa fa-home"></i> فلتر بالفرع:</label>
-                                <select id="driverBranchFilter" class="form-control select2" style="width:100%">
-                                    <option value="0">كل الفروع</option>
-                                    @foreach (SelectListItem item in (SelectList)ViewBag.Branches)
-                                    {
-                                        <option value="@item.Value">@item.Text</option>
-                                    }
-                                </select>
-                            </div>
-                        }
-                        <div class="@(isHighAdmin ? "col-md-12" : "col-md-8")">
-                            <label><i class="fa fa-users"></i> اختيار المناديب: <small class="text-muted">(اتركه فارغ للإرسال لجميع المناديب)</small></label>
-                            <select name="Users" id="driverUsers" class="form-control" multiple style="width:100%"></select>
-                        </div>
-                    </div>
-                    <div class="row" style="margin-bottom: 15px;">
-                        <div class="col-md-12">
-                            <label class="required"><i class="fa fa-tag"></i> عنوان الإشعار:</label>
-                            <input name="Title" type="text" required class="form-control" placeholder="أدخل عنوان الإشعار" />
-                        </div>
-                    </div>
-                    <div class="row" style="margin-bottom: 15px;">
-                        <div class="col-md-12">
-                            <label class="required"><i class="fa fa-align-right"></i> محتوى الإشعار:</label>
-                            <textarea name="Body" required class="form-control" rows="5" placeholder="أدخل محتوى الإشعار"></textarea>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-success btn-lg">
-                        <i class="fa fa-paper-plane"></i> إرسال الإشعار للمناديب
-                    </button>
-                }
-            </div>
-
-            <!-- تبويب الراسلين -->
-            <div role="tabpanel" class="tab-pane" id="tab-clients">
-                @using (Html.BeginForm("Create", "Notification", FormMethod.Post))
-                {
-                    <input type="hidden" name="targetType" value="client" />
-                    <div class="row" style="margin-bottom: 15px;">
-                        @if (!isHighAdmin)
-                        {
-                            <div class="col-md-4">
-                                <label><i class="fa fa-home"></i> فلتر بالفرع:</label>
-                                <select id="clientBranchFilter" class="form-control select2" style="width:100%">
-                                    <option value="0">كل الفروع</option>
-                                    @foreach (SelectListItem item in (SelectList)ViewBag.Branches)
-                                    {
-                                        <option value="@item.Value">@item.Text</option>
-                                    }
-                                </select>
-                            </div>
-                        }
-                        <div class="@(isHighAdmin ? "col-md-12" : "col-md-8")">
-                            <label><i class="fa fa-users"></i> اختيار الراسلين: <small class="text-muted">(اتركه فارغ للإرسال لجميع الراسلين)</small></label>
-                            <select name="Users" id="clientUsers" class="form-control" multiple style="width:100%"></select>
-                        </div>
-                    </div>
-                    <div class="row" style="margin-bottom: 15px;">
-                        <div class="col-md-12">
-                            <label class="required"><i class="fa fa-tag"></i> عنوان الإشعار:</label>
-                            <input name="Title" type="text" required class="form-control" placeholder="أدخل عنوان الإشعار" />
-                        </div>
-                    </div>
-                    <div class="row" style="margin-bottom: 15px;">
-                        <div class="col-md-12">
-                            <label class="required"><i class="fa fa-align-right"></i> محتوى الإشعار:</label>
-                            <textarea name="Body" required class="form-control" rows="5" placeholder="أدخل محتوى الإشعار"></textarea>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="fa fa-paper-plane"></i> إرسال الإشعار للراسلين
-                    </button>
-                }
-            </div>
+        <div class="notif-tab" data-tab="tab-clients" onclick="switchTab(this)">
+            <i class="fa fa-user"></i> إرسال للراسلين
         </div>
+    </div>
 
+    <!-- تبويب المناديب -->
+    <div class="tab-pane active" id="tab-drivers">
+        <form id="formDrivers" enctype="multipart/form-data">
+            <input type="hidden" name="targetType" value="driver" />
+            <div class="row">
+                @if (!isHighAdmin)
+                {
+                    <div class="col-md-4 form-section">
+                        <label><i class="fa fa-home"></i> فلتر بالفرع</label>
+                        <select id="driverBranchFilter" class="form-control" style="width:100%">
+                            <option value="0">كل الفروع</option>
+                            @foreach (SelectListItem item in (SelectList)ViewBag.Branches)
+                            {
+                                <option value="@item.Value">@item.Text</option>
+                            }
+                        </select>
+                    </div>
+                }
+                <div class="@(isHighAdmin ? "col-md-12" : "col-md-8") form-section">
+                    <label><i class="fa fa-users"></i> اختيار المناديب <small>(اتركه فارغ للإرسال لجميع المناديب)</small></label>
+                    <select name="Users" id="driverUsers" class="form-control" multiple style="width:100%"></select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 form-section">
+                    <label><i class="fa fa-tag"></i> عنوان الإشعار <span style="color:red">*</span></label>
+                    <input name="Title" type="text" required class="form-control" placeholder="مثال: عرض خاص، تحديث مهم..." />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 form-section">
+                    <label><i class="fa fa-align-right"></i> محتوى الإشعار <span style="color:red">*</span></label>
+                    <textarea name="Body" required class="form-control" rows="4" placeholder="اكتب محتوى الإشعار هنا..."></textarea>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 form-section">
+                    <label><i class="fa fa-image"></i> صورة الإشعار <small>(اختياري)</small></label>
+                    <input name="Image" type="file" accept="image/*" class="form-control" onchange="previewImage(this, 'driverImgPreview')" />
+                </div>
+                <div class="col-md-6 form-section">
+                    <div class="img-preview-box" id="driverPreviewBox">
+                        <span style="color:#ccc"><i class="fa fa-image fa-2x"></i></span>
+                        <img id="driverImgPreview" src="#" alt="" style="display:none" />
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-send btn-send-driver">
+                <i class="fa fa-paper-plane"></i> إرسال الإشعار للمناديب
+            </button>
+        </form>
+    </div>
+
+    <!-- تبويب الراسلين -->
+    <div class="tab-pane" id="tab-clients">
+        <form id="formClients" enctype="multipart/form-data">
+            <input type="hidden" name="targetType" value="client" />
+            <div class="row">
+                @if (!isHighAdmin)
+                {
+                    <div class="col-md-4 form-section">
+                        <label><i class="fa fa-home"></i> فلتر بالفرع</label>
+                        <select id="clientBranchFilter" class="form-control" style="width:100%">
+                            <option value="0">كل الفروع</option>
+                            @foreach (SelectListItem item in (SelectList)ViewBag.Branches)
+                            {
+                                <option value="@item.Value">@item.Text</option>
+                            }
+                        </select>
+                    </div>
+                }
+                <div class="@(isHighAdmin ? "col-md-12" : "col-md-8") form-section">
+                    <label><i class="fa fa-users"></i> اختيار الراسلين <small>(اتركه فارغ للإرسال لجميع الراسلين)</small></label>
+                    <select name="Users" id="clientUsers" class="form-control" multiple style="width:100%"></select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 form-section">
+                    <label><i class="fa fa-tag"></i> عنوان الإشعار <span style="color:red">*</span></label>
+                    <input name="Title" type="text" required class="form-control" placeholder="مثال: عرض خاص، تحديث مهم..." />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 form-section">
+                    <label><i class="fa fa-align-right"></i> محتوى الإشعار <span style="color:red">*</span></label>
+                    <textarea name="Body" required class="form-control" rows="4" placeholder="اكتب محتوى الإشعار هنا..."></textarea>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 form-section">
+                    <label><i class="fa fa-image"></i> صورة الإشعار <small>(اختياري)</small></label>
+                    <input name="Image" type="file" accept="image/*" class="form-control" onchange="previewImage(this, 'clientImgPreview')" />
+                </div>
+                <div class="col-md-6 form-section">
+                    <div class="img-preview-box" id="clientPreviewBox">
+                        <span style="color:#ccc"><i class="fa fa-image fa-2x"></i></span>
+                        <img id="clientImgPreview" src="#" alt="" style="display:none" />
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-send btn-send-client">
+                <i class="fa fa-paper-plane"></i> إرسال الإشعار للراسلين
+            </button>
+        </form>
     </div>
 </div>
 
@@ -136,43 +346,134 @@
 <script>
     var defaultBranchId = @(isHighAdmin ? currentBranchId.ToString() : "0");
 
-    function initUserSelect(selectId, userType, branchFilterId) {
-        var branchId = branchFilterId ? ($('#' + branchFilterId).val() || defaultBranchId) : defaultBranchId;
+    // ========== Tabs ==========
+    function switchTab(el) {
+        $('.notif-tab').removeClass('active');
+        $(el).addClass('active');
+        $('.tab-pane').removeClass('active');
+        $('#' + $(el).data('tab')).addClass('active');
+    }
 
-        $('#' + selectId).select2({
+    // ========== Image Preview ==========
+    function previewImage(input, previewId) {
+        var preview = document.getElementById(previewId);
+        var box = preview.parentElement;
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                box.querySelector('span').style.display = 'none';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // ========== Select2 AJAX ==========
+    function initUserSelect(selectId, userType, branchFilterId) {
+        var $el = $('#' + selectId);
+
+        // destroy اللي اتعمل من الـ Layout
+        if ($el.hasClass('select2-hidden-accessible')) {
+            $el.select2('destroy');
+        }
+
+        $el.select2({
             placeholder: 'ابحث بالاسم أو رقم الهاتف...',
             allowClear: true,
             minimumInputLength: 0,
             ajax: {
                 url: '@Url.Action("SearchUsers", "Notification")',
                 dataType: 'json',
-                delay: 300,
+                delay: 200,
                 data: function (params) {
                     var bId = branchFilterId ? ($('#' + branchFilterId).val() || defaultBranchId) : defaultBranchId;
-                    return {
-                        term: params.term || '',
-                        branchId: bId,
-                        userType: userType
-                    };
+                    return { term: params.term || '', branchId: bId, userType: userType };
                 },
                 processResults: function (data) {
                     return { results: data.results };
-                }
+                },
+                cache: true
+            },
+            language: {
+                noResults: function () { return 'لا يوجد نتائج'; },
+                searching: function () { return 'جاري البحث...'; }
             }
         });
 
-        // عند تغيير الفرع، امسح الاختيارات السابقة وأعد التحميل
         if (branchFilterId) {
             $('#' + branchFilterId).on('change', function () {
-                $('#' + selectId).val(null).trigger('change');
+                $el.val(null).trigger('change');
             });
         }
     }
 
+    // ========== Toast ==========
+    function showToast(message, isSuccess) {
+        var $toast = $('#resultToast');
+        $toast.text(message).removeClass('success error show')
+            .addClass(isSuccess ? 'success' : 'error');
+        setTimeout(function () { $toast.addClass('show'); }, 50);
+        setTimeout(function () { $toast.removeClass('show'); }, 5000);
+    }
+
+    // ========== Form Submit via AJAX ==========
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        var $form = $(this);
+        var title = $form.find('input[name="Title"]').val().trim();
+        var body = $form.find('textarea[name="Body"]').val().trim();
+
+        if (!title || !body) {
+            showToast('العنوان والمحتوى مطلوبين', false);
+            return;
+        }
+
+        var formData = new FormData(this);
+        var targetType = $form.find('input[name="targetType"]').val();
+        var targetName = targetType === 'driver' ? 'المناديب' : 'الراسلين';
+
+        // Show loader
+        $('#loaderText').text('جاري إرسال الإشعار لـ ' + targetName + '...');
+        $('#sendOverlay').addClass('show');
+
+        $.ajax({
+            url: '@Url.Action("Create", "Notification")',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (res) {
+                $('#sendOverlay').removeClass('show');
+                if (res.success) {
+                    showToast(res.message, true);
+                    $form[0].reset();
+                    $form.find('select[name="Users"]').val(null).trigger('change');
+                    $form.find('img').hide();
+                    $form.find('.img-preview-box span').show();
+                } else {
+                    showToast(res.message, false);
+                }
+            },
+            error: function () {
+                $('#sendOverlay').removeClass('show');
+                showToast('حدث خطأ في الاتصال بالسيرفر', false);
+            }
+        });
+    }
+
+    // ========== Init ==========
+    // setTimeout عشان نتأكد إن كود الـ Layout خلص الأول
     $(document).ready(function () {
-        var isHighAdmin = @Html.Raw(isHighAdmin ? "true" : "false");
-        initUserSelect('driverUsers', 'driver', isHighAdmin ? null : 'driverBranchFilter');
-        initUserSelect('clientUsers', 'client', isHighAdmin ? null : 'clientBranchFilter');
+        setTimeout(function () {
+            var isHighAdmin = @Html.Raw(isHighAdmin ? "true" : "false");
+            initUserSelect('driverUsers', 'driver', isHighAdmin ? null : 'driverBranchFilter');
+            initUserSelect('clientUsers', 'client', isHighAdmin ? null : 'clientBranchFilter');
+        }, 300);
+
+        // AJAX submit - unbind الـ Layout's form submit handler الأول
+        $('#formDrivers').off('submit').on('submit', handleFormSubmit);
+        $('#formClients').off('submit').on('submit', handleFormSubmit);
     });
 </script>
 }

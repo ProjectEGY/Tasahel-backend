@@ -38,6 +38,7 @@ namespace PostexS.Models.Data
         public DbSet<LandingPartner> LandingPartners { get; set; }
         public DbSet<CourierOrderSheet> CourierOrderSheets { get; set; }
         public DbSet<CourierOrderSheetItem> CourierOrderSheetItems { get; set; }
+        public DbSet<PrivacyPolicy> PrivacyPolicies { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ApplicationUser>().
