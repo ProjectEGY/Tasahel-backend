@@ -1120,7 +1120,7 @@ namespace PostexS.Controllers.API
             if (pageSize > 50) pageSize = 50;
 
             var query = _wallets.GetAllAsIQueryable(
-                filter: x => x.ActualUserId == user.Id && !x.IsDeleted,
+                filter: x => (x.ActualUserId == user.Id || x.UserId == user.Id) && !x.IsDeleted,
                 orderby: q => q.OrderByDescending(w => w.CreateOn));
 
             var totalCount = query.Count();
