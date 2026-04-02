@@ -1,14 +1,14 @@
-﻿@model PostexS.Models.ViewModels.PaginationVM
+@model PostexS.Models.ViewModels.PaginationVM
 @{
     var prevDisabled = !Model.PreviousPage ? "disabled" : "";
     var nextDisabled = !Model.NextPage ? "disabled" : "";
     var tbl_footer_msg = "عرض " + Model.StartIndex + " الى " + Model.EndIndex + " من " + Model.ItemsCount + " مدخلات ";
     var index = 1;
-    var end = 10;
-    if(Model.PageIndex >5)
+    var end = Math.Min(10, Model.TotalPages);
+    if (Model.PageIndex > 5)
     {
-        index = Model.PageIndex - 5;
-        end = Model.PageIndex + 5;
+        index = Math.Max(1, Model.PageIndex - 5);
+        end = Math.Min(Model.TotalPages, Model.PageIndex + 5);
     }
 
 }

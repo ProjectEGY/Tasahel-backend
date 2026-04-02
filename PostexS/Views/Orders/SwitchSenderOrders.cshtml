@@ -1,0 +1,535 @@
+@model PostexS.Helper.PagedList<PostexS.Models.Domain.Order>
+@using PostexS.Models.Enums;
+@using PostexS.Helper
+@using PostexS.Models.ViewModels;
+
+@{
+    ViewData["Title"] = "تحويل طلبات من راسل لراسل";
+
+    var fromClientId = ViewBag.FromClientId as string;
+    var fromClient = ViewBag.FromClient as PostexS.Models.Domain.ApplicationUser;
+    var fromClients = ViewBag.FromClients as List<PostexS.Models.Domain.ApplicationUser>;
+    var toClients = ViewBag.ToClients as List<PostexS.Models.Domain.ApplicationUser>;
+    var toClientId = ViewBag.ToClientId as string;
+    long branchId = fromClient != null ? fromClient.BranchId : 0;
+
+    var paginationVM = new PaginationVM()
+    {
+        PageIndex = Model.PageIndex,
+        TotalPages = Model.TotalPages,
+        PreviousPage = Model.PreviousPage,
+        NextPage = Model.NextPage,
+        GetItemsUrl = "/Orders/GetItemsSenderTransfer",
+        GetPaginationUrl = "/Orders/GetPaginationSenderTransfer",
+        ItemsCount = Model.ItemsCount,
+        StartIndex = Model.StartIndex,
+        EndIndex = Model.EndIndex
+    };
+}
+
+<style>
+    .transfer-modern {
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        background: #ffffff;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .transfer-modern .panel-heading {
+        border-top-right-radius: 14px;
+        border-top-left-radius: 14px;
+        padding: 14px 18px;
+        background: linear-gradient(90deg, #0f172a, #1e3a8a) !important;
+    }
+
+    .transfer-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        color: #fff;
+    }
+
+    .transfer-title .main-text {
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .transfer-badge-new {
+        background: #f59e0b;
+        color: #fff;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .transfer-security {
+        border: 1px solid #fecaca;
+        background: #fff5f5;
+        color: #991b1b;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-weight: 700;
+        margin-bottom: 14px;
+    }
+
+    .transfer-controls-box {
+        border: 1px solid #e5e7eb;
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 14px 10px 4px;
+        margin-bottom: 14px;
+    }
+
+    .transfer-controls-box label {
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 6px;
+    }
+
+    .search-wrap {
+        position: relative;
+    }
+
+    .search-wrap .search-icon {
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        color: #64748b;
+    }
+
+    .search-wrap input {
+        padding-left: 30px;
+    }
+
+    .actions-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 10px 0 14px;
+    }
+
+    .actions-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .selection-count {
+        background: #eef2ff;
+        color: #3730a3;
+        border-radius: 999px;
+        font-weight: 700;
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    #tbBody {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -6px;
+        margin-left: -6px;
+    }
+
+    .order-card-wrap {
+        margin-bottom: 12px;
+        padding-right: 6px;
+        padding-left: 6px;
+        width: 20%;
+    }
+
+    @@media (max-width: 1400px) {
+        .order-card-wrap {
+            width: 25%;
+        }
+    }
+
+    @@media (max-width: 1200px) {
+        .order-card-wrap {
+            width: 33.3333%;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .order-card-wrap {
+            width: 50%;
+        }
+    }
+
+    @@media (max-width: 520px) {
+        .order-card-wrap {
+            width: 100%;
+        }
+    }
+
+    .order-transfer-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+        height: 100%;
+        padding: 10px;
+        transition: all .2s ease;
+        cursor: pointer;
+    }
+
+    .order-transfer-card:hover {
+        border-color: #c7d2fe;
+        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.12);
+        transform: translateY(-2px);
+    }
+
+    .order-transfer-card.is-selected {
+        border-color: #2563eb;
+        background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+    }
+
+    .order-transfer-card.is-selected .order-code-badge {
+        background: #1d4ed8;
+    }
+
+    .order-transfer-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+        border-bottom: 1px dashed #e5e7eb;
+        padding-bottom: 8px;
+        margin-bottom: 10px;
+    }
+
+    .order-code-badge {
+        background: #2563eb;
+        color: #fff;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .order-date-meta {
+        margin-top: 6px;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .card-check {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #334155;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .order-meta-line {
+        margin-bottom: 4px;
+        color: #0f172a;
+        font-size: 12px;
+    }
+
+    .order-status-wrap {
+        margin-top: 10px;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+</style>
+
+<input hidden type="text" id="BId" value="@branchId" />
+<input hidden type="text" id="Q" value="@fromClientId" />
+
+<div class="panel panel-primary transfer-modern">
+    <div class="panel-heading">
+        <h3 class="panel-title transfer-title">
+            <span class="main-text"><i class="fa fa-fw fa-random"></i> تحويل طلبات من راسل لراسل</span>
+            <span class="transfer-badge-new">تحديث جديد</span>
+        </h3>
+    </div>
+
+    <div class="panel-body">
+        <div class="transfer-security">
+            <i class="fa fa-shield"></i>
+            هذه الصفحة مخصصة فقط للمسؤول المعتمد للتحويل: <b>Admin@Tasahel.com</b>
+        </div>
+
+        <div class="row transfer-controls-box">
+            <div class="col-lg-4 mb-10">
+                <label>الراسل الحالي</label>
+                <div class="form-group">
+                    <select name="fromClientIdSelect" id="fromClientIdSelect" class="select2 form-control">
+                        @if (fromClients != null)
+                        {
+                            foreach (var c in fromClients)
+                            {
+                                if (c.Id == fromClientId)
+                                {
+                                    <option value="@c.Id" selected="selected">@c.Name - @c.PhoneNumber</option>
+                                }
+                                else
+                                {
+                                    <option value="@c.Id">@c.Name - @c.PhoneNumber</option>
+                                }
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-10">
+                <label>اختر الراسل الجديد</label>
+                <div class="form-group">
+                    <select name="toClientId" id="toClientId" class="select2 form-control">
+                        @if (toClients != null)
+                        {
+                            foreach (var c in toClients)
+                            {
+                                @if (c.Id == toClientId)
+                                {
+                                    <option value="@c.Id" selected="selected">
+                                        @c.Name - @c.PhoneNumber
+                                    </option>
+                                }
+                                else
+                                {
+                                    <option value="@c.Id">
+                                        @c.Name - @c.PhoneNumber
+                                    </option>
+                                }
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-10">
+                <label>بحث ديناميك</label>
+                <div class="form-group search-wrap">
+                    <i class="fa fa-search search-icon"></i>
+                    <input class="form-control left-border-none" type="text" id="inpSearch" placeholder="البحث بكود الطلب او رقم الهاتف" value="" />
+                </div>
+            </div>
+        </div>
+
+        @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+
+        <form asp-action="TransferSenderOrders" asp-controller="Orders" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="fromClientId" value="@fromClientId" />
+            <input type="hidden" name="toClientId" id="toClientIdHidden" value="@toClientId" />
+
+            <div class="actions-bar">
+                <div class="actions-left">
+                    <button type="button" class="btn btn-default" id="toggleSelectAllBtn">
+                        <i class="fa fa-check-square-o"></i> تحديد الكل
+                    </button>
+                    <span class="selection-count" id="selectionCount">المحدد: 0</span>
+                    <div class="form-inline" style="margin-right:8px;">
+                        <label style="margin-left:6px;">عرض</label>
+                        <select class="form-control" onchange="ReloadPagination(1)" id="entires" style="width:95px;">
+                            <option value="15" selected="selected">15</option>
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="fa fa-exchange"></i> تحويل المحدد
+                </button>
+            </div>
+
+            <div id="tbBody" class="row">
+                @await Html.PartialAsync("_SenderTransferCardsList", Model.ToList())
+            </div>
+
+            <div id="dvPagination">
+                <partial name="_Pagination" model="paginationVM" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    // نعمل ReloadPagination خاص بصفحة تحويل الرسل حتى لا يعتمد على TotalPrice الخاص بصفحة Index
+    function ReloadPagination(pageNum) {
+        if (typeof showGlobalLoader === "function") {
+            showGlobalLoader();
+        }
+        syncToClientValue();
+        var inpSearchVal = document.getElementById("inpSearch").value;
+        var BranchId = document.getElementById("BId").value;
+        var q = document.getElementById("Q").value; // fromClientId
+        var pageSize = 15;
+        var entiresEl = document.getElementById("entires");
+        if (entiresEl) {
+            pageSize = parseInt(entiresEl.value) || 15;
+        }
+
+        var reqItems = $.ajax({
+            url: "/Orders/GetItemsSenderTransfer",
+            type: "GET",
+            data: { searchStr: inpSearchVal, q: q, BranchId: BranchId, pageNumber: pageNum, pageSize: pageSize }
+        });
+
+        var reqPagination = $.ajax({
+            url: "/Orders/GetPaginationSenderTransfer",
+            type: "GET",
+            data: { searchStr: inpSearchVal, q: q, BranchId: BranchId, pageNumber: pageNum, pageSize: pageSize }
+        });
+
+        $.when(reqItems, reqPagination)
+            .done(function (itemsResponse, paginationResponse) {
+                var itemsHtml = itemsResponse[0];
+                var paginationHtml = paginationResponse[0];
+
+                $("#tbBody").empty().html(itemsHtml);
+                $("#dvPagination").empty().html(paginationHtml);
+
+                window._lastSearchHadResults = $("#tbBody .order-card-wrap").length > 0;
+                window._lastSearchText = inpSearchVal;
+                bindCardSelectionEvents();
+            })
+            .fail(function () {
+                // نخلي آخر نص محفوظ عشان منطق smart-search يفضل صحيح
+                window._lastSearchText = inpSearchVal;
+            })
+            .always(function () {
+                if (typeof hideGlobalLoader === "function") {
+                    hideGlobalLoader();
+                }
+            });
+    }
+
+    function syncToClientValue() {
+        var toClientSelect = document.getElementById("toClientId");
+        var toClientHidden = document.getElementById("toClientIdHidden");
+        if (toClientSelect && toClientHidden) {
+            toClientHidden.value = toClientSelect.value;
+        }
+    }
+
+    function updateSelectionCount() {
+        var checked = document.querySelectorAll('input.order-selector[name="OrderId"]:checked').length;
+        var countLabel = document.getElementById("selectionCount");
+        if (countLabel) {
+            countLabel.innerText = "المحدد: " + checked;
+        }
+    }
+
+    function bindCardSelectionEvents() {
+        var boxes = document.querySelectorAll('input.order-selector[name="OrderId"]');
+        boxes.forEach(function (cb) {
+            toggleCardSelectedState(cb);
+            cb.removeEventListener('change', updateSelectionCount);
+            cb.removeEventListener('change', onCardSelectionChange);
+            cb.addEventListener('change', updateSelectionCount);
+            cb.addEventListener('change', onCardSelectionChange);
+        });
+
+        var cards = document.querySelectorAll('.order-transfer-card');
+        cards.forEach(function (card) {
+            card.removeEventListener('click', onCardClickToggleSelection);
+            card.addEventListener('click', onCardClickToggleSelection);
+        });
+
+        updateSelectionCount();
+    }
+
+    function toggleCardSelectedState(checkbox) {
+        var card = checkbox.closest('.order-transfer-card');
+        if (!card) return;
+        if (checkbox.checked) {
+            card.classList.add('is-selected');
+        } else {
+            card.classList.remove('is-selected');
+        }
+    }
+
+    function onCardSelectionChange(e) {
+        toggleCardSelectedState(e.target);
+    }
+
+    function onCardClickToggleSelection(e) {
+        var interactive = e.target.closest('a, button, input, select, textarea, label');
+        if (interactive) {
+            return;
+        }
+
+        var card = e.currentTarget;
+        var checkbox = card.querySelector('input.order-selector[name="OrderId"]');
+        if (!checkbox) {
+            return;
+        }
+
+        checkbox.checked = !checkbox.checked;
+        toggleCardSelectedState(checkbox);
+        updateSelectionCount();
+    }
+
+    $(document).ready(function () {
+        syncToClientValue();
+        bindCardSelectionEvents();
+        window._lastSearchText = "";
+        window._lastSearchHadResults = true;
+
+        var searchTimer = null;
+        $("#inpSearch").on("input", function () {
+            var currentValue = (this.value || "").trim();
+            var prevValue = (window._lastSearchText || "").trim();
+            var lastHadResults = window._lastSearchHadResults !== false;
+
+            // حركة البحث المطلوبة:
+            // لو آخر نتيجة كانت فاضية، ومستخدم بيزود على نفس النص، ما نعملش بحث جديد
+            var isAdding = currentValue.length > prevValue.length;
+            var samePrefix = currentValue.startsWith(prevValue);
+            if (!lastHadResults && isAdding && samePrefix) {
+                return;
+            }
+
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(function () {
+                ReloadPagination(1);
+            }, 180);
+        });
+
+        $("#fromClientIdSelect").on("change", function () {
+            var nextFromClient = this.value;
+            if (typeof showGlobalLoader === "function") {
+                showGlobalLoader();
+            }
+            window.location.href = "/Orders/SwitchSenderOrders?fromClientId=" + encodeURIComponent(nextFromClient);
+        });
+
+        $("#toClientId").on("change", function () {
+            syncToClientValue();
+        });
+
+        $("#toggleSelectAllBtn").on("click", function () {
+            var checkboxes = document.querySelectorAll('input.order-selector[name="OrderId"]');
+            var allChecked = checkboxes.length > 0;
+            checkboxes.forEach(function (cb) {
+                if (!cb.checked) {
+                    allChecked = false;
+                }
+            });
+
+            checkboxes.forEach(function (cb) {
+                cb.checked = !allChecked;
+                toggleCardSelectedState(cb);
+            });
+
+            this.innerHTML = allChecked
+                ? '<i class="fa fa-check-square-o"></i> تحديد الكل'
+                : '<i class="fa fa-square-o"></i> إلغاء تحديد الكل';
+
+            updateSelectionCount();
+        });
+    });
+</script>
+

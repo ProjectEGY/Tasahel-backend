@@ -148,7 +148,13 @@ namespace PostexS.Controllers
 
         public async Task<IActionResult> Login()
         {
+            // لو اليوزر مسجل دخول أصلاً، يروح على الصفحة الرئيسية
+            if (User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Index", "Home");
+            }
             await GeneratRoles();
+
             if (_branch.GetAll().Count() == 0)
             {
                 var model = new Branch()

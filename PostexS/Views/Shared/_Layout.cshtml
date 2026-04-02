@@ -1,4 +1,4 @@
-﻿@using PostexS.Helper
+@using PostexS.Helper
 <!DOCTYPE html>
 <html>
 <head>
@@ -57,6 +57,61 @@
 
         .select2-container--default {
             text-align: right;
+        }
+
+        #cover-spin {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.58);
+            z-index: 99999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #cover-spin::after {
+            display: none !important;
+        }
+
+        #cover-spin .loader-content {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 18px 22px 14px;
+            text-align: center;
+            min-width: 200px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+        }
+
+        #cover-spin .loader-logo {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            object-fit: contain;
+            animation: loaderPulse 1.2s ease-in-out infinite;
+            margin-bottom: 10px;
+        }
+
+        #cover-spin .loader-text {
+            font-size: 13px;
+            color: #0f172a;
+            font-weight: 700;
+        }
+
+        @@keyframes loaderPulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.08);
+                opacity: 0.78;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
     </style>
     <style type="text/css">
@@ -161,7 +216,12 @@
     </script>*@
 
 <body class="skin-blue sidebar-mini">
-    <div id="cover-spin"></div>
+    <div id="cover-spin">
+        <div class="loader-content">
+            <img class="loader-logo" src="~/content/images/tasahelexpress.png" alt="Tasahel Loader" />
+            <div class="loader-text">جاري التحميل...</div>
+        </div>
+    </div>
     <div class="wrapper">
         <div id="header-data">
             @Html.RenderAction("Header", "Partials")
@@ -247,6 +307,14 @@
     defer></script>*@
     @RenderSection("Scripts", false)
     <script>
+        function showGlobalLoader() {
+            $("#cover-spin").css("display", "flex");
+        }
+
+        function hideGlobalLoader() {
+            $("#cover-spin").hide();
+        }
+
         $(function () {
             $("body").toggleClass('sidebar-open');
             $("body").click(function (e) {
@@ -284,16 +352,42 @@
             });
 
             $('[data-toggle="tooltip"]').tooltip()
-            $("#cover-spin").hide();
+            hideGlobalLoader();
             $('.select2').select2({
                 placeholder: 'اضغط للاختيار المتعدد',
             });
             $("form").submit(function () {
                 if ($(this).valid()) {
-                    $("#cover-spin").show();
+                    showGlobalLoader();
                 }
             })
-        })</script>
+        })
+
+        $(window).on('load', function () {
+            hideGlobalLoader();
+        });
+
+        $(document).ajaxStart(function () {
+            showGlobalLoader();
+        }).ajaxStop(function () {
+            hideGlobalLoader();
+        });
+
+        $(document).on('click', 'a[href]', function (e) {
+            var href = $(this).attr('href');
+            if (!href || href.startsWith('#') || href.startsWith('javascript:')) {
+                return;
+            }
+            if (e.ctrlKey || e.metaKey || e.shiftKey || this.target === '_blank') {
+                return;
+            }
+            showGlobalLoader();
+        });
+
+        $(window).on('beforeunload', function () {
+            showGlobalLoader();
+        });
+    </script>
     @if (TempData["Success"] != null)
     {
         <script>

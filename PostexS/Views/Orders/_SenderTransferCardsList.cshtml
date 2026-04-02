@@ -1,0 +1,69 @@
+@model List<PostexS.Models.Domain.Order>
+@using PostexS.Models.Enums;
+@using System.Globalization
+
+@{
+    Func<DateTime, string> ToEgyptTimeString = (utcDateTime) =>
+    {
+        var egyptTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+        var egyptTime = TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, egyptTimeZone);
+        return egyptTime.ToString("dd/MM/yyyy HH:mm");
+    };
+}
+
+@if (Model != null && Model.Count > 0)
+{
+    foreach (var item in Model)
+    {
+        <div class="col-lg-4 col-md-6 order-card-wrap">
+            <div class="order-transfer-card">
+                <div class="order-transfer-head">
+                    <div>
+                        <span class="order-code-badge">@item.Code</span>
+                        <div class="order-date-meta">
+                            <i class="fa fa-clock-o"></i> @ToEgyptTimeString(item.CreateOn)
+                        </div>
+                    </div>
+                    <label class="card-check">
+                        <input class="check-box order-selector" type="checkbox" name="OrderId" value="@item.Id" />
+                        <span>تحديد</span>
+                    </label>
+                </div>
+
+                <div class="order-transfer-body">
+                    <div class="order-meta-line"><strong>الراسل الحالي:</strong> @item.Client.Name</div>
+                    <div class="order-meta-line"><strong>المرسل إليه:</strong> @item.ClientName (@item.ClientCode)</div>
+                    <div class="order-meta-line"><strong>هاتف المرسل إليه:</strong> @item.ClientPhone</div>
+                    <div class="order-meta-line"><strong>العنوان:</strong> @item.AddressCity - @item.Address</div>
+
+                    <div class="order-status-wrap">
+                        <span class="badge bg-gray">غير متسوى</span>
+                        @if (item.Status == OrderStatus.Delivered)
+                        {
+                            <span class="badge bg-green">تم التوصيل</span>
+                        }
+                        else if (item.Status == OrderStatus.PartialDelivered)
+                        {
+                            <span class="badge bg-yellow-active">توصيل جزئي</span>
+                        }
+                        else if (item.Status == OrderStatus.Waiting)
+                        {
+                            <span class="badge bg-orange">مؤجل</span>
+                        }
+                        else if (item.Status == OrderStatus.Assigned)
+                        {
+                            <span class="badge bg-light-blue">جارى التوصيل</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="alert alert-info" style="width:100%; margin:10px 0;">
+        لا توجد طلبات مطابقة لشروط التحويل.
+    </div>
+}
+

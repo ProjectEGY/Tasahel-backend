@@ -71,6 +71,12 @@ namespace PostexS.Controllers
         private readonly IGeneric<CourierOrderSheet> _courierOrderSheet;
         private readonly IGeneric<CourierOrderSheetItem> _courierOrderSheetItem;
         private readonly FirebaseMessagingService _firebaseService;
+        private static readonly HashSet<string> SenderTransferAuthorizedEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Admin@Tasahel.com",
+            "elyaskee@Tasahel.com"
+        };
+        private const string SenderTransferAuthorizedUserId = "9897454b-add0-45ef-ad3b-53027814ede";
         public OrdersController(IGeneric<ApplicationUser> users, IGeneric<Order> orders, IGeneric<OrderOperationHistory> histories
             , ICRUD<Order> CRUD, ICRUD<OrderOperationHistory> CRUDhistory, IGeneric<OrderNotes> notes, IGeneric<Branch> branch,
             IOrderService orderService, IGeneric<OrderTransferrHistory> TransferHistories, IGeneric<DeviceTokens> pushNotification, IGeneric<Notification> notification, IWebHostEnvironment webHostEnvironment, UserManager<ApplicationUser> userManger, IGeneric<OrderNotes> OrderNotes, IGeneric<Wallet> wallet, IWapilotService wapilotService, IHttpClientFactory httpClientFactory, IServiceScopeFactory serviceScopeFactory,
@@ -3602,6 +3608,231 @@ namespace PostexS.Controllers
             model.GetPaginationUrl = "/Orders/GetPagination";
             return PartialView("_Pagination", model);
         }
+
+        #region Switch Sender Orders (ClientId) [Admin only]
+
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SwitchSenderOrders(
+            string fromClientId,
+            string toClientId = null,
+            int pageNumber = 1,
+            int pageSize = 15,
+            string searchStr = "")
+        {
+            if (!await IsSenderTransferManagerAsync())
+                return Forbid();
+
+            var eligibleSenders = _orderService.GetUsers(o =>
+                    o.OrderCompleted == OrderCompleted.NOK &&
+                    !o.IsDeleted)
+                .Where(u => !u.IsDeleted && u.UserType == Models.Enums.UserType.Client)
+                .OrderBy(u => u.Name)
+                .ToList();
+
+            if (eligibleSenders.Count == 0)
+                return BadRequest("لا توجد طلبات غير مسواة مؤهلة للتحويل.");
+
+            if (string.IsNullOrWhiteSpace(fromClientId))
+            {
+                fromClientId = eligibleSenders.First().Id;
+            }
+
+            var fromClient = await _users.GetObj(x => x.Id == fromClientId);
+            if (fromClient == null || fromClient.IsDeleted || fromClient.UserType != Models.Enums.UserType.Client)
+                return BadRequest("الراسل من غير موجود.");
+
+            var toClients = _users.Get(x =>
+                    !x.IsDeleted &&
+                    x.UserType == Models.Enums.UserType.Client &&
+                    x.BranchId == fromClient.BranchId &&
+                    x.Id != fromClientId)
+                .ToList();
+
+            if (toClients.Count == 0)
+                return BadRequest("لا يوجد رسل بديلة في نفس الفرع.");
+
+            if (string.IsNullOrWhiteSpace(toClientId))
+                toClientId = toClients.First().Id;
+
+            var query = GetSenderTransferEligibleOrders(fromClientId, searchStr);
+
+            query = query
+                .Where(o => o.Client.BranchId == fromClient.BranchId)
+                .OrderByDescending(o => o.CreateOn);
+
+            var paged = await PagedList<Order>.CreateAsync(query, pageNumber, pageSize);
+
+            ViewBag.FromClientId = fromClientId;
+            ViewBag.FromClient = fromClient;
+            ViewBag.FromClients = eligibleSenders;
+            ViewBag.ToClients = toClients;
+            ViewBag.ToClientId = toClientId;
+
+            return View(paged);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TransferSenderOrders(List<long> OrderId, string fromClientId, string toClientId)
+        {
+            if (!await IsSenderTransferManagerAsync())
+                return Forbid();
+
+            if (OrderId == null || OrderId.Count == 0)
+                return BadRequest("من فضلك اختر طلب واحد على الأقل.");
+
+            if (string.IsNullOrWhiteSpace(fromClientId) || string.IsNullOrWhiteSpace(toClientId))
+                return BadRequest("من فضلك أدخل الراسلين بشكل صحيح.");
+
+            if (fromClientId == toClientId)
+                return BadRequest("لا يمكنك تحويل الطلب لنفس الراسل.");
+
+            var fromClient = await _users.GetObj(x => x.Id == fromClientId);
+            var toClient = await _users.GetObj(x => x.Id == toClientId);
+
+            if (fromClient == null || fromClient.IsDeleted || fromClient.UserType != Models.Enums.UserType.Client)
+                return BadRequest("الراسل من غير موجود.");
+            if (toClient == null || toClient.IsDeleted || toClient.UserType != Models.Enums.UserType.Client)
+                return BadRequest("الراسل إلى غير موجود.");
+            if (toClient.BranchId != fromClient.BranchId)
+                return BadRequest("لازم يكون الراسلين في نفس الفرع.");
+
+            using (var scope = new TransactionScope(TransactionScopeOption.Required,
+                       new TransactionOptions { IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted, Timeout = TimeSpan.FromMinutes(10) },
+                       TransactionScopeAsyncFlowOption.Enabled))
+            {
+                foreach (var id in OrderId)
+                {
+                    var order = await _orders.GetObj(x => x.Id == id);
+                    if (order == null || order.IsDeleted)
+                        throw new Exception($"الطلب {id} غير موجود أو تم حذفه.");
+
+                    // نفس شروط صفحة الـ Complete
+                    if (order.ClientId != fromClientId)
+                        throw new Exception($"الطلب {order.Code} ليس تابعًا للراسل المحدد.");
+                    if (order.OrderCompleted != OrderCompleted.NOK)
+                        throw new Exception($"الطلب {order.Code} تم تسويته بالفعل.");
+
+                    order.ClientId = toClientId;
+                    order.LastUpdated = DateTime.Now.ToUniversalTime();
+
+                    if (order.OrderOperationHistoryId != null)
+                    {
+                        var history = await _Histories.GetObj(x => x.Id == order.OrderOperationHistoryId);
+                        if (history != null)
+                        {
+                            history.Transfer_UserId = _userManger.GetUserId(User);
+                            history.TransferDate = DateTime.Now.ToUniversalTime();
+                            await _Histories.Update(history);
+                        }
+                    }
+
+                    await _orders.Update(order);
+                    await _CRUD.Update(order.Id);
+                }
+
+                scope.Complete();
+            }
+
+            return RedirectToAction(nameof(SwitchSenderOrders), new { fromClientId = fromClientId, toClientId = toClientId });
+        }
+
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetItemsSenderTransfer(string searchStr, string q, long BranchId = -1, int pageNumber = 1, int pageSize = 15)
+        {
+            if (!await IsSenderTransferManagerAsync())
+                return Forbid();
+
+            // q = fromClientId
+            if (string.IsNullOrWhiteSpace(q))
+                return PartialView("_SenderTransferCardsList", new List<Order>());
+
+            var fromClient = await _users.GetObj(x => x.Id == q);
+            if (fromClient == null || fromClient.IsDeleted || fromClient.UserType != Models.Enums.UserType.Client)
+                return PartialView("_SenderTransferCardsList", new List<Order>());
+
+            var query = GetSenderTransferEligibleOrders(q, searchStr);
+
+            if (BranchId != -1 && fromClient.BranchId != BranchId)
+                return PartialView("_SenderTransferCardsList", new List<Order>());
+
+            query = query
+                .Where(o => o.Client.BranchId == fromClient.BranchId)
+                .OrderByDescending(o => o.CreateOn);
+
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return PartialView("_SenderTransferCardsList", items);
+        }
+
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetPaginationSenderTransfer(string searchStr, string q, long BranchId = -1, int pageNumber = 1, int pageSize = 15)
+        {
+            if (!await IsSenderTransferManagerAsync())
+                return Forbid();
+
+            if (string.IsNullOrWhiteSpace(q))
+                return PartialView("_Pagination", new PaginationVM());
+
+            var fromClient = await _users.GetObj(x => x.Id == q);
+            if (fromClient == null || fromClient.IsDeleted || fromClient.UserType != Models.Enums.UserType.Client)
+                return PartialView("_Pagination", new PaginationVM());
+
+            var query = GetSenderTransferEligibleOrders(q, searchStr);
+
+            if (BranchId != -1 && fromClient.BranchId != BranchId)
+                return PartialView("_Pagination", new PaginationVM());
+
+            query = query
+                .Where(o => o.Client.BranchId == fromClient.BranchId)
+                .OrderByDescending(o => o.CreateOn);
+
+            var paged = await PagedList<Order>.CreateAsync(query, pageNumber, pageSize);
+            var model = PagedList<Order>.GetPaginationObject(paged);
+            model.GetItemsUrl = "/Orders/GetItemsSenderTransfer";
+            model.GetPaginationUrl = "/Orders/GetPaginationSenderTransfer";
+            return PartialView("_Pagination", model);
+        }
+
+        private IQueryable<Order> GetSenderTransferEligibleOrders(string fromClientId, string searchStr)
+        {
+            var query = _orderService.GetQueryableList(o =>
+                o.ClientId == fromClientId &&
+                !o.IsDeleted &&
+                o.OrderCompleted == OrderCompleted.NOK);
+
+            if (!string.IsNullOrWhiteSpace(searchStr))
+            {
+                var s = searchStr.ToLower();
+                query = query.Where(o =>
+                    (o.ClientPhone != null && o.ClientPhone.ToLower().Contains(s)) ||
+                    (o.ClientCode != null && o.ClientCode.ToLower().Contains(s)) ||
+                    (o.Code != null && o.Code.Contains(searchStr)));
+            }
+
+            return query;
+        }
+
+        private async Task<bool> IsSenderTransferManagerAsync()
+        {
+            var user = await _userManger.GetUserAsync(User);
+            if (user == null)
+                return false;
+
+            if (string.Equals(user.Id, SenderTransferAuthorizedUserId, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (!string.IsNullOrWhiteSpace(user.Email) && SenderTransferAuthorizedEmails.Contains(user.Email.Trim()))
+                return true;
+
+            return false;
+        }
+
+        #endregion
 
         #endregion
 
