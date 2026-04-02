@@ -1,5 +1,17 @@
 @model PostexS.Models.ViewModels.SideMenuVM
 @using System
+@using System.Security.Claims
+@{
+    var currentUserId = User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    var currentUserEmail = User?.FindFirstValue(ClaimTypes.Email) ?? User?.Identity?.Name ?? string.Empty;
+    var canSeeSenderTransferTab =
+        User.IsInRole("Admin") &&
+        (
+            string.Equals(currentUserEmail, "Admin@Tasahel.com", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(currentUserEmail, "elyaskee@Tasahel.com", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(currentUserId, "9897454b-add0-45ef-ad3b-53027814ede", StringComparison.OrdinalIgnoreCase)
+        );
+}
 <aside class="main-sidebar">
     <!-- sidebar: style can be found in sidebar.less -->
     <section class="sidebar">
@@ -149,7 +161,7 @@
                             <i class="fa fa-save"></i> <span>التسوية</span>
                         </a>
                     </li>
-                    @if (User.IsInRole("Admin") && string.Equals(User?.Identity?.Name, "Admin@Tasahel.com", StringComparison.OrdinalIgnoreCase))
+                    @if (canSeeSenderTransferTab)
                     {
                         <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("orders/switchsenderorders") ? "active" : "")"
                             style="background: linear-gradient(135deg, #b71c1c, #e53935); border-radius: 5px; margin: 5px 10px;">
