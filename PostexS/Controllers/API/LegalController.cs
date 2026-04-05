@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PostexS.Interfaces;
 using PostexS.Models.Domain;
@@ -15,11 +17,16 @@ namespace PostexS.Controllers.API
     {
         private readonly IGeneric<TermsAndCondition> _terms;
         private readonly IGeneric<PrivacyPolicy> _privacy;
+        private readonly IGeneric<ApplicationUser> _user;
 
-        public LegalController(IGeneric<TermsAndCondition> terms, IGeneric<PrivacyPolicy> privacy)
+        public LegalController(
+            IGeneric<TermsAndCondition> terms,
+            IGeneric<PrivacyPolicy> privacy,
+            IGeneric<ApplicationUser> user)
         {
             _terms = terms;
             _privacy = privacy;
+            _user = user;
         }
 
         /// <summary>
@@ -43,6 +50,44 @@ namespace PostexS.Controllers.API
                     content = content ?? "",
                     lastUpdated = terms.ModifiedOn ?? terms.CreateOn
                 }
+            });
+        }
+
+        /// <summary>
+        /// التحقق من حالة الحساب - يرجع هل المستخدم متاح ولا محذوف
+        /// </summary>
+        [HttpGet("CheckAccountStatus")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public IActionResult CheckAccountStatus()
+        {
+            var userId = User.Identity.Name;
+            var user = _user.Get(x => x.Id == userId).FirstOrDefault();
+
+            var isActive = user != null && !user.IsDeleted;
+
+            return Ok(new
+            {
+                errorCode = 0,
+                errorMessage = "Success",
+                data = new { isActive }
+            });
+        }
+
+        /// <summary>
+        /// رابط صفحة حذف الحساب
+        /// </summary>
+        /// <param name="app">نوع التطبيق: driver أو sender (افتراضي driver)</param>
+        [HttpGet("DeleteAccountUrl")]
+        public IActionResult DeleteAccountUrl(string app = "driver")
+        {
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var path = app == "sender" ? "Sender" : "Driver";
+
+            return Ok(new
+            {
+                errorCode = 0,
+                errorMessage = "Success",
+                data = new { url = $"{baseUrl}/DeleteAccount/{path}" }
             });
         }
 

@@ -31,7 +31,8 @@
       "Bash(route)",
       "Bash(http)",
       "Bash(grep -n \"enum Errors\" /c/Users/iT/source/repos/ProjectEGY/Tasahel-backend/PostexS/Models/Enums/*.cs)",
-      "Bash(grep -r \"\\\\[Route\\\\|api/\" /c/Users/iT/source/repos/ProjectEGY/Tasahel-backend/PostexS/Controllers/API/DriverApp/*.cs)"
+      "Bash(grep -r \"\\\\[Route\\\\|api/\" /c/Users/iT/source/repos/ProjectEGY/Tasahel-backend/PostexS/Controllers/API/DriverApp/*.cs)",
+      "Bash(xargs basename:*)"
     ]
   }
 }

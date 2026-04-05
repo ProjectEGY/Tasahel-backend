@@ -1,0 +1,427 @@
+@{
+    Layout = null;
+    var appType = ViewBag.AppType ?? "driver";
+    var appName = ViewBag.AppName ?? "تطبيق المندوب";
+    var accentColor = ViewBag.AccentColor ?? "#2e7d32";
+    var accentBg = ViewBag.AccentBg ?? "#e8f5e9";
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حذف الحساب - تساهل اكسبريس</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: @accentColor;
+            --accent-bg: @accentBg;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 50%, #fff1f2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 24px;
+            padding: 40px 28px 32px;
+            max-width: 440px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--danger), #f97316);
+        }
+
+        .logo-wrap { text-align: center; margin-bottom: 20px; }
+        .logo-wrap img {
+            width: 72px; height: 72px;
+            border-radius: 18px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--accent-bg);
+            color: var(--accent);
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 22px;
+            color: var(--gray-900);
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 14px;
+            color: var(--gray-500);
+            margin-bottom: 28px;
+            line-height: 1.7;
+        }
+
+        .form-group { margin-bottom: 18px; }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--gray-700);
+            margin-bottom: 8px;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        .input-wrap svg {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
+            width: 20px; height: 20px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 44px 14px 16px;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: 'Cairo', sans-serif;
+            color: var(--gray-900);
+            direction: ltr;
+            text-align: right;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background: var(--gray-50);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-bg);
+            background: #fff;
+        }
+
+        .form-input::placeholder {
+            color: var(--gray-400);
+            font-size: 13px;
+        }
+
+        .warning-box {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 24px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .warning-icon { font-size: 22px; flex-shrink: 0; }
+
+        .warning-text {
+            font-size: 13px;
+            color: #92400e;
+            line-height: 1.8;
+            font-weight: 500;
+        }
+
+        .warning-text strong { color: #78350f; }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Cairo', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-delete { background: var(--danger); color: #fff; }
+        .btn-delete:hover { background: var(--danger-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+
+        .alert-error {
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            display: none;
+        }
+
+        /* Overlay */
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .overlay.active { display: flex; }
+
+        .popup {
+            background: #fff;
+            border-radius: 24px;
+            padding: 32px 24px 24px;
+            max-width: 380px;
+            width: 100%;
+            text-align: center;
+            animation: slideUp 0.3s ease;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .popup-icon {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: #fef2f2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 32px;
+        }
+
+        .popup-title { font-size: 18px; font-weight: 800; color: var(--gray-900); margin-bottom: 8px; }
+        .popup-text { font-size: 14px; color: var(--gray-500); line-height: 1.7; margin-bottom: 24px; }
+
+        .popup-buttons { display: flex; gap: 10px; }
+        .popup-buttons .btn { flex: 1; padding: 14px; font-size: 15px; }
+
+        .btn-cancel { background: var(--gray-100); color: var(--gray-700); }
+        .btn-cancel:hover { background: var(--gray-200); }
+
+        .btn-confirm-delete { background: var(--danger); color: #fff; }
+        .btn-confirm-delete:hover { background: var(--danger-hover); }
+
+        /* Success */
+        .success-state { display: none; text-align: center; padding: 20px 0; }
+        .success-icon {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: #f0fdf4;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+        }
+        .success-title { font-size: 20px; font-weight: 800; color: #166534; margin-bottom: 8px; }
+        .success-text { font-size: 14px; color: var(--gray-500); line-height: 1.7; }
+
+        .spinner {
+            width: 20px; height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            display: none;
+        }
+
+        @@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @@keyframes spin { to { transform: rotate(360deg); } }
+
+        @@media (max-width: 380px) {
+            .card { padding: 28px 20px 24px; }
+            .title { font-size: 19px; }
+            .popup-buttons { flex-direction: column-reverse; }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo-wrap">
+            <img src="/content/images/tasahelexpress.png" alt="Tasahel Express">
+        </div>
+        <div style="text-align:center;">
+            <span class="badge">@appName</span>
+        </div>
+
+        <div id="mainContent">
+            <h1 class="title">حذف الحساب</h1>
+            <p class="subtitle">أدخل رقم هاتفك وكلمة المرور لتأكيد حذف حسابك نهائياً</p>
+
+            <div class="alert-error" id="errorAlert"></div>
+
+            <div class="form-group">
+                <label>رقم الهاتف</label>
+                <div class="input-wrap">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                    <input type="text" class="form-input" id="phone" placeholder="01xxxxxxxxx" autocomplete="tel">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>كلمة المرور</label>
+                <div class="input-wrap">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    <input type="password" class="form-input" id="password" placeholder="أدخل كلمة المرور" autocomplete="current-password">
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <div class="warning-icon">&#9888;&#65039;</div>
+                <div class="warning-text">
+                    <strong>تنبيه:</strong> بعد حذف الحساب لن تتمكن من استرجاعه أو تسجيل الدخول مرة أخرى.
+                </div>
+            </div>
+
+            <button class="btn btn-delete" onclick="showPopup()">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                حذف حسابي نهائياً
+            </button>
+        </div>
+
+        <div class="success-state" id="successContent">
+            <div class="success-icon">&#10004;&#65039;</div>
+            <h2 class="success-title">تم حذف الحساب بنجاح</h2>
+            <p class="success-text">تم حذف حسابك نهائياً.<br>لن تتمكن من تسجيل الدخول مرة أخرى.</p>
+        </div>
+    </div>
+
+    <!-- Confirmation Popup -->
+    <div class="overlay" id="popup">
+        <div class="popup">
+            <div class="popup-icon">&#128683;</div>
+            <h3 class="popup-title">تأكيد حذف الحساب</h3>
+            <p class="popup-text">هل أنت متأكد من حذف حسابك؟<br>هذا الإجراء <strong>لا يمكن التراجع عنه</strong>.</p>
+            <div class="popup-buttons">
+                <button class="btn btn-cancel" onclick="hidePopup()">إلغاء</button>
+                <button class="btn btn-confirm-delete" id="btnConfirm" onclick="confirmDelete()">
+                    <span id="btnText">نعم، احذف حسابي</span>
+                    <div class="spinner" id="btnSpinner"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showPopup() {
+            var phone = document.getElementById('phone').value.trim();
+            var password = document.getElementById('password').value.trim();
+            if (!phone || !password) {
+                showError('برجاء إدخال رقم الهاتف وكلمة المرور');
+                return;
+            }
+            hideError();
+            document.getElementById('popup').classList.add('active');
+        }
+
+        function hidePopup() {
+            document.getElementById('popup').classList.remove('active');
+        }
+
+        function showError(msg) {
+            var el = document.getElementById('errorAlert');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorAlert').style.display = 'none';
+        }
+
+        function confirmDelete() {
+            var btn = document.getElementById('btnConfirm');
+            var text = document.getElementById('btnText');
+            var spinner = document.getElementById('btnSpinner');
+
+            btn.disabled = true;
+            text.textContent = 'جاري الحذف...';
+            spinner.style.display = 'block';
+
+            var phone = document.getElementById('phone').value.trim();
+            var password = document.getElementById('password').value.trim();
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/DeleteAccount/Confirm', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    var res = JSON.parse(xhr.responseText);
+                    if (res.success) {
+                        hidePopup();
+                        document.getElementById('mainContent').style.display = 'none';
+                        document.getElementById('successContent').style.display = 'block';
+                    } else {
+                        hidePopup();
+                        showError(res.message);
+                        resetBtn();
+                    }
+                } else {
+                    hidePopup();
+                    showError('حدث خطأ، حاول مرة أخرى');
+                    resetBtn();
+                }
+            };
+
+            xhr.onerror = function () {
+                hidePopup();
+                showError('حدث خطأ في الاتصال');
+                resetBtn();
+            };
+
+            xhr.send('phone=' + encodeURIComponent(phone) + '&password=' + encodeURIComponent(password) + '&appType=@(appType)');
+        }
+
+        function resetBtn() {
+            var btn = document.getElementById('btnConfirm');
+            btn.disabled = false;
+            document.getElementById('btnText').textContent = 'نعم، احذف حسابي';
+            document.getElementById('btnSpinner').style.display = 'none';
+        }
+
+        document.getElementById('popup').addEventListener('click', function (e) {
+            if (e.target === this) hidePopup();
+        });
+    </script>
+</body>
+</html>
