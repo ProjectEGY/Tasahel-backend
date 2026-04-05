@@ -119,6 +119,77 @@ namespace PostexS.Controllers.API
         }
 
         /// <summary>
+        /// طلبات في انتظار التقفيل - الطلبات اللي المندوب غيّر حالتها بس لسه ما اتقفلتش مع المشرف
+        /// </summary>
+        /// <remarks>
+        /// يحتاج JWT Token. يرجع الطلبات اللي المندوب سلمها أو رجعها بس لسه ما اتعملهاش تقفيلة.
+        /// يعني الطلبات اللي حالتها مش (Assigned/Waiting/Placed) و Finished = false.
+        /// فيها إحصائيات: عدد كل حالة، إجمالي المحصل، نسبة المندوب، المبلغ المطلوب تسليمه للشركة.
+        /// </remarks>
+        [HttpGet("PendingSettlement")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> PendingSettlement(
+            [FromHeader(Name = "Latitude")] double? latitude,
+            [FromHeader(Name = "Longitude")] double? longitude,
+            int page = 1, int size = 15)
+        {
+            var (user, errorResult) = await GetCurrentDriverAsync();
+            if (errorResult != null) return errorResult;
+
+            var userid = user.Id;
+
+            var allPending = _orders.Get(x =>
+                x.DeliveryId == userid && !x.IsDeleted && !x.Finished
+                && x.Status != OrderStatus.Assigned
+                && x.Status != OrderStatus.Waiting
+                && x.Status != OrderStatus.Placed
+                && x.Status != OrderStatus.PartialReturned
+            ).ToList();
+
+            // الإحصائيات
+            var stats = new
+            {
+                TotalOrders = allPending.Count,
+                DeliveredCount = allPending.Count(o => o.Status == OrderStatus.Delivered),
+                DeliveredWithEditPriceCount = allPending.Count(o => o.Status == OrderStatus.Delivered_With_Edit_Price),
+                PartialDeliveredCount = allPending.Count(o => o.Status == OrderStatus.PartialDelivered),
+                ReturnedCount = allPending.Count(o => o.Status == OrderStatus.Returned),
+                ReturnedPaidDeliveryCount = allPending.Count(o => o.Status == OrderStatus.Returned_And_Paid_DeliveryCost),
+                ReturnedOnSenderCount = allPending.Count(o => o.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender),
+                RejectedCount = allPending.Count(o => o.Status == OrderStatus.Rejected),
+                TotalCollected = allPending.Sum(o => o.ArrivedCost),
+                TotalDriverCommission = allPending.Sum(o => o.DeliveryCost),
+                TotalToCompany = allPending.Sum(o => o.ArrivedCost) - allPending.Sum(o => o.DeliveryCost),
+            };
+
+            // الطلبات مع pagination
+            var totalCount = allPending.Count;
+            var pagedOrders = allPending.OrderByDescending(x => x.LastUpdated ?? x.CreateOn)
+                .Skip((page - 1) * size).Take(size).ToList();
+
+            string notFound = "لم يتم تحديد السائق";
+            var dto = new System.Collections.Generic.List<OrderDto>();
+            foreach (var item in pagedOrders)
+            {
+                var model = new OrderDto(item);
+                var sender = await _user.GetObj(x => x.Id == item.ClientId);
+                model.AgentName = sender?.Name ?? notFound;
+                model.SenderName = sender?.Name ?? notFound;
+                model.SenderNumber = sender?.PhoneNumber ?? "-1";
+                dto.Add(model);
+            }
+
+            await UpdateLocationIfProvided(latitude, longitude, user);
+
+            baseResponse.Data = new
+            {
+                Statistics = stats,
+                Orders = new PaginatedResponse<OrderDto>(dto, page, size, totalCount)
+            };
+            return Ok(baseResponse);
+        }
+
+        /// <summary>
         /// أرشيف الطلبات المنتهية للمندوب مع فلتر حسب الحالة
         /// </summary>
         [HttpGet("OrderHistory")]
