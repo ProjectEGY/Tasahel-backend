@@ -14,6 +14,7 @@ namespace PostexS.Models.Dtos
         public string AgentName { get; set; }
         public string date { get; set; }
         public double Cost { get; set; }
+        public double ArrivedCost { get; set; }
         public double DeliveryCost { get; set; }
         public double OrderCostWithoutDeliveryCost { get; set; }
         public string SenderName { get; set; }
@@ -30,6 +31,7 @@ namespace PostexS.Models.Dtos
             this.OrderNumber = order.Code;
             this.date = date.ToString("dddd MMM, yyyy");
             this.Cost = order.TotalCost;
+            this.ArrivedCost = order.ArrivedCost;
             this.OrderCostWithoutDeliveryCost = order.Cost;
             this.ReciverName = order.ClientName;
             this.ReciverCode = order.ClientCode;

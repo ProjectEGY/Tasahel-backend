@@ -3963,5 +3963,89 @@ namespace PostexS.Controllers
                 showOrderCost, showDeliveryFees, showClientCode, useCustomColumns: useCustomColumns);
         }
         #endregion
+
+        #region طلبات في انتظار التقفيل (لكل مندوب)
+
+        /// <summary>
+        /// صفحة طلبات التوصيل في انتظار التقفيل - فلتر بالمندوب
+        /// </summary>
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,TrustAdmin")]
+        public IActionResult PendingDeliveriesSettlement(string driverId = "0")
+        {
+            var drivers = _users.Get(x => !x.IsDeleted && x.UserType == UserType.Driver).OrderBy(x => x.Name).ToList();
+            ViewBag.Drivers = drivers;
+            ViewBag.DriverId = driverId;
+
+            var orders = new List<Order>();
+            if (driverId != "0" && !string.IsNullOrEmpty(driverId))
+            {
+                orders = _orders.GetAllAsIQueryable(
+                    filter: x => x.DeliveryId == driverId && !x.IsDeleted && !x.Finished
+                        && (x.Status == OrderStatus.Delivered
+                            || x.Status == OrderStatus.Delivered_With_Edit_Price
+                            || x.Status == OrderStatus.PartialDelivered
+                            || x.Status == OrderStatus.Waiting),
+                    orderby: o => o.OrderByDescending(c => c.LastUpdated ?? c.CreateOn),
+                    IncludeProperties: "Client,Delivery,OrderNotes").ToList();
+
+                var driver = drivers.FirstOrDefault(x => x.Id == driverId);
+                ViewBag.DriverName = driver?.Name ?? "-";
+                ViewBag.DriverPhone = driver?.PhoneNumber ?? "-";
+            }
+
+            // الإحصائيات
+            ViewBag.TotalOrders = orders.Count;
+            ViewBag.DeliveredCount = orders.Count(o => o.Status == OrderStatus.Delivered);
+            ViewBag.DeliveredWithEditPriceCount = orders.Count(o => o.Status == OrderStatus.Delivered_With_Edit_Price);
+            ViewBag.PartialDeliveredCount = orders.Count(o => o.Status == OrderStatus.PartialDelivered);
+            ViewBag.WaitingCount = orders.Count(o => o.Status == OrderStatus.Waiting);
+            ViewBag.TotalCollected = orders.Sum(o => o.ArrivedCost);
+            ViewBag.TotalDriverCommission = orders.Sum(o => o.DeliveryCost);
+            ViewBag.TotalToCompany = orders.Sum(o => o.ArrivedCost) - orders.Sum(o => o.DeliveryCost);
+
+            return View(orders);
+        }
+
+        /// <summary>
+        /// صفحة مرتجعات في انتظار التقفيل - فلتر بالمندوب
+        /// </summary>
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,TrustAdmin")]
+        public IActionResult PendingReturnsSettlement(string driverId = "0")
+        {
+            var drivers = _users.Get(x => !x.IsDeleted && x.UserType == UserType.Driver).OrderBy(x => x.Name).ToList();
+            ViewBag.Drivers = drivers;
+            ViewBag.DriverId = driverId;
+
+            var orders = new List<Order>();
+            if (driverId != "0" && !string.IsNullOrEmpty(driverId))
+            {
+                orders = _orders.GetAllAsIQueryable(
+                    filter: x => x.DeliveryId == driverId && !x.IsDeleted && !x.ReturnedFinished
+                        && (x.Status == OrderStatus.Returned
+                            || x.Status == OrderStatus.PartialReturned
+                            || x.Status == OrderStatus.Returned_And_Paid_DeliveryCost
+                            || x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender),
+                    orderby: o => o.OrderByDescending(c => c.LastUpdated ?? c.CreateOn),
+                    IncludeProperties: "Client,Delivery,OrderNotes").ToList();
+
+                var driver = drivers.FirstOrDefault(x => x.Id == driverId);
+                ViewBag.DriverName = driver?.Name ?? "-";
+                ViewBag.DriverPhone = driver?.PhoneNumber ?? "-";
+            }
+
+            // الإحصائيات
+            ViewBag.TotalOrders = orders.Count;
+            ViewBag.ReturnedCount = orders.Count(o => o.Status == OrderStatus.Returned);
+            ViewBag.PartialReturnedCount = orders.Count(o => o.Status == OrderStatus.PartialReturned);
+            ViewBag.ReturnedPaidDeliveryCount = orders.Count(o => o.Status == OrderStatus.Returned_And_Paid_DeliveryCost);
+            ViewBag.ReturnedOnSenderCount = orders.Count(o => o.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender);
+            ViewBag.TotalCollected = orders.Sum(o => o.ArrivedCost);
+            ViewBag.TotalDriverCommission = orders.Sum(o => o.DeliveryCost);
+            ViewBag.TotalToCompany = orders.Sum(o => o.ArrivedCost) - orders.Sum(o => o.DeliveryCost);
+
+            return View(orders);
+        }
+
+        #endregion
     }
 }

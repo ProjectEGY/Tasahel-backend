@@ -1233,6 +1233,10 @@
             var qrPollingInterval = null;
             var statusMonitorInterval = null;
             var currentQrSessionId = null;
+            var qrRetryTimeoutHandle = null;
+            var qrRetryAttempts = 0;
+            var maxQrRetryAttempts = 20; // ~40 seconds with 2s retry interval
+            var qrRetryDelayMs = 2000;
 
             function showQrResult(success, message) {
                 var resultDiv = $('#whaStackQrResult');
@@ -1306,6 +1310,13 @@
                 }
             }
 
+            function stopQrRetry() {
+                if (qrRetryTimeoutHandle) {
+                    clearTimeout(qrRetryTimeoutHandle);
+                    qrRetryTimeoutHandle = null;
+                }
+            }
+
             function startStatusMonitor(sessionId) {
                 stopStatusMonitor();
 
@@ -1352,6 +1363,7 @@
             }
 
             function loadQrCode(sessionId) {
+                stopQrRetry();
                 $('#whaStackQrContainer').show();
                 $('#whaStackConnectedBox').hide();
                 $('#whaStackQrImg').hide();
@@ -1360,6 +1372,7 @@
                 $.post('@Url.Action("GetWhaStackSessionQr")', { sessionId: sessionId }, function (response) {
                     $('#whaStackQrLoading').hide();
                     if (response.success && response.qrCode) {
+                        qrRetryAttempts = 0;
                         var src = response.qrCode;
                         if (!src.startsWith('data:')) {
                             if (src.startsWith('http')) {
@@ -1371,11 +1384,25 @@
                         $('#whaStackQrImg').attr('src', src).show();
                         showQrResult(true, 'تم تحميل الـ QR Code - امسحه بواسطة واتساب');
                         startQrPolling(sessionId);
+                    } else if (response.pending) {
+                        qrRetryAttempts++;
+                        if (qrRetryAttempts <= maxQrRetryAttempts) {
+                            showQrResult(true, 'جاري تجهيز الـ QR Code... محاولة ' + qrRetryAttempts + ' من ' + maxQrRetryAttempts);
+                            $('#whaStackQrLoading').show();
+                            qrRetryTimeoutHandle = setTimeout(function () {
+                                loadQrCode(sessionId);
+                            }, qrRetryDelayMs);
+                        } else {
+                            showQrResult(false, 'تأخر تحميل الـ QR Code. اضغط "إعادة الاتصال" أو أعد إنشاء الجلسة.');
+                            qrRetryAttempts = 0;
+                        }
                     } else {
+                        qrRetryAttempts = 0;
                         showQrResult(false, response.message || 'فشل تحميل الـ QR Code');
                     }
                 }).fail(function () {
                     $('#whaStackQrLoading').hide();
+                    qrRetryAttempts = 0;
                     showQrResult(false, 'حدث خطأ أثناء تحميل الـ QR Code');
                 });
             }
@@ -1388,7 +1415,9 @@
 
                 btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الإنشاء...');
                 stopQrPolling();
+                stopQrRetry();
                 stopStatusMonitor();
+                qrRetryAttempts = 0;
 
                 $.post('@Url.Action("CreateWhaStackSession")', { name: name }, function (response) {
                     if (response.success && response.sessionId) {
@@ -1416,6 +1445,8 @@
                 }
 
                 btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري إعادة الاتصال...');
+                stopQrRetry();
+                qrRetryAttempts = 0;
                 stopStatusMonitor();
 
                 $.post('@Url.Action("ReconnectWhaStackSession")', { sessionId: sessionId }, function (response) {

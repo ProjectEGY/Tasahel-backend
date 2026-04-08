@@ -134,6 +134,16 @@
                             <i class="fa fa-list-alt"></i> <span>قوائم تحميل المندوبين</span>
                         </a>
                     </li>
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("pendingdeliveriessettlement") ? "active" : "")">
+                        <a href="@Url.Action("PendingDeliveriesSettlement", "Orders")">
+                            <i class="fa fa-clock-o"></i> <span>طلبات منتظرة للتقفيل</span>
+                        </a>
+                    </li>
+                    <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("pendingreturnssettlement") ? "active" : "")">
+                        <a href="@Url.Action("PendingReturnsSettlement", "Orders")">
+                            <i class="fa fa-undo"></i> <span>مرتجعات منتظرة للتقفيل</span>
+                        </a>
+                    </li>
                 }
             }
             @* <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("video") ? "active" : "")">

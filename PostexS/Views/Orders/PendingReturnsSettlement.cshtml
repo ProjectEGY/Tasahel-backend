@@ -1,0 +1,270 @@
+@model IEnumerable<PostexS.Models.Domain.Order>
+@using PostexS.Models.Domain
+@using PostexS.Models.Enums
+@{
+    ViewData["Title"] = "مرتجعات في انتظار التقفيل";
+    var drivers = ViewBag.Drivers as List<ApplicationUser>;
+    var driverId = ViewBag.DriverId as string;
+    var egyptTZ = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+}
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-undo"></i> مرتجعات في انتظار التقفيل</h3>
+    </div>
+    <div class="panel-body">
+
+        <!-- فلتر المندوب -->
+        <div class="row no-print" style="margin-bottom:15px;">
+            <div class="col-lg-6">
+                <label>اختيار المندوب</label>
+                <select id="DriverIdFilter" class="form-control select2">
+                    <option value="0">-- اختر المندوب --</option>
+                    @foreach (var driver in drivers)
+                    {
+                        if (driverId == driver.Id)
+                        {
+                            <option selected value="@driver.Id">@driver.Name - @driver.PhoneNumber</option>
+                        }
+                        else
+                        {
+                            <option value="@driver.Id">@driver.Name - @driver.PhoneNumber</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-lg-3" style="padding-top:25px;">
+                <a onclick="filterByDriver()" class="btn btn-primary form-control"><i class="fa fa-search"></i> عرض</a>
+            </div>
+            <div class="col-lg-3" style="padding-top:25px;">
+                <a onclick="window.print()" class="btn btn-default form-control no-print"><i class="fa fa-print"></i> طباعة</a>
+            </div>
+        </div>
+
+        @if (driverId != "0" && !string.IsNullOrEmpty(driverId))
+        {
+            <!-- بيانات المندوب -->
+            <div class="row" style="margin-bottom:15px; background:#f5f5f5; padding:10px; border-radius:5px;">
+                <div class="col-lg-6">
+                    <strong><i class="fa fa-motorcycle"></i> المندوب:</strong> @ViewBag.DriverName
+                    <span style="margin-right:15px;"><i class="fa fa-phone"></i> @ViewBag.DriverPhone</span>
+                </div>
+                <div class="col-lg-6 text-left">
+                    <strong>إجمالي المرتجعات:</strong> <span class="badge bg-yellow">@ViewBag.TotalOrders</span>
+                </div>
+            </div>
+
+            <!-- الإحصائيات -->
+            <div class="row" style="margin-bottom:20px;">
+                <div class="col-lg-3 col-sm-6">
+                    <div class="small-box bg-yellow">
+                        <div class="inner">
+                            <h3>@ViewBag.ReturnedCount</h3>
+                            <p>مرتجع كامل</p>
+                        </div>
+                        <div class="icon"><i class="fa fa-undo"></i></div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-sm-6">
+                    <div class="small-box" style="background:#f39c12; color:#fff;">
+                        <div class="inner">
+                            <h3>@ViewBag.PartialReturnedCount</h3>
+                            <p>مرتجع جزئي</p>
+                        </div>
+                        <div class="icon"><i class="fa fa-minus-circle"></i></div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-sm-6">
+                    <div class="small-box bg-red">
+                        <div class="inner">
+                            <h3>@ViewBag.ReturnedPaidDeliveryCount</h3>
+                            <p>مرتجع ودفع شحن</p>
+                        </div>
+                        <div class="icon"><i class="fa fa-truck"></i></div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-sm-6">
+                    <div class="small-box bg-maroon">
+                        <div class="inner">
+                            <h3>@ViewBag.ReturnedOnSenderCount</h3>
+                            <p>مرتجع وشحن على الراسل</p>
+                        </div>
+                        <div class="icon"><i class="fa fa-user"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- الملخص المالي -->
+            <div class="row" style="margin-bottom:20px;">
+                <div class="col-lg-4 col-sm-6">
+                    <div class="info-box">
+                        <span class="info-box-icon bg-green"><i class="fa fa-money"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">إجمالي المحصل</span>
+                            <span class="info-box-number">@(((double)ViewBag.TotalCollected).ToString("N2")) ج.م</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-sm-6">
+                    <div class="info-box">
+                        <span class="info-box-icon bg-yellow"><i class="fa fa-motorcycle"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">عمولة المندوب</span>
+                            <span class="info-box-number">@(((double)ViewBag.TotalDriverCommission).ToString("N2")) ج.م</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-sm-6">
+                    <div class="info-box">
+                        <span class="info-box-icon bg-red"><i class="fa fa-building"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">المطلوب للشركة</span>
+                            <span class="info-box-number">@(((double)ViewBag.TotalToCompany).ToString("N2")) ج.م</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- جدول المرتجعات -->
+            <div class="table-responsive">
+                <table id="tableReturns" cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered table-hover" style="text-align:center;">
+                    <thead>
+                        <tr>
+                            <th style="text-align:center">#</th>
+                            <th style="text-align:center">كود الطلب</th>
+                            <th style="text-align:center">الحالة</th>
+                            <th style="text-align:center">الراسل</th>
+                            <th style="text-align:center">المرسل إليه</th>
+                            <th style="text-align:center">العنوان</th>
+                            <th style="text-align:center">التكلفة الإجمالية</th>
+                            <th style="text-align:center">المحصل</th>
+                            <th style="text-align:center">عمولة المندوب</th>
+                            <th style="text-align:center">صورة المرتجع</th>
+                            <th style="text-align:center">ملاحظات</th>
+                            <th style="text-align:center">آخر تحديث</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ int rowNum = 1; }
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@(rowNum++)</td>
+                                <td>
+                                    <span class="badge bg-yellow">@item.Code</span>
+                                </td>
+                                <td>
+                                    @switch (item.Status)
+                                    {
+                                        case OrderStatus.Returned:
+                                            <span class="badge bg-yellow">مرتجع كامل</span>
+                                            break;
+                                        case OrderStatus.PartialReturned:
+                                            <span class="badge bg-yellow-active">مرتجع جزئي</span>
+                                            break;
+                                        case OrderStatus.Returned_And_Paid_DeliveryCost:
+                                            <span class="badge bg-red">مرتجع ودفع شحن</span>
+                                            break;
+                                        case OrderStatus.Returned_And_DeliveryCost_On_Sender:
+                                            <span class="badge bg-maroon">مرتجع وشحن على الراسل</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @item.Client?.Name
+                                </td>
+                                <td>
+                                    <span class="badge bg-blue-active">@item.ClientCode</span><br />
+                                    @item.ClientName<br />
+                                    <small>@item.ClientPhone</small>
+                                </td>
+                                <td style="max-width:150px;">@item.AddressCity - @item.Address</td>
+                                <td>@item.TotalCost.ToString("N2")</td>
+                                <td class="@(item.ArrivedCost != item.TotalCost ? "text-danger" : "text-success")" style="font-weight:bold;">
+                                    @item.ArrivedCost.ToString("N2")
+                                </td>
+                                <td>@item.DeliveryCost.ToString("N2")</td>
+                                <td>
+                                    @if (item.Returned_Image != null)
+                                    {
+                                        <button type="button" class="btn btn-primary btn-xs" data-toggle="modal" data-target="#imageModal-@item.Id">
+                                            <i class="fas fa-image"></i> عرض
+                                        </button>
+                                        <div class="modal fade" id="imageModal-@item.Id" tabindex="-1" role="dialog">
+                                            <div class="modal-dialog" role="document">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                                                        <h5 class="modal-title">صورة المرتجع: @item.Code</h5>
+                                                    </div>
+                                                    <div class="modal-body text-center">
+                                                        <img src="~/Images/OrderReturns/@item.Returned_Image" style="max-width:100%; height:auto;" />
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-default" data-dismiss="modal">غلق</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td style="max-width:150px;">
+                                    @if (item.OrderNotes != null && item.OrderNotes.Count > 0)
+                                    {
+                                        <small>@item.OrderNotes.OrderBy(x => x.Id).Last().Content</small>
+                                    }
+                                    else
+                                    {
+                                        <small>@item.Notes</small>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.LastUpdated.HasValue)
+                                    {
+                                        var localTime = TimeZoneInfo.ConvertTimeFromUtc(item.LastUpdated.Value, egyptTZ);
+                                        <small>@localTime.ToString("dd/MM/yyyy")<br />@localTime.ToString("hh:mm tt")</small>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info text-center" style="margin-top:20px;">
+                <i class="fa fa-info-circle"></i> برجاء اختيار المندوب لعرض المرتجعات المنتظرة للتقفيل
+            </div>
+        }
+
+    </div>
+</div>
+
+<script type="text/javascript">
+    function filterByDriver() {
+        var driverId = document.getElementById("DriverIdFilter").value;
+        window.location.href = "/Orders/PendingReturnsSettlement?driverId=" + driverId;
+    }
+
+    $(document).ready(function () {
+        $("#tableReturns").DataTable({
+            paging: false,
+            ordering: true,
+            info: false,
+            searching: true,
+            language: {
+                search: "بحث:",
+                zeroRecords: "لا توجد نتائج",
+            }
+        });
+    });
+</script>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

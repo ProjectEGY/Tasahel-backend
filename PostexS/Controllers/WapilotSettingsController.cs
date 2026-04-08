@@ -670,14 +670,21 @@ namespace PostexS.Controllers
             }
 
             var result = await _whaStackService.GetSessionQrAsync(sessionId);
+            var isQrNotReadyYet = !result.Success
+                                  && result.StatusCode == 400
+                                  && !string.IsNullOrWhiteSpace(result.ResponseBody)
+                                  && result.ResponseBody.Contains("QR_NOT_AVAILABLE", StringComparison.OrdinalIgnoreCase);
 
             return Json(new
             {
                 success = result.Success,
+                pending = isQrNotReadyYet,
                 qrCode = result.QrCode,
                 message = result.Success
                     ? "تم جلب الـ QR Code بنجاح"
-                    : $"فشل جلب الـ QR Code: {result.ErrorMessage}",
+                    : isQrNotReadyYet
+                        ? "جاري تجهيز الـ QR Code، سيتم المحاولة تلقائياً..."
+                        : $"فشل جلب الـ QR Code: {result.ErrorMessage}",
                 response = result.ResponseBody,
                 statusCode = result.StatusCode
             });
