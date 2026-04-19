@@ -26,6 +26,7 @@ namespace PostexS.Models.Domain
         public double Wallet { get; set; }
         public double? DeliveryCost { get; set; }
         public string WhatsappPhone { get; set; }
+        public string? SecondaryPhone { get; set; }
         public string? WhatsappGroupId { get; set; }
         // إعدادات إخفاء بيانات الراسل في البوليصة
         public bool HideSenderName { get; set; } = false;

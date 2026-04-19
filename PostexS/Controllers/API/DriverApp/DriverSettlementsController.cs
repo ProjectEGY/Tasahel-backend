@@ -220,6 +220,8 @@ namespace PostexS.Controllers.API
                 model.AgentName = sender?.Name ?? "-";
                 model.SenderName = sender?.Name ?? "-";
                 model.SenderNumber = sender?.PhoneNumber ?? "-1";
+                model.SenderSecondaryPhone = sender?.SecondaryPhone;
+                model.SenderWhatsappPhone = sender?.WhatsappPhone;
                 dto.Add(model);
             }
 
@@ -286,6 +288,8 @@ namespace PostexS.Controllers.API
                 model.AgentName = sender?.Name ?? "-";
                 model.SenderName = sender?.Name ?? "-";
                 model.SenderNumber = sender?.PhoneNumber ?? "-1";
+                model.SenderSecondaryPhone = sender?.SecondaryPhone;
+                model.SenderWhatsappPhone = sender?.WhatsappPhone;
                 dto.Add(model);
             }
 

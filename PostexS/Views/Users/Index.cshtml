@@ -244,6 +244,14 @@
                                                                             </div>
                                                                             <div class="col-lg-6 mb-10">
                                                                                 <div class="form-group">
+                                                                                    <label for="SecondaryPhone" class="col-sm-5 control-label">رقم اضافي:</label>
+                                                                                    <div class="col-sm-7">
+                                                                                        <input name="SecondaryPhone" type="text" id="SecondaryPhone" class="form-control valid" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-lg-6 mb-10">
+                                                                                <div class="form-group">
                                                                                     <label for="NameEn" class="col-sm-5 control-label required">العنوان:</label>
                                                                                     <div class="col-sm-7">
                                                                                         <input name="Address" type="text" required id="Address" class="form-control valid" />
@@ -492,6 +500,11 @@
                             }
                                         <td>
                                 @item.PhoneNumber
+                                @if (!string.IsNullOrEmpty(item.SecondaryPhone))
+                                {
+                                                            <br />
+                                                            <small style="color:#888">@item.SecondaryPhone</small>
+                                }
                                         </td>
                                         <td>
                                 @item.WhatsappPhone

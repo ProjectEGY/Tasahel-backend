@@ -264,6 +264,8 @@ namespace PostexS.Controllers.API
                     orderDto.AgentName = sender?.Name ?? "-";
                     orderDto.SenderName = sender?.Name ?? "-";
                     orderDto.SenderNumber = sender?.PhoneNumber ?? "-";
+                    orderDto.SenderSecondaryPhone = sender?.SecondaryPhone;
+                    orderDto.SenderWhatsappPhone = sender?.WhatsappPhone;
                     dto.Orders.Add(orderDto);
                 }
             }

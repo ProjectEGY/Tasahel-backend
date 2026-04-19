@@ -101,6 +101,8 @@ namespace PostexS.Models.Dtos
         public int StatusCode { get; set; }
         public string SenderName { get; set; }
         public string SenderPhone { get; set; }
+        public string SenderSecondaryPhone { get; set; }
+        public string SenderWhatsappPhone { get; set; }
         public string BranchName { get; set; }
         public string CreatedDate { get; set; }
         public string LastUpdated { get; set; }

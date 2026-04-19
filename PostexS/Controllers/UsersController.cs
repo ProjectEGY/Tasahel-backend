@@ -262,6 +262,7 @@ namespace PostexS.Controllers
                 Address = model.Address,
                 //site = model.site,
                 WhatsappPhone = model.WhatsappPhone,
+                SecondaryPhone = model.SecondaryPhone,
                 UserType = model.UserType == UserType.subAdmin ? UserType.Admin : model.UserType,
                 BranchId = model.BranchId,
                 IsApproved = true
@@ -1470,6 +1471,7 @@ namespace PostexS.Controllers
             user.NormalizedUserName = model.Email.ToUpper();
             user.PhoneNumber = model.PhoneNumber;
             user.WhatsappPhone = model.WhatsappPhone;
+            user.SecondaryPhone = model.SecondaryPhone;
             user.Address = model.Address;
             //user.site = model.site;
             user.DeliveryCost = model.DeliveryCost;

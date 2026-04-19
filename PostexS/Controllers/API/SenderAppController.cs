@@ -315,6 +315,7 @@ namespace PostexS.Controllers.API
                 Name = model.Name,
                 Email = model.Email,
                 WhatsappPhone = model.WhatsappPhone,
+                SecondaryPhone = model.SecondaryPhone,
                 Address = model.Address,
                 BranchId = model.BranchId,
                 UserType = UserType.Client,
@@ -445,6 +446,8 @@ namespace PostexS.Controllers.API
                 user.Email = dto.Email;
             if (!string.IsNullOrEmpty(dto.WhatsappPhone))
                 user.WhatsappPhone = dto.WhatsappPhone;
+            if (!string.IsNullOrEmpty(dto.SecondaryPhone))
+                user.SecondaryPhone = dto.SecondaryPhone;
             if (!string.IsNullOrEmpty(dto.Address))
                 user.Address = dto.Address;
 

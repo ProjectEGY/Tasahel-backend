@@ -9,6 +9,7 @@ namespace PostexS.Models.Dtos
         public string Phone { get; set; }
         public string Email { get; set; }
         public string WhatsappPhone { get; set; }
+        public string SecondaryPhone { get; set; }
         public string Address { get; set; }
         public double Wallet { get; set; }
         public BranchDto Branch { get; set; }
@@ -26,6 +27,7 @@ namespace PostexS.Models.Dtos
             Phone = user.PhoneNumber;
             Email = user.Email;
             WhatsappPhone = user.WhatsappPhone;
+            SecondaryPhone = user.SecondaryPhone;
             Address = user.Address;
             Wallet = user.Wallet;
             Branch = new BranchDto(branch);

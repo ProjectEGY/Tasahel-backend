@@ -11,6 +11,7 @@ namespace PostexS.Models.ViewModels
         public string Name { get; set; }
         public string WhatsappPhone { get; set; }
         public string Phone { get; set; }
+        public string SecondaryPhone { get; set; }
         public string Email { get; set; }
         public string Address { get; set; }
         public UserType UserType { get; set; }

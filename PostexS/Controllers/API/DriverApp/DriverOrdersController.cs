@@ -69,6 +69,8 @@ namespace PostexS.Controllers.API
                 model.AgentName = sender?.Name ?? dilvertNotFound;
                 model.SenderName = sender?.Name ?? dilvertNotFound;
                 model.SenderNumber = sender?.PhoneNumber ?? "-1";
+                model.SenderSecondaryPhone = sender?.SecondaryPhone;
+                model.SenderWhatsappPhone = sender?.WhatsappPhone;
                 dto.Add(model);
             }
             await UpdateLocationIfProvided(latitude, longitude, user);
@@ -111,6 +113,8 @@ namespace PostexS.Controllers.API
                 model.AgentName = sender?.Name ?? dilvertNotFound;
                 model.SenderName = sender?.Name ?? dilvertNotFound;
                 model.SenderNumber = sender?.PhoneNumber ?? "-1";
+                model.SenderSecondaryPhone = sender?.SecondaryPhone;
+                model.SenderWhatsappPhone = sender?.WhatsappPhone;
                 dto.Add(model);
             }
             await UpdateLocationIfProvided(latitude, longitude, user);
@@ -176,6 +180,8 @@ namespace PostexS.Controllers.API
                 model.AgentName = sender?.Name ?? notFound;
                 model.SenderName = sender?.Name ?? notFound;
                 model.SenderNumber = sender?.PhoneNumber ?? "-1";
+                model.SenderSecondaryPhone = sender?.SecondaryPhone;
+                model.SenderWhatsappPhone = sender?.WhatsappPhone;
                 dto.Add(model);
             }
 
@@ -227,6 +233,8 @@ namespace PostexS.Controllers.API
                 model.AgentName = sender?.Name ?? driverNotFound;
                 model.SenderName = sender?.Name ?? driverNotFound;
                 model.SenderNumber = sender?.PhoneNumber ?? "-1";
+                model.SenderSecondaryPhone = sender?.SecondaryPhone;
+                model.SenderWhatsappPhone = sender?.WhatsappPhone;
                 dto.Add(model);
             }
 
@@ -290,6 +298,8 @@ namespace PostexS.Controllers.API
             {
                 dto.SenderName = sender.Name;
                 dto.SenderPhone = sender.PhoneNumber;
+                dto.SenderSecondaryPhone = sender.SecondaryPhone;
+                dto.SenderWhatsappPhone = sender.WhatsappPhone;
             }
 
             // الملاحظات
@@ -407,6 +417,8 @@ namespace PostexS.Controllers.API
             {
                 dto.SenderName = sender.Name;
                 dto.SenderPhone = sender.PhoneNumber;
+                dto.SenderSecondaryPhone = sender.SecondaryPhone;
+                dto.SenderWhatsappPhone = sender.WhatsappPhone;
             }
 
             // الملاحظات

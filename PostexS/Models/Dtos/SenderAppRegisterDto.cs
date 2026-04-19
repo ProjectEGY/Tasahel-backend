@@ -17,6 +17,7 @@ namespace PostexS.Models.Dtos
 
         public string Email { get; set; }
         public string WhatsappPhone { get; set; }
+        public string SecondaryPhone { get; set; }
         public string Address { get; set; }
 
         [Required]

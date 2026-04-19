@@ -19,6 +19,8 @@ namespace PostexS.Models.Dtos
         public double OrderCostWithoutDeliveryCost { get; set; }
         public string SenderName { get; set; }
         public string SenderNumber { get; set; }
+        public string SenderSecondaryPhone { get; set; }
+        public string SenderWhatsappPhone { get; set; }
         public string ReciverCode { get; set; }
         public string ReciverName { get; set; }
         public string ReciverNumber { get; set; }
