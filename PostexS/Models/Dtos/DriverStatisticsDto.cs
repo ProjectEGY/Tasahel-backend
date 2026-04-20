@@ -87,6 +87,7 @@ namespace PostexS.Models.Dtos
         public string Code { get; set; }
         public string ClientName { get; set; }
         public string ClientPhone { get; set; }
+        public string ClientSecondaryPhone { get; set; }
         public string ClientCode { get; set; }
         public string Address { get; set; }
         public string AddressCity { get; set; }

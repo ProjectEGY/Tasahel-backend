@@ -109,6 +109,10 @@
                                     <br />
                                     <p>@Model.ClientName</p>
                                     <p>الهاتف :  <a dir="auto" href="tel:@Model.ClientPhone">@Model.ClientPhone</a> </p>
+                                    @if (!string.IsNullOrEmpty(Model.ClientSecondaryPhone))
+                                    {
+                                        <p>رقم اضافي :  <a dir="auto" href="tel:@Model.ClientSecondaryPhone">@Model.ClientSecondaryPhone</a> </p>
+                                    }
                                     <p>العنوان : @Model.AddressCity - @Model.Address</p>
                                 </td>
                             </tr>

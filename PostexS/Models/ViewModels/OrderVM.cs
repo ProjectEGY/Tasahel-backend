@@ -15,6 +15,7 @@ namespace PostexS.Models.Domain
         public string ClientCode { get; set; }
         public string ClientName { get; set; }
         public string ClientPhone { get; set; }
+        public string? ClientSecondaryPhone { get; set; }
         public double Cost { get; set; } = 0;
         public double DeliveryFees { get; set; } = 0;
     }

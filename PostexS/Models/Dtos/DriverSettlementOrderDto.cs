@@ -7,6 +7,7 @@ namespace PostexS.Models.Dtos
         public string Code { get; set; }
         public string ClientName { get; set; }
         public string ClientPhone { get; set; }
+        public string ClientSecondaryPhone { get; set; }
         public string SenderName { get; set; }
         public double ArrivedCost { get; set; }
         public double DeliveryCost { get; set; }

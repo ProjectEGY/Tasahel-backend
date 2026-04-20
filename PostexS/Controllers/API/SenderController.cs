@@ -164,6 +164,7 @@ namespace PostexS.Controllers.API
                 ClientName = model.ClientName,
                 ClientCode = model.ClientCode,
                 ClientPhone = model.ClientPhone,
+                ClientSecondaryPhone = model.ClientSecondaryPhone,
                 Cost = model.Cost,
                 DeliveryFees = model.DeliveryFees,
                 Notes = GeneralNote + model.Notes,

@@ -127,6 +127,7 @@ namespace PostexS.Controllers.API
                     Code = o.Code,
                     ClientName = o.ClientName,
                     ClientPhone = o.ClientPhone,
+                    ClientSecondaryPhone = o.ClientSecondaryPhone,
                     SenderName = sender?.Name ?? "-",
                     ArrivedCost = o.ArrivedCost,
                     DeliveryCost = o.DeliveryCost,

@@ -545,6 +545,7 @@ namespace PostexS.Controllers.API
                 ClientName = model.ClientName,
                 ClientCode = model.ClientCode,
                 ClientPhone = model.ClientPhone,
+                ClientSecondaryPhone = model.ClientSecondaryPhone,
                 Cost = model.Cost,
                 DeliveryFees = model.DeliveryFees,
                 Notes = generalNote + model.Notes,
@@ -885,6 +886,8 @@ namespace PostexS.Controllers.API
                 order.ClientName = dto.ClientName;
             if (!string.IsNullOrEmpty(dto.ClientPhone))
                 order.ClientPhone = dto.ClientPhone;
+            if (!string.IsNullOrEmpty(dto.ClientSecondaryPhone))
+                order.ClientSecondaryPhone = dto.ClientSecondaryPhone;
             if (!string.IsNullOrEmpty(dto.ClientCode))
                 order.ClientCode = dto.ClientCode;
             if (!string.IsNullOrEmpty(dto.Address))
@@ -1236,6 +1239,7 @@ namespace PostexS.Controllers.API
                 Code = o.Code,
                 ClientName = o.ClientName,
                 ClientPhone = o.ClientPhone,
+                ClientSecondaryPhone = o.ClientSecondaryPhone,
                 ArrivedCost = o.ArrivedCost,
                 DeliveryCost = o.DeliveryCost,
                 ClientCost = o.ClientCost,
@@ -1348,6 +1352,7 @@ namespace PostexS.Controllers.API
                 Code = o.Code,
                 ClientName = o.ClientName,
                 ClientPhone = o.ClientPhone,
+                ClientSecondaryPhone = o.ClientSecondaryPhone,
                 ArrivedCost = o.ArrivedCost,
                 DeliveryCost = o.DeliveryCost,
                 ClientCost = o.ClientCost,

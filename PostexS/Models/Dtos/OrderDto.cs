@@ -24,6 +24,7 @@ namespace PostexS.Models.Dtos
         public string ReciverCode { get; set; }
         public string ReciverName { get; set; }
         public string ReciverNumber { get; set; }
+        public string ReciverSecondaryNumber { get; set; }
         public OrderStatus Status { get; set; }
         public string Address { get; set; }
         public OrderDto(Order order)
@@ -38,6 +39,7 @@ namespace PostexS.Models.Dtos
             this.ReciverName = order.ClientName;
             this.ReciverCode = order.ClientCode;
             this.ReciverNumber = order.ClientPhone;
+            this.ReciverSecondaryNumber = order.ClientSecondaryPhone;
             this.Status = order.Status;
             this.Address = order.Address;
             this.DeliveryCost = order.DeliveryCost;

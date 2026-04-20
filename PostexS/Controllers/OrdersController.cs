@@ -3064,6 +3064,7 @@ namespace PostexS.Controllers
                             ClientCode = order.ClientCode,
                             ClientName = order.ClientName,
                             ClientPhone = order.ClientPhone,
+                            ClientSecondaryPhone = order.ClientSecondaryPhone,
                             Cost = order.Cost,
                             DeliveryFees = order.DeliveryFees,
                             TotalCost = order.TotalCost,

@@ -10,6 +10,7 @@ namespace PostexS.Models.Dtos
         public string ReceiverName { get; set; }
         public string ReceiverCode { get; set; }
         public string ReceiverPhone { get; set; }
+        public string ReceiverSecondaryPhone { get; set; }
         public string City { get; set; }
         public string Address { get; set; }
         public double Cost { get; set; }
@@ -33,6 +34,7 @@ namespace PostexS.Models.Dtos
             ReceiverName = order.ClientName;
             ReceiverCode = order.ClientCode;
             ReceiverPhone = order.ClientPhone;
+            ReceiverSecondaryPhone = order.ClientSecondaryPhone;
             City = order.AddressCity;
             Address = order.Address;
             Cost = order.Cost;
