@@ -248,6 +248,11 @@
                         <i class="fa fa-coins"></i> <span>محافظ الفروع</span>
                     </a>
                 </li>
+                <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("/locations") ? "active" : "")">
+                    <a href="@Url.Action("Index", "Locations")">
+                        <i class="fa fa-map-marker"></i> <span>إدارة اللوكيشنز</span>
+                    </a>
+                </li>
             }
             @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
             {

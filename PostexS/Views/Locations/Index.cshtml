@@ -1,0 +1,134 @@
+@{
+    ViewData["Title"] = "إدارة جدول اللوكيشنز";
+    long total = ViewBag.TotalCount ?? 0;
+    long last24h = ViewBag.Last24hCount ?? 0;
+    long last7d = ViewBag.Last7dCount ?? 0;
+    long older7d = ViewBag.OlderThan7dCount ?? 0;
+    long older30d = ViewBag.OlderThan30dCount ?? 0;
+    DateTime? oldest = ViewBag.OldestDate;
+}
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-map-marker"></i> @ViewData["Title"]</h3>
+    </div>
+    <div class="panel-body">
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success">@TempData["Success"]</div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger">@TempData["Error"]</div>
+        }
+
+        <div class="alert alert-info">
+            <i class="fa fa-info-circle"></i>
+            <strong>مسح تلقائي:</strong> النظام بيمسح اللوكيشنز الأقدم من <strong>7 أيام</strong> بشكل تلقائي كل ساعة في الخلفية.
+        </div>
+
+        <h4 style="margin-top:20px;">إحصائيات الجدول</h4>
+        <div class="row" style="margin-top:15px;">
+            <div class="col-md-4">
+                <div class="panel panel-default">
+                    <div class="panel-body text-center">
+                        <h2 style="color:#2196F3;">@total.ToString("N0")</h2>
+                        <p>إجمالي عدد السجلات</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="panel panel-default">
+                    <div class="panel-body text-center">
+                        <h2 style="color:#4CAF50;">@last24h.ToString("N0")</h2>
+                        <p>آخر 24 ساعة</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="panel panel-default">
+                    <div class="panel-body text-center">
+                        <h2 style="color:#FF9800;">@last7d.ToString("N0")</h2>
+                        <p>آخر 7 أيام</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="panel panel-default">
+                    <div class="panel-body text-center">
+                        <h2 style="color:#F44336;">@older7d.ToString("N0")</h2>
+                        <p>أقدم من 7 أيام</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="panel panel-default">
+                    <div class="panel-body text-center">
+                        <h2 style="color:#9C27B0;">@older30d.ToString("N0")</h2>
+                        <p>أقدم من 30 يوم</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="panel panel-default">
+                    <div class="panel-body text-center">
+                        <h2 style="color:#607D8B; font-size:18px; margin-top:15px;">
+                            @(oldest.HasValue ? oldest.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "—")
+                        </h2>
+                        <p>أقدم سجل</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr />
+
+        <h4>مسح يدوي</h4>
+        <p class="text-muted">استخدم الأزرار دي لمسح اللوكيشنز يدوياً.</p>
+
+        <div class="row" style="margin-top:15px;">
+            <div class="col-md-6">
+                <div class="panel panel-warning">
+                    <div class="panel-heading">مسح حسب العمر</div>
+                    <div class="panel-body">
+                        <form asp-action="DeleteOlderThan" method="post" onsubmit="return confirm('متأكد تمسح اللوكيشنز الأقدم من ' + document.getElementById('days').value + ' يوم؟');">
+                            @Html.AntiForgeryToken()
+                            <div class="form-group">
+                                <label for="days">مسح اللوكيشنز الأقدم من (أيام):</label>
+                                <input type="number" name="days" id="days" min="0" value="7" required class="form-control" />
+                                <small class="text-muted">
+                                    0 = مسح كل اللوكيشنز. 7 = أقدم من أسبوع. 30 = أقدم من شهر.
+                                </small>
+                            </div>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fa fa-trash"></i> مسح حسب العمر
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="panel panel-danger">
+                    <div class="panel-heading">مسح كامل الجدول</div>
+                    <div class="panel-body">
+                        <p class="text-danger">
+                            <strong>تحذير:</strong> هيتم مسح كل السجلات في الجدول. المسح ده ما يمكنش التراجع عنه.
+                        </p>
+                        <form asp-action="DeleteAll" method="post" onsubmit="return confirm('هل أنت متأكد من مسح جدول اللوكيشنز بالكامل؟ ده إجراء لا يمكن التراجع عنه.');">
+                            @Html.AntiForgeryToken()
+                            <div class="form-group">
+                                <label for="confirm">للتأكيد اكتب <code>DELETE</code> بالحروف الكبيرة:</label>
+                                <input type="text" name="confirm" id="confirm" required class="form-control" placeholder="DELETE" />
+                            </div>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fa fa-exclamation-triangle"></i> مسح كل اللوكيشنز
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

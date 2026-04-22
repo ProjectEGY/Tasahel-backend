@@ -122,6 +122,9 @@ namespace PostexS
             services.AddScoped<IWhatsAppProviderService, WhatsAppProviderService>();
             services.AddHostedService<WhatsAppQueueProcessor>();
 
+            // Background service لمسح جدول اللوكيشن بشكل دوري
+            services.AddHostedService<LocationCleanupService>();
+
             // Initialize Dual Firebase Apps (Captain + Customer)
             var appDataPath = Path.Combine(Directory.GetCurrentDirectory(), "AppData");
             var firebaseService = new FirebaseMessagingService(
