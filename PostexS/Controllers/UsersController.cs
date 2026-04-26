@@ -1729,28 +1729,57 @@ namespace PostexS.Controllers
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
         public async Task<IActionResult> Wallet(int pageNumber = 1, int pageSize = 10,
-             string id = "all", long BranchId = -1)
+             string id = "all", long BranchId = -1, bool transferOnly = false)
         {
             var history = _orderService.GetOrdersHistory(x => !x.IsDeleted && x.Finish_UserId == id);
             ViewBag.history = history;
             ViewBag.BranchId = BranchId;
             ViewBag.q = id;
+            ViewBag.TransferOnly = transferOnly;
+
+            string targetUserId;
             if (!User.IsInRole("Admin") && !User.IsInRole("TrustAdmin"))
             {
                 var SubAdminUser = await _userManger.GetUserAsync(User);
                 ViewBag.User = SubAdminUser;
                 history = _orderService.GetOrdersHistory(x => !x.IsDeleted && x.Finish_UserId == SubAdminUser.Id);
                 ViewBag.history = history;
-                return View(await GetPagedListItems("", pageNumber, pageSize, SubAdminUser.Id, BranchId));
+                targetUserId = SubAdminUser.Id;
             }
-            if (!await _user.IsExist(x => x.Id == id))
+            else
             {
-                return NotFound("هذا المستخد غير موجود او محذوف");
+                if (!await _user.IsExist(x => x.Id == id))
+                {
+                    return NotFound("هذا المستخد غير موجود او محذوف");
+                }
+                var user = _user.Get(x => x.Id == id).First();
+                ViewBag.User = user;
+                targetUserId = user.Id;
             }
-            var user = _user.Get(x => x.Id == id).First();
-            ViewBag.User = user;
-            return View(await GetPagedListItems("", pageNumber, pageSize, user.Id, BranchId));
 
+            // إحصائيات التحويلات (حركات EmployeeTransferOut و EmployeeTransferIn فقط)
+            ComputeTransferStats(targetUserId);
+
+            return View(await GetPagedListItems("", pageNumber, pageSize, targetUserId, BranchId, transferOnly));
+        }
+
+        private void ComputeTransferStats(string userId)
+        {
+            var transferTypes = new[] {
+                PostexS.Models.Enums.TransactionType.EmployeeTransferOut,
+                PostexS.Models.Enums.TransactionType.EmployeeTransferIn
+            };
+            var query = _wallet.GetAllAsIQueryable(
+                w => w.UserId == userId && transferTypes.Contains(w.TransactionType),
+                o => o.OrderByDescending(c => c.Id),
+                "");
+            var list = query.ToList();
+            ViewBag.TransferCount = list.Count;
+            ViewBag.TransferOutCount = list.Count(w => w.TransactionType == PostexS.Models.Enums.TransactionType.EmployeeTransferOut);
+            ViewBag.TransferInCount = list.Count(w => w.TransactionType == PostexS.Models.Enums.TransactionType.EmployeeTransferIn);
+            ViewBag.TransferOutSum = list.Where(w => w.TransactionType == PostexS.Models.Enums.TransactionType.EmployeeTransferOut).Sum(w => w.Amount);
+            ViewBag.TransferInSum = list.Where(w => w.TransactionType == PostexS.Models.Enums.TransactionType.EmployeeTransferIn).Sum(w => w.Amount);
+            ViewBag.TransferLastDate = list.OrderByDescending(w => w.CreateOn).FirstOrDefault()?.CreateOn;
         }
 
         #region TestWallet
@@ -2450,7 +2479,7 @@ namespace PostexS.Controllers
 
         [Authorize]
         public async Task<PagedList<Wallet>> GetPagedListItems(string searchStr, int pageNumber, int pageSize, string q,
-            long BranchId = -1)
+            long BranchId = -1, bool transferOnly = false)
         {
             bool auth = User.IsInRole("Client");
             var user = new ApplicationUser();
@@ -2469,6 +2498,10 @@ namespace PostexS.Controllers
 
                 filter = f =>
                 f.UserId == q &&
+                              (!transferOnly
+                                || f.TransactionType == PostexS.Models.Enums.TransactionType.EmployeeTransferOut
+                                || f.TransactionType == PostexS.Models.Enums.TransactionType.EmployeeTransferIn)
+                              &&
                               ((string.IsNullOrEmpty(searchStr) ? true : f.Note.ToLower().Contains(searchStr))
                                || (string.IsNullOrEmpty(searchStr)
                                    ? true
@@ -2480,8 +2513,6 @@ namespace PostexS.Controllers
                                    : (f.Id).ToString().Contains(searchStr)));
             }
 
-            /*  var orders = _orders.Get(filter).ToList();
-              ViewBag.TotalPrice = orders.Sum(x => x.Cost+x.DeliveryFees);*/
             ViewBag.PageStartRowNum = ((pageNumber - 1) * pageSize) + 1;
 
             return await PagedList<Wallet>.CreateAsync(
@@ -2490,18 +2521,18 @@ namespace PostexS.Controllers
         }
 
         public async Task<IActionResult> GetItems(string searchStr, string q, long BranchId = -1, int pageNumber = 1,
-            int pageSize = 10)
+            int pageSize = 10, bool transferOnly = false)
         {
             return PartialView("_TableList",
-                (await GetPagedListItems(searchStr, pageNumber, pageSize, q, BranchId)).ToList());
+                (await GetPagedListItems(searchStr, pageNumber, pageSize, q, BranchId, transferOnly)).ToList());
         }
 
 
         public async Task<IActionResult> GetPagination(string searchStr, string q, long BranchId = -1, int pageNumber = 1,
-            int pageSize = 10)
+            int pageSize = 10, bool transferOnly = false)
         {
             var model = PagedList<Wallet>.GetPaginationObject(
-                await GetPagedListItems(searchStr, pageNumber, pageSize, q, BranchId));
+                await GetPagedListItems(searchStr, pageNumber, pageSize, q, BranchId, transferOnly));
             model.GetItemsUrl = "/Users/GetItems";
             model.GetPaginationUrl = "/Users/GetPagination";
             return PartialView("_Pagination2", model);

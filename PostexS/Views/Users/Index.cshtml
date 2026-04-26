@@ -550,6 +550,11 @@
                                                                             <span>|</span>
                                                                             <a href="/users/ChangePassword?UserId=@item.Id&q=@ViewBag.q">تغيير كلمة السر</a>
                                                                             <span>|</span>
+                                        @if (item.UserType != PostexS.Models.Enums.UserType.Driver && item.UserType != PostexS.Models.Enums.UserType.Client)
+                                        {
+                                                                                            <a asp-action="UserHistory" asp-controller="EmployeeTransfers" asp-route-userId="@item.Id" class="btn btn-info btn-sm" style="background:#8b5cf6; border-color:#7c3aed; color:#fff;" title="تاريخ التحويلات المالية"><i class="fa fa-money"></i> تحويلات مالية</a>
+                                                                                            <span>|</span>
+                                        }
                                         @if (User.IsInRole("Admin") || User.IsInRole("TrustAdmin"))
                                         {
                                                                                             <a onclick="Delete('/Users/Delete?id=@item.Id')">حذف</a>

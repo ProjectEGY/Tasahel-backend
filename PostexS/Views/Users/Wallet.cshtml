@@ -3,6 +3,14 @@
 @{
     var user = ViewBag.User as PostexS.Models.Domain.ApplicationUser;
     var history = ViewBag.history;
+    var transferOnly = ViewBag.TransferOnly as bool? ?? false;
+
+    int transferCount = ViewBag.TransferCount as int? ?? 0;
+    int transferOutCount = ViewBag.TransferOutCount as int? ?? 0;
+    int transferInCount  = ViewBag.TransferInCount  as int? ?? 0;
+    double transferOutSum = ViewBag.TransferOutSum as double? ?? 0;
+    double transferInSum  = ViewBag.TransferInSum  as double? ?? 0;
+    DateTime? transferLastDate = ViewBag.TransferLastDate as DateTime?;
 
     ViewBag.Title = "محفظه " + user.Name;
     var paginationVM = new PaginationVM()
@@ -18,6 +26,57 @@
                 EndIndex = Model.EndIndex
             };
 }
+
+<style>
+    .wlt-filter-bar {
+        display: flex; gap: 10px; flex-wrap: wrap; padding: 14px 18px;
+        background: #fff; border-radius: 12px; margin: 10px 0 16px;
+        box-shadow: 0 4px 14px -8px rgba(15,23,42,.1); border: 1px solid #eef0f5;
+        align-items: center;
+    }
+    .wlt-filter-bar .lbl { font-weight: 700; color: #475569; font-size: 13px; }
+    .wlt-filter-btn {
+        padding: 8px 16px; border-radius: 9px; font-weight: 700; font-size: 13px;
+        border: 1.5px solid #e2e8f0; background: #fff; color: #475569; cursor: pointer;
+        text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+        transition: all .2s;
+    }
+    .wlt-filter-btn:hover { transform: translateY(-1px); text-decoration: none; }
+    .wlt-filter-btn.active { background: linear-gradient(135deg,#8b5cf6,#6d28d9); color: #fff; border-color: #6d28d9; }
+    .wlt-filter-btn.active.green { background: linear-gradient(135deg,#10b981,#047857); border-color: #047857; }
+
+    .wlt-stats-card {
+        background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+        border: 1.5px solid #c4b5fd; border-radius: 16px; padding: 22px;
+        margin-bottom: 18px; font-family: 'Cairo', 'Tajawal', sans-serif;
+    }
+    .wlt-stats-card h4 { margin: 0 0 14px; font-size: 16px; font-weight: 800; color: #5b21b6; display: flex; align-items: center; gap: 10px; }
+    .wlt-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+    .wlt-stat-cell {
+        background: #fff; border-radius: 12px; padding: 14px;
+        box-shadow: 0 2px 10px -4px rgba(91,33,182,.18);
+        display: flex; align-items: center; gap: 12px;
+    }
+    .wlt-stat-cell .ico {
+        width: 44px; height: 44px; border-radius: 11px; display: grid; place-items: center;
+        font-size: 18px; color: #fff; flex-shrink: 0;
+    }
+    .wlt-stat-cell .ico.purple { background: linear-gradient(135deg,#a78bfa,#7c3aed); }
+    .wlt-stat-cell .ico.green  { background: linear-gradient(135deg,#34d399,#059669); }
+    .wlt-stat-cell .ico.blue   { background: linear-gradient(135deg,#60a5fa,#1d4ed8); }
+    .wlt-stat-cell .ico.amber  { background: linear-gradient(135deg,#fbbf24,#d97706); }
+    .wlt-stat-cell .lbl-sm { font-size: 11px; color: #64748b; font-weight: 600; }
+    .wlt-stat-cell .val { font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1.2; }
+    .wlt-stat-cell .val small { font-size: 11px; color: #64748b; font-weight: 600; }
+
+    .wlt-net-pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px;
+        margin-right: auto;
+    }
+    .wlt-net-pill.up   { background: #dcfce7; color: #166534; }
+    .wlt-net-pill.down { background: #fee2e2; color: #991b1b; }
+</style>
 <div class="panel panel-primary">
     <div class="panel-heading">
         <h3 class="panel-title"><i class="fa fa-fw fa-money"></i> @ViewBag.Title</h3>
@@ -27,6 +86,79 @@
         <h4 class="text-center">سجل عمليات المحفظه لـ [@user.Name]</h4>
         <hr />
         <h3 class="text-center">عدد عمليات تقفيل الطلبات لـ [@ViewBag.history ] :  عمليه</h3>
+
+        <!-- Filter bar -->
+        <div class="wlt-filter-bar">
+            <span class="lbl"><i class="fa fa-filter"></i> فلتر العمليات:</span>
+            <a href="@Url.Action("Wallet", new { id = user.Id, BranchId = ViewBag.BranchId, transferOnly = false })"
+               class="wlt-filter-btn @(transferOnly ? "" : "active green")">
+                <i class="fa fa-list"></i> كل العمليات
+            </a>
+            <a href="@Url.Action("Wallet", new { id = user.Id, BranchId = ViewBag.BranchId, transferOnly = true })"
+               class="wlt-filter-btn @(transferOnly ? "active" : "")">
+                <i class="fa fa-exchange"></i> التحويلات المالية فقط
+                @if (transferCount > 0)
+                {
+                    <span style="background:rgba(255,255,255,.25); padding:2px 8px; border-radius:10px; font-size:11px;">@transferCount</span>
+                }
+            </a>
+
+            @if (transferOnly)
+            {
+                double net = transferInSum - transferOutSum;
+                <span class="wlt-net-pill @(net >= 0 ? "up" : "down")">
+                    <i class="fa fa-balance-scale"></i>
+                    صافي: @net.ToString("N2") جنيه
+                </span>
+            }
+        </div>
+
+        @if (transferOnly)
+        {
+            <!-- Transfer stats card (only when filter active) -->
+            <div class="wlt-stats-card">
+                <h4><i class="fa fa-exchange" style="color:#7c3aed;"></i> إحصائيات التحويلات المالية</h4>
+                <div class="wlt-stats-grid">
+                    <div class="wlt-stat-cell">
+                        <div class="ico purple"><i class="fa fa-list"></i></div>
+                        <div>
+                            <div class="lbl-sm">إجمالي العمليات</div>
+                            <div class="val">@transferCount</div>
+                        </div>
+                    </div>
+                    <div class="wlt-stat-cell">
+                        <div class="ico green"><i class="fa fa-arrow-down"></i></div>
+                        <div>
+                            <div class="lbl-sm">عمليات استلام (دخول)</div>
+                            <div class="val">@transferInCount <small style="color:#16a34a;">(@transferInSum.ToString("N2") جنيه)</small></div>
+                        </div>
+                    </div>
+                    <div class="wlt-stat-cell">
+                        <div class="ico amber"><i class="fa fa-arrow-up"></i></div>
+                        <div>
+                            <div class="lbl-sm">عمليات تسليم (خروج)</div>
+                            <div class="val">@transferOutCount <small style="color:#d97706;">(@transferOutSum.ToString("N2") جنيه)</small></div>
+                        </div>
+                    </div>
+                    <div class="wlt-stat-cell">
+                        <div class="ico blue"><i class="fa fa-clock-o"></i></div>
+                        <div>
+                            <div class="lbl-sm">آخر تحويل</div>
+                            <div class="val" style="font-size:14px;">
+                                @(transferLastDate?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <a href="@Url.Action("UserHistory", "EmployeeTransfers", new { userId = user.Id })"
+                       class="wlt-filter-btn" style="background:#fff; color:#7c3aed; border-color:#c4b5fd;">
+                        <i class="fa fa-history"></i> سجل طلبات التحويل (الموافقات والرفض)
+                    </a>
+                </div>
+            </div>
+        }
         @* <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#walletModal">
         مشاكل المحفظة
         </button>
@@ -116,6 +248,7 @@
             </div>
         </div>
         <input hidden id="user" value="@user.Id" />
+        <input hidden id="transferOnlyFlag" value="@(transferOnly ? "true" : "false")" />
         <div class="table-responsive text-center">
             <table id="tablewallet" cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered table-hover">
                 <thead>
@@ -150,6 +283,36 @@
             searching: false
         });
     });
+
+    // Override ReloadPagination to include transferOnly flag (and keep filter on search/page change)
+    (function () {
+        var originalReload = window.ReloadPagination;
+        window.ReloadPagination = function (pageNum) {
+            var inpSearchVal = document.getElementById("inpSearch").value;
+            var BranchId = document.getElementById("BId") ? document.getElementById("BId").value : -1;
+            var q = document.getElementById("user").value;
+            var transferOnly = (document.getElementById("transferOnlyFlag") || {}).value === "true";
+            var pageSize = 10;
+            if ($("#entires").length) pageSize = $("#entires").val();
+
+            $.ajax({
+                url: "/Users/GetItems",
+                type: "GET",
+                data: { searchStr: inpSearchVal, q: q, BranchId: BranchId, pageNumber: pageNum, pageSize: pageSize, transferOnly: transferOnly },
+                success: function (results) {
+                    $("#tbBody").empty().html(results);
+                    $.ajax({
+                        url: "/Users/GetPagination",
+                        type: "GET",
+                        data: { searchStr: inpSearchVal, q: q, BranchId: BranchId, pageNumber: pageNum, pageSize: pageSize, transferOnly: transferOnly },
+                        success: function (results) {
+                            $("#dvPagination").empty().html(results);
+                        }
+                    });
+                }
+            });
+        };
+    })();
 </script>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

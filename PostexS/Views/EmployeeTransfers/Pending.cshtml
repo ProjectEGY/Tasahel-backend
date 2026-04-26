@@ -1,0 +1,164 @@
+@model List<PostexS.Models.Domain.EmployeeMoneyTransferRequest>
+@{
+    ViewData["Title"] = "طلبات التحويل المعلقة";
+}
+
+@Html.Partial("_Shared")
+
+<div class="et-page">
+    <div class="et-hero amber">
+        <div>
+            <h1><i class="fa fa-clock-o"></i> @ViewData["Title"]</h1>
+            <p>كل طلبات التحويل من الموظفين اللي في انتظار موافقتك. لما توافق، اكتب المبلغ الفعلي اللي استلمته (لو مختلف عن طلب الموظف هيتم تسجيل الفرق تلقائياً).</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <a href="@Url.Action("All")" class="et-btn" style="background:#fff; color:#b45309;">
+                <i class="fa fa-history"></i> كل الطلبات
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null) { <div class="et-alert et-alert-ok"><i class="fa fa-check-circle"></i> @TempData["Success"]</div> }
+    @if (TempData["Error"] != null)   { <div class="et-alert et-alert-err"><i class="fa fa-times-circle"></i> @TempData["Error"]</div> }
+
+    <div class="et-card">
+        <h3><i class="fa fa-inbox" style="color:#f59e0b;"></i> طلبات في الانتظار (@(Model?.Count ?? 0))</h3>
+
+        @if (Model == null || Model.Count == 0)
+        {
+            <div class="et-empty">
+                <i class="fa fa-check-circle" style="color:#10b981;"></i>
+                <strong>كل الطلبات اتعالجت!</strong>
+                مفيش طلبات معلقة دلوقتي.
+            </div>
+        }
+        else
+        {
+            <div style="overflow-x:auto;">
+                <table class="et-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>الموظف</th>
+                            <th>المبلغ المُقدَّم</th>
+                            <th>ملاحظات الموظف</th>
+                            <th>تاريخ التقديم</th>
+                            <th style="width:240px;">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td><strong>#@item.Id</strong></td>
+                                <td>
+                                    <strong style="color:#0f172a;">@(item.Employee?.Name ?? "غير معروف")</strong>
+                                    <div class="et-meta">@(item.Employee?.UserName ?? "")</div>
+                                </td>
+                                <td><span class="et-amount">@item.RequestedAmount.ToString("0.##")</span> <small>جنيه</small></td>
+                                <td style="max-width:300px;">
+                                    @if (!string.IsNullOrEmpty(item.EmployeeNotes))
+                                    {
+                                        <div style="font-size:13px;">@item.EmployeeNotes</div>
+                                    }
+                                    else { <span style="color:#cbd5e1;">بدون ملاحظات</span> }
+                                </td>
+                                <td>
+                                    @item.CreateOn.ToLocalTime().ToString("yyyy-MM-dd")
+                                    <div class="et-meta">@item.CreateOn.ToLocalTime().ToString("HH:mm")</div>
+                                </td>
+                                <td>
+                                    <button type="button" class="et-btn et-btn-primary et-btn-sm" onclick="openApprove(@item.Id, @item.RequestedAmount, '@(item.Employee?.Name?.Replace("'", "\\'") ?? "")')">
+                                        <i class="fa fa-check"></i> موافقة
+                                    </button>
+                                    <button type="button" class="et-btn et-btn-danger et-btn-sm" onclick="openReject(@item.Id, '@(item.Employee?.Name?.Replace("'", "\\'") ?? "")')">
+                                        <i class="fa fa-times"></i> رفض
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ===== Approve Modal ===== -->
+<div id="approveModal" class="et-modal-overlay">
+    <div class="et-modal">
+        <div class="et-modal-head green">
+            <i class="fa fa-check-circle" style="font-size:22px;"></i>
+            <h3>موافقة على طلب التحويل</h3>
+        </div>
+        <form asp-action="Approve" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="appId" />
+            <div class="et-modal-body">
+                <div class="info-line"><span class="k">الموظف:</span><span class="v" id="appEmployee">—</span></div>
+                <div class="info-line"><span class="k">المبلغ اللي قدّمه الموظف:</span><span class="v" id="appReqAmt" style="color:#0f172a;">—</span></div>
+                <div class="info-line" style="margin-top: 14px; padding-top: 14px; border-top: 2px solid #e2e8f0;"></div>
+                <div class="et-field" style="margin-top:8px;">
+                    <label>المبلغ الفعلي اللي استلمته <span class="req">*</span></label>
+                    <input type="number" step="0.01" min="0.01" name="approvedAmount" id="appApprovedAmt" class="form-control" required />
+                    <div class="hint">لو حطيت مبلغ مختلف عن المبلغ اللي قاله الموظف، هيتم تسجيل الفرق في الداتابيز كملاحظة.</div>
+                </div>
+                <div class="et-field" style="margin-top:14px;">
+                    <label>ملاحظاتك (اختياري)</label>
+                    <textarea name="adminNotes" class="form-control" rows="3" placeholder="مثلاً: تم العد والتأكد، أو سبب الفرق..."></textarea>
+                </div>
+            </div>
+            <div class="et-modal-footer">
+                <button type="button" class="et-btn et-btn-cancel" onclick="closeModal('approveModal')">إلغاء</button>
+                <button type="submit" class="et-btn et-btn-primary"><i class="fa fa-check"></i> تأكيد الموافقة</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ===== Reject Modal ===== -->
+<div id="rejectModal" class="et-modal-overlay">
+    <div class="et-modal">
+        <div class="et-modal-head red">
+            <i class="fa fa-times-circle" style="font-size:22px;"></i>
+            <h3>رفض طلب التحويل</h3>
+        </div>
+        <form asp-action="Reject" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="rejId" />
+            <div class="et-modal-body">
+                <div class="info-line"><span class="k">الموظف:</span><span class="v" id="rejEmployee">—</span></div>
+                <div class="et-field" style="margin-top:14px;">
+                    <label>سبب الرفض <span class="req">*</span></label>
+                    <textarea name="adminNotes" class="form-control" rows="4" placeholder="اكتب سبب الرفض..." required></textarea>
+                </div>
+                <div style="background:#fef2f2; border-right:3px solid #ef4444; padding:10px 14px; border-radius:8px; color:#991b1b; font-size:12px; margin-top:12px;">
+                    <i class="fa fa-info-circle"></i> الرفض لن يخصم أي مبلغ من محفظة الموظف. الطلب يبقى مرفوض في السجل.
+                </div>
+            </div>
+            <div class="et-modal-footer">
+                <button type="button" class="et-btn et-btn-cancel" onclick="closeModal('rejectModal')">إلغاء</button>
+                <button type="submit" class="et-btn et-btn-danger"><i class="fa fa-times"></i> تأكيد الرفض</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openApprove(id, requested, empName) {
+        document.getElementById('appId').value = id;
+        document.getElementById('appEmployee').textContent = empName;
+        document.getElementById('appReqAmt').textContent = requested.toLocaleString() + ' جنيه';
+        document.getElementById('appApprovedAmt').value = requested;
+        document.getElementById('approveModal').classList.add('show');
+    }
+    function openReject(id, empName) {
+        document.getElementById('rejId').value = id;
+        document.getElementById('rejEmployee').textContent = empName;
+        document.getElementById('rejectModal').classList.add('show');
+    }
+    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+    document.querySelectorAll('.et-modal-overlay').forEach(function (m) {
+        m.addEventListener('click', function (e) { if (e.target === m) m.classList.remove('show'); });
+    });
+</script>

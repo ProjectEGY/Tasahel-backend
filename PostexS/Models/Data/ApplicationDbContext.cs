@@ -40,6 +40,7 @@ namespace PostexS.Models.Data
         public DbSet<CourierOrderSheet> CourierOrderSheets { get; set; }
         public DbSet<CourierOrderSheetItem> CourierOrderSheetItems { get; set; }
         public DbSet<PrivacyPolicy> PrivacyPolicies { get; set; }
+        public DbSet<EmployeeMoneyTransferRequest> EmployeeMoneyTransferRequests { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ApplicationUser>().

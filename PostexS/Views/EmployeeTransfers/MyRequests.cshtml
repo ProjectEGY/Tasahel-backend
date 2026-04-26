@@ -1,0 +1,133 @@
+@model List<PostexS.Models.Domain.EmployeeMoneyTransferRequest>
+@{
+    ViewData["Title"] = "طلبات التحويل بتاعتي";
+    var pendingCount = Model?.Count(x => x.Status == PostexS.Models.Enums.TransferRequestStatus.Pending) ?? 0;
+    var approvedCount = Model?.Count(x => x.Status == PostexS.Models.Enums.TransferRequestStatus.Approved) ?? 0;
+    var rejectedCount = Model?.Count(x => x.Status == PostexS.Models.Enums.TransferRequestStatus.Rejected) ?? 0;
+}
+
+@Html.Partial("_Shared")
+
+<div class="et-page">
+    <div class="et-hero green">
+        <div>
+            <h1><i class="fa fa-history"></i> @ViewData["Title"]</h1>
+            <p>كل طلبات التحويل اللي قدمتها — معلقة ومقبولة ومرفوضة.</p>
+        </div>
+        <a href="@Url.Action("Submit")" class="et-btn" style="background:#fff; color:#047857;">
+            <i class="fa fa-plus"></i> تحويل جديد
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null) { <div class="et-alert et-alert-ok"><i class="fa fa-check-circle"></i> @TempData["Success"]</div> }
+    @if (TempData["Error"] != null)   { <div class="et-alert et-alert-err"><i class="fa fa-times-circle"></i> @TempData["Error"]</div> }
+
+    <!-- Stats -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 18px;">
+        <div class="et-card" style="margin: 0; padding: 18px; display: flex; align-items: center; gap: 12px;">
+            <div style="width:46px; height:46px; border-radius:12px; background:linear-gradient(135deg,#fbbf24,#d97706); color:#fff; display:grid; place-items:center; font-size:20px;"><i class="fa fa-clock-o"></i></div>
+            <div><div style="font-size:11px; color:#64748b; font-weight:600;">معلق</div><div style="font-size:22px; font-weight:800; color:#0f172a;">@pendingCount</div></div>
+        </div>
+        <div class="et-card" style="margin: 0; padding: 18px; display: flex; align-items: center; gap: 12px;">
+            <div style="width:46px; height:46px; border-radius:12px; background:linear-gradient(135deg,#34d399,#059669); color:#fff; display:grid; place-items:center; font-size:20px;"><i class="fa fa-check"></i></div>
+            <div><div style="font-size:11px; color:#64748b; font-weight:600;">مقبول</div><div style="font-size:22px; font-weight:800; color:#0f172a;">@approvedCount</div></div>
+        </div>
+        <div class="et-card" style="margin: 0; padding: 18px; display: flex; align-items: center; gap: 12px;">
+            <div style="width:46px; height:46px; border-radius:12px; background:linear-gradient(135deg,#f87171,#dc2626); color:#fff; display:grid; place-items:center; font-size:20px;"><i class="fa fa-times"></i></div>
+            <div><div style="font-size:11px; color:#64748b; font-weight:600;">مرفوض</div><div style="font-size:22px; font-weight:800; color:#0f172a;">@rejectedCount</div></div>
+        </div>
+    </div>
+
+    <div class="et-card">
+        <h3><i class="fa fa-list" style="color:#10b981;"></i> سجل الطلبات (@(Model?.Count ?? 0))</h3>
+
+        @if (Model == null || Model.Count == 0)
+        {
+            <div class="et-empty">
+                <i class="fa fa-inbox"></i>
+                <strong>لا توجد طلبات بعد</strong>
+                ابدأ بتقديم أول طلب تحويل من زرار "تحويل جديد".
+            </div>
+        }
+        else
+        {
+            <div style="overflow-x:auto;">
+                <table class="et-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>تاريخ التقديم</th>
+                            <th>المبلغ المُرسَل</th>
+                            <th>المبلغ المُعتمد</th>
+                            <th>الحالة</th>
+                            <th>ملاحظات</th>
+                            <th>تاريخ المعالجة</th>
+                            <th style="width:120px;">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            var statusCls = item.Status == PostexS.Models.Enums.TransferRequestStatus.Pending ? "pending"
+                                          : item.Status == PostexS.Models.Enums.TransferRequestStatus.Approved ? "approved" : "rejected";
+                            var statusText = item.Status == PostexS.Models.Enums.TransferRequestStatus.Pending ? "معلق"
+                                           : item.Status == PostexS.Models.Enums.TransferRequestStatus.Approved ? "مقبول" : "مرفوض";
+                            <tr>
+                                <td><strong>#@item.Id</strong></td>
+                                <td>
+                                    @item.CreateOn.ToLocalTime().ToString("yyyy-MM-dd")
+                                    <div class="et-meta">@item.CreateOn.ToLocalTime().ToString("HH:mm")</div>
+                                </td>
+                                <td><span class="et-amount">@item.RequestedAmount.ToString("0.##")</span> <small>جنيه</small></td>
+                                <td>
+                                    @if (item.ApprovedAmount.HasValue)
+                                    {
+                                        <span class="et-amount @(item.HasDiscrepancy ? "out" : "in")">@item.ApprovedAmount.Value.ToString("0.##")</span>
+                                        <small>جنيه</small>
+                                        @if (item.HasDiscrepancy)
+                                        {
+                                            <div style="margin-top:4px;"><span class="et-disc-badge"><i class="fa fa-exclamation-triangle"></i> فيه فرق</span></div>
+                                        }
+                                    }
+                                    else { <span style="color:#cbd5e1;">—</span> }
+                                </td>
+                                <td><span class="et-badge @statusCls"><span class="dot"></span> @statusText</span></td>
+                                <td style="max-width:240px;">
+                                    @if (!string.IsNullOrEmpty(item.EmployeeNotes))
+                                    {
+                                        <div style="font-size:12px;"><strong>أنا:</strong> @item.EmployeeNotes</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.AdminNotes))
+                                    {
+                                        <div class="et-meta" style="margin-top:4px;"><strong>الأدمن:</strong> @item.AdminNotes</div>
+                                    }
+                                    @if (item.HasDiscrepancy && !string.IsNullOrEmpty(item.DiscrepancyNote))
+                                    {
+                                        <div style="margin-top:6px; font-size:11px; color:#78350f; background:#fef3c7; padding:6px 8px; border-radius:6px;"><i class="fa fa-info-circle"></i> @item.DiscrepancyNote</div>
+                                    }
+                                </td>
+                                <td>
+                                    @(item.ProcessedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—")
+                                </td>
+                                <td>
+                                    @if (item.Status == PostexS.Models.Enums.TransferRequestStatus.Pending)
+                                    {
+                                        <form asp-action="CancelMyRequest" method="post" onsubmit="return confirm('متأكد من إلغاء الطلب؟');" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="et-btn et-btn-danger et-btn-sm"><i class="fa fa-times"></i> إلغاء</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:#cbd5e1;">—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
