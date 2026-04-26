@@ -10,6 +10,14 @@ namespace PostexS.Interfaces
         Task<WhaStackSettings> GetSettingsAsync();
         Task<bool> UpdateSettingsAsync(WhaStackSettings settings, string updatedBy);
 
+        // Session Instances Management (multiple WhatsApp numbers - round robin)
+        Task<List<WhaStackSessionInstance>> GetSessionInstancesAsync();
+        Task<WhaStackSessionInstance> GetSessionInstanceByIdAsync(long id);
+        Task<bool> AddSessionInstanceAsync(WhaStackSessionInstance instance);
+        Task<bool> UpdateSessionInstanceAsync(WhaStackSessionInstance instance);
+        Task<bool> DeleteSessionInstanceAsync(long id);
+        Task<bool> ToggleSessionInstanceActiveAsync(long id);
+
         // Message Sending
         Task<WhaStackSendResult> SendMessageAsync(string phoneNumber, string message);
         Task<WhaStackSendResult> SendGroupMessageAsync(string groupId, string message);
@@ -32,6 +40,7 @@ namespace PostexS.Interfaces
         Task<WhaStackQrResult> GetSessionQrAsync(string sessionId);
         Task<WhaStackStatusResult> GetSessionStatusAsync(string sessionId);
         Task<WhaStackSendResult> ReconnectSessionAsync(string sessionId);
+        Task<WhaStackSendResult> DeleteRemoteSessionAsync(string sessionId);
     }
 
     public class WhaStackSessionInfo
@@ -58,6 +67,12 @@ namespace PostexS.Interfaces
         public int StatusCode { get; set; }
         public string ErrorMessage { get; set; }
         public double DurationMs { get; set; }
+
+        // Round-robin tracking
+        public long? UsedSessionInstanceId { get; set; }
+        public string UsedSessionName { get; set; }
+        public int AttemptsCount { get; set; }
+        public List<string> AttemptErrors { get; set; } = new List<string>();
     }
 
     public class WhaStackGetGroupsResult

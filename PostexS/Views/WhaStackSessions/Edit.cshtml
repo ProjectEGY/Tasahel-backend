@@ -1,0 +1,403 @@
+@model PostexS.Models.Domain.WhaStackSessionInstance
+@{
+    ViewData["Title"] = "تعديل الجلسة";
+}
+
+<style>
+    .ws-page { font-family: 'Cairo', 'Tajawal', sans-serif; padding: 24px; background: #f5f7fb; min-height: 100vh; }
+
+    .ws-form-hero {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: #fff; padding: 28px 32px; border-radius: 18px 18px 0 0;
+        display: flex; align-items: center; gap: 16px;
+    }
+    .ws-form-hero .icon-wrap {
+        width: 56px; height: 56px; background: rgba(255,255,255,.2); border-radius: 14px;
+        display: grid; place-items: center; font-size: 24px;
+    }
+    .ws-form-hero h1 { margin: 0; font-size: 22px; font-weight: 700; }
+    .ws-form-hero p  { margin: 4px 0 0; opacity: .92; font-size: 14px; }
+
+    .ws-form-card {
+        background: #fff; border-radius: 0 0 18px 18px; padding: 32px;
+        box-shadow: 0 8px 28px -12px rgba(15,23,42,.15); margin-bottom: 22px; max-width: 1100px;
+    }
+
+    .top-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; margin-bottom: 24px; }
+    @@media (max-width: 768px) { .top-grid { grid-template-columns: 1fr; } }
+
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .form-field label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px; }
+    .form-field label .req { color: #ef4444; margin-right: 3px; }
+    .form-field .form-control {
+        width: 100%; padding: 11px 14px; border-radius: 10px;
+        border: 1.5px solid #e2e8f0; background: #fff; font-size: 14px;
+        transition: all .2s; font-family: inherit;
+    }
+    .form-field .form-control:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59,130,246,.12); }
+    .form-field .hint { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+    .field-error { color: #ef4444; font-size: 12px; margin-top: 6px; display: block; }
+
+    .toggle-row {
+        background: #f8fafc; padding: 14px 18px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;
+    }
+    .toggle-row strong { font-size: 14px; color: #0f172a; display: block; }
+    .toggle-row small { font-size: 12px; color: #64748b; }
+    .toggle-switch { position: relative; display: inline-block; width: 50px; height: 27px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; transition: .3s; border-radius: 27px; }
+    .toggle-slider:before {
+        position: absolute; content: ""; height: 21px; width: 21px;
+        right: 3px; top: 3px; background: #fff; transition: .3s; border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0,0,0,.2);
+    }
+    .toggle-switch input:checked + .toggle-slider { background: #25D366; }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(-23px); }
+
+    .stats-strip {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 18px 0;
+    }
+    .stat-cell { background: #f8fafc; padding: 14px; border-radius: 10px; text-align: center; border: 1px solid #eef0f5; }
+    .stat-cell .lbl { font-size: 11px; color: #64748b; margin-bottom: 4px; font-weight: 600; }
+    .stat-cell .val { font-size: 18px; font-weight: 700; color: #0f172a; }
+    .stat-cell.success .val { color: #16a34a; }
+    .stat-cell.failed  .val { color: #dc2626; }
+    .stat-cell.warn    .val { color: #d97706; }
+
+    .form-actions {
+        display: flex; gap: 12px; justify-content: flex-end;
+        padding-top: 18px; border-top: 1px solid #f1f5f9;
+    }
+    .ws-btn {
+        display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
+        border-radius: 10px; font-size: 14px; font-weight: 700; border: none;
+        cursor: pointer; transition: all .25s; text-decoration: none;
+    }
+    .ws-btn-save { background: linear-gradient(135deg,#3b82f6,#1d4ed8); color: #fff; box-shadow: 0 6px 18px -8px rgba(29,78,216,.5); }
+    .ws-btn-save:hover { transform: translateY(-2px); color:#fff; }
+    .ws-btn-cancel { background: #f1f5f9; color: #475569; }
+    .ws-btn-cancel:hover { background: #e2e8f0; color: #334155; }
+    .ws-btn-warn { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+    .ws-btn-warn:hover { transform: translateY(-2px); color:#fff; }
+
+    /* Connection panel */
+    .conn-card {
+        background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px;
+    }
+    .conn-card h4 { margin: 0 0 12px; font-size: 15px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+    .status-pill {
+        display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+        border-radius: 20px; font-size: 12px; font-weight: 700; margin-bottom: 12px;
+    }
+    .status-pill.checking   { background: #fef3c7; color: #92400e; }
+    .status-pill.connected  { background: #dcfce7; color: #166534; }
+    .status-pill.disconnected { background: #fee2e2; color: #991b1b; }
+    .status-pill .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .status-pill.checking .dot   { background: #f59e0b; animation: pulse 1.5s infinite; }
+    .status-pill.connected .dot  { background: #16a34a; }
+    .status-pill.disconnected .dot { background: #dc2626; }
+    @@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+    .qr-box {
+        background: #f0fdf4; border: 2px dashed #25D366; border-radius: 14px; padding: 18px;
+        text-align: center; margin-top: 14px; display: none;
+    }
+    .qr-box img { max-width: 240px; max-height: 240px; background: #fff; padding: 10px; border-radius: 10px; box-shadow: 0 4px 12px -4px rgba(0,0,0,.15); }
+    .qr-box .loading-q { padding: 50px 20px; color: #128C7E; font-weight: 600; }
+    .qr-box .loading-q i { font-size: 32px; margin-bottom: 10px; }
+    .qr-box .help-text { font-size: 12px; color: #475569; margin-top: 12px; line-height: 1.7; background:#fff; padding: 8px 12px; border-radius: 8px; }
+
+    .conn-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .conn-actions .ws-btn { font-size: 12px; padding: 8px 14px; }
+
+    .toast-msg { padding: 11px 15px; border-radius: 10px; margin-bottom: 14px; font-weight: 600; font-size: 13px; }
+    .toast-msg.ok  { background: #dcfce7; color: #166534; border-right: 4px solid #16a34a; }
+    .toast-msg.err { background: #fee2e2; color: #991b1b; border-right: 4px solid #dc2626; }
+</style>
+
+<div class="ws-page">
+    <div class="ws-form-hero">
+        <div class="icon-wrap"><i class="fa fa-edit"></i></div>
+        <div>
+            <h1>تعديل الجلسة: @Model.DisplayName</h1>
+            <p>عدّل بيانات الجلسة، تابع حالة الاتصال، وأعد ربط الرقم لو الجلسة مفصولة.</p>
+        </div>
+    </div>
+
+    <div class="ws-form-card">
+        @if (TempData["Success"] != null) { <div class="toast-msg ok"><i class="fa fa-check-circle"></i> @TempData["Success"]</div> }
+        @if (TempData["Error"] != null)   { <div class="toast-msg err"><i class="fa fa-times-circle"></i> @TempData["Error"]</div> }
+        <div id="topMsg"></div>
+
+        <div class="top-grid">
+            <!-- LEFT: Edit Form -->
+            <div>
+                @using (Html.BeginForm("Edit", "WhaStackSessions", FormMethod.Post))
+                {
+                    @Html.AntiForgeryToken()
+                    @Html.HiddenFor(m => m.Id)
+                    @Html.HiddenFor(m => m.CreateOn)
+                    @Html.HiddenFor(m => m.IsDeleted)
+                    @Html.HiddenFor(m => m.LastUsedAt)
+                    @Html.HiddenFor(m => m.LastFailureAt)
+                    @Html.HiddenFor(m => m.ConsecutiveFailures)
+                    @Html.HiddenFor(m => m.TotalSentSuccess)
+                    @Html.HiddenFor(m => m.TotalSentFailed)
+
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>اسم الجلسة / الوصف <span class="req">*</span></label>
+                            @Html.TextBoxFor(m => m.DisplayName, new { @class = "form-control" })
+                            @Html.ValidationMessageFor(m => m.DisplayName, "", new { @class = "field-error" })
+                        </div>
+                        <div class="form-field">
+                            <label>رقم الهاتف</label>
+                            @Html.TextBoxFor(m => m.PhoneNumber, new { @class = "form-control", dir = "ltr", style = "text-align:left;" })
+                        </div>
+                    </div>
+
+                    <div class="form-field" style="margin-bottom: 16px;">
+                        <label>Session ID <span class="req">*</span></label>
+                        @Html.TextBoxFor(m => m.SessionId, new { @class = "form-control", dir = "ltr", id = "sessionIdInput", style = "text-align:left; font-family:'Courier New',monospace;" })
+                        @Html.ValidationMessageFor(m => m.SessionId, "", new { @class = "field-error" })
+                        <div class="hint">معرف الجلسة من WhaStack — استخدم زر "إعادة الربط" بالجنب لإنشاء جلسة جديدة لو الحالية مفصولة.</div>
+                    </div>
+
+                    <div class="toggle-row">
+                        <div>
+                            <strong>تفعيل الجلسة</strong>
+                            <small>عند الإلغاء لن تُستخدم في توزيع الرسائل.</small>
+                        </div>
+                        <label class="toggle-switch">
+                            @Html.CheckBoxFor(m => m.IsActive)
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="stats-strip">
+                        <div class="stat-cell success">
+                            <div class="lbl">إجمالي ناجح</div>
+                            <div class="val">@Model.TotalSentSuccess.ToString("N0")</div>
+                        </div>
+                        <div class="stat-cell failed">
+                            <div class="lbl">إجمالي فاشل</div>
+                            <div class="val">@Model.TotalSentFailed.ToString("N0")</div>
+                        </div>
+                        <div class="stat-cell warn">
+                            <div class="lbl">فشل متتالي</div>
+                            <div class="val">@Model.ConsecutiveFailures</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="lbl">آخر استخدام</div>
+                            <div class="val" style="font-size:13px;">
+                                @(Model.LastUsedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—")
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <a href="@Url.Action("Index")" class="ws-btn ws-btn-cancel">
+                            <i class="fa fa-arrow-right"></i> رجوع
+                        </a>
+                        <button type="submit" class="ws-btn ws-btn-save">
+                            <i class="fa fa-save"></i> حفظ التعديلات
+                        </button>
+                    </div>
+                }
+            </div>
+
+            <!-- RIGHT: Connection panel -->
+            <div>
+                <div class="conn-card">
+                    <h4><i class="fa fa-signal"></i> حالة الاتصال</h4>
+
+                    <div id="statusPill" class="status-pill checking">
+                        <span class="dot"></span>
+                        <span id="statusText">جاري التحقق...</span>
+                    </div>
+                    <div id="phoneText" style="font-size:13px; color:#475569; margin-bottom:8px;"></div>
+
+                    <div class="conn-actions">
+                        <button type="button" id="btnCheck" class="ws-btn ws-btn-cancel">
+                            <i class="fa fa-refresh"></i> فحص الحالة
+                        </button>
+                        <button type="button" id="btnReconnect" class="ws-btn ws-btn-warn">
+                            <i class="fa fa-link"></i> إعادة ربط (QR جديد)
+                        </button>
+                        <button type="button" id="btnNewSession" class="ws-btn ws-btn-warn" style="background:linear-gradient(135deg,#f87171,#ef4444);">
+                            <i class="fa fa-plus"></i> إنشاء سيشن جديد
+                        </button>
+                    </div>
+
+                    <!-- QR display -->
+                    <div id="qrBox" class="qr-box">
+                        <div id="qrLoading" class="loading-q">
+                            <i class="fa fa-spinner fa-spin"></i>
+                            <p>جاري تحميل الـ QR Code...</p>
+                        </div>
+                        <div id="qrShow" style="display:none;">
+                            <img id="qrImg" src="" alt="QR Code" />
+                            <div class="help-text">
+                                واتساب ← الأجهزة المرتبطة ← ربط جهاز ← امسح الكود
+                            </div>
+                            <button type="button" id="btnRefreshQr" class="ws-btn ws-btn-cancel" style="font-size:11px; padding:6px 12px; margin-top:10px;">
+                                <i class="fa fa-refresh"></i> تحديث QR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background:#fef3c7; border-right:4px solid #f59e0b; padding:12px 16px; border-radius:10px; margin-top:14px; font-size:12px; color:#78350f; line-height:1.7;">
+                    <i class="fa fa-info-circle" style="color:#f59e0b;"></i>
+                    <strong>نصيحة:</strong>
+                    لو الجلسة مفصولة، اضغط <strong>"إعادة ربط"</strong> ليتم عرض QR جديد لنفس الـ Session ID.
+                    لو فيه مشكلة في الجلسة الحالية، اضغط <strong>"إنشاء سيشن جديد"</strong> ليتم إنشاء Session ID جديد بدلاً من القديم.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script>
+    jQuery(function ($) {
+        var token = $('input[name="__RequestVerificationToken"]').first().val();
+        var qrPollTimer = null;
+        var statusPollTimer = null;
+
+        function showMsg(text, ok) {
+            $('#topMsg').html('<div class="toast-msg ' + (ok ? 'ok' : 'err') + '">' +
+                '<i class="fa fa-' + (ok ? 'check-circle' : 'times-circle') + '"></i> ' + text + '</div>');
+            if (ok) setTimeout(function () { $('#topMsg').empty(); }, 3500);
+        }
+
+        function setStatus(state, text, phone) {
+            var $p = $('#statusPill').removeClass('checking connected disconnected').addClass(state);
+            $('#statusText').text(text);
+            $('#phoneText').text(phone ? ('الرقم: ' + phone) : '');
+        }
+
+        function getSessionId() { return $('#sessionIdInput').val().trim(); }
+
+        // ===== Status check =====
+        function checkStatus(silent) {
+            var sid = getSessionId();
+            if (!sid) { setStatus('disconnected', 'لا يوجد Session ID'); return; }
+
+            if (!silent) setStatus('checking', 'جاري التحقق...');
+            $.post('@Url.Action("GetWhaStackSessionStatus", "WapilotSettings")', { sessionId: sid })
+                .done(function (res) {
+                    if (!res.success) { setStatus('disconnected', res.message || 'تعذر التحقق'); return; }
+                    var status = (res.status || '').toLowerCase();
+                    var phone = res.phoneNumber || '';
+                    if (status === 'ready' || status === 'authenticated' || status === 'connected' || status === 'open' || status === 'active') {
+                        setStatus('connected', 'متصل بنجاح', phone);
+                        // If QR was showing and now connected, hide and refresh
+                        if ($('#qrBox').is(':visible')) {
+                            stopQrPolling();
+                            $('#qrBox').slideUp();
+                        }
+                    } else if (status === 'qr' || status === 'scan_qr' || status === 'qrcode' || status === 'pending') {
+                        setStatus('disconnected', 'في انتظار مسح QR', phone);
+                    } else if (status === 'loading' || status === 'connecting') {
+                        setStatus('checking', 'جاري الاتصال...', phone);
+                    } else {
+                        setStatus('disconnected', 'الحالة: ' + (res.status || 'غير معروفة'), phone);
+                    }
+                })
+                .fail(function () { setStatus('disconnected', 'خطأ في الاتصال'); });
+        }
+
+        $('#btnCheck').on('click', function () { checkStatus(); });
+
+        // ===== QR fetch =====
+        function fetchQr() {
+            var sid = getSessionId();
+            if (!sid) { showMsg('لا يوجد Session ID لجلب QR له', false); return; }
+
+            $('#qrBox').show();
+            $('#qrShow').hide();
+            $('#qrLoading').show();
+
+            $.post('@Url.Action("GetWhaStackSessionQr", "WapilotSettings")', { sessionId: sid })
+                .done(function (res) {
+                    if (res.success && res.qrCode) {
+                        var src = res.qrCode.startsWith('data:') ? res.qrCode : ('data:image/png;base64,' + res.qrCode);
+                        $('#qrImg').attr('src', src);
+                        $('#qrLoading').hide();
+                        $('#qrShow').show();
+                    } else if (res.pending) {
+                        if (qrPollTimer) clearTimeout(qrPollTimer);
+                        qrPollTimer = setTimeout(fetchQr, 2000);
+                    } else {
+                        $('#qrLoading').html('<i class="fa fa-exclamation-triangle" style="color:#dc2626;"></i><p style="color:#991b1b;">' + (res.message || 'فشل جلب QR') + '</p>');
+                    }
+                })
+                .fail(function () {
+                    $('#qrLoading').html('<i class="fa fa-times" style="color:#dc2626;"></i><p style="color:#991b1b;">خطأ في الاتصال</p>');
+                });
+        }
+
+        function stopQrPolling() {
+            if (qrPollTimer) { clearTimeout(qrPollTimer); qrPollTimer = null; }
+        }
+
+        $('#btnRefreshQr').on('click', function () { stopQrPolling(); fetchQr(); });
+
+        // ===== Reconnect (same session) =====
+        $('#btnReconnect').on('click', function () {
+            var sid = getSessionId();
+            if (!sid) { showMsg('لا يوجد Session ID', false); return; }
+
+            var $btn = $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري...');
+            $.post('@Url.Action("ReconnectWhaStackSession", "WapilotSettings")', { sessionId: sid })
+                .done(function (res) {
+                    if (res.success) {
+                        showMsg('تم طلب إعادة الاتصال — اعرض QR لمسحه', true);
+                        fetchQr();
+                        // Start polling status to detect connection
+                        if (statusPollTimer) clearInterval(statusPollTimer);
+                        statusPollTimer = setInterval(function () { checkStatus(true); }, 3000);
+                    } else {
+                        showMsg(res.message || 'فشل إعادة الاتصال', false);
+                    }
+                })
+                .fail(function () { showMsg('خطأ في الاتصال', false); })
+                .always(function () { $btn.prop('disabled', false).html('<i class="fa fa-link"></i> إعادة ربط (QR جديد)'); });
+        });
+
+        // ===== Create brand-new session (replaces SessionId) =====
+        $('#btnNewSession').on('click', function () {
+            if (!confirm('هيتم إنشاء Session ID جديد للجلسة دي. الـ Session ID القديم هيتم استبداله. هل تريد المتابعة؟')) return;
+            var name = $('input[name="DisplayName"]').val().trim();
+            var $btn = $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+
+            $.post('@Url.Action("CreateWhaStackSession", "WapilotSettings")', { name: 'Tasahel_' + (name || 'Session').replace(/\s+/g,'_') + '_' + Date.now() })
+                .done(function (res) {
+                    if (res.success && res.sessionId) {
+                        $('#sessionIdInput').val(res.sessionId);
+                        showMsg('تم إنشاء Session ID جديد. اضغط حفظ ثم امسح QR', true);
+                        fetchQr();
+                        if (statusPollTimer) clearInterval(statusPollTimer);
+                        statusPollTimer = setInterval(function () { checkStatus(true); }, 3000);
+                    } else {
+                        showMsg(res.message || 'فشل الإنشاء', false);
+                    }
+                })
+                .fail(function () { showMsg('خطأ في الاتصال', false); })
+                .always(function () { $btn.prop('disabled', false).html('<i class="fa fa-plus"></i> إنشاء سيشن جديد'); });
+        });
+
+        // Initial status check
+        checkStatus();
+
+        // Cleanup
+        window.addEventListener('beforeunload', function () {
+            stopQrPolling();
+            if (statusPollTimer) clearInterval(statusPollTimer);
+        });
+    });
+</script>

@@ -32,6 +32,7 @@ namespace PostexS.Models.Data
         public DbSet<WhatsAppMessageQueue> WhatsAppMessageQueues { get; set; }
         public DbSet<WhatsAppMessageLog> WhatsAppMessageLogs { get; set; }
         public DbSet<WhaStackSettings> WhaStackSettings { get; set; }
+        public DbSet<WhaStackSessionInstance> WhaStackSessionInstances { get; set; }
         public DbSet<LandingPageContent> LandingPageContents { get; set; }
         public DbSet<LandingStatistic> LandingStatistics { get; set; }
         public DbSet<LandingTestimonial> LandingTestimonials { get; set; }

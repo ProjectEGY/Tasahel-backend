@@ -128,7 +128,12 @@
             </div>
         }
 
-        <!-- Provider Switch -->
+        @* ================================================================
+           Provider Switch - معطّل مؤقتاً، نشتغل على WhaStack فقط.
+           لإعادة تفعيل المزودات الأخرى: احذف بداية ونهاية بلوك التعليق
+           حول هذا القسم وحول بلوكات Wapilot و WhatsAppBotCloud بالأسفل.
+           ================================================================ *@
+        @*
         <div class="panel panel-default" style="margin-bottom: 20px;">
             <div class="panel-heading">
                 <h4 class="panel-title"><i class="fa fa-exchange"></i> اختيار مزود واتساب</h4>
@@ -160,6 +165,7 @@
                 </div>
             </div>
         </div>
+        *@
 
         <!-- Statistics Cards -->
         <div class="row" style="margin-bottom: 20px;">
@@ -201,13 +207,14 @@
             </div>
         </div>
 
-        <!-- Provider Tabs -->
+        <!-- Provider Tabs — معطّل: نشتغل على WhaStack فقط حالياً -->
         <div style="margin-bottom: 20px;">
+            @{
+                // أي حد يفتح الصفحة بيشوف WhaStack تلقائياً
+                var activeProviderName = "WhaStack";
+            }
+            @* لإعادة تفعيل التابات: ارجع البلوك التحت ده وكمان فعّل قسم Provider Switch بالأعلى
             <div class="provider-tabs" style="padding-bottom: 0;">
-                @{
-                    var activeProviderName = Model.ActiveProvider == WhatsAppProvider.Wapilot ? "Wapilot" :
-                                             Model.ActiveProvider == WhatsAppProvider.WhatsAppBotCloud ? "WhatsAppBotCloud" : "WhaStack";
-                }
                 <div class="provider-tab @(activeProviderName == "WhaStack" ? "active" : "")" data-provider="WhaStack">
                     @if(Model.ActiveProvider == WhatsAppProvider.WhaStack) { <span class="active-provider-indicator on"></span> }
                     <i class="fa fa-bolt"></i> Server 3 (WhaStack)
@@ -221,7 +228,14 @@
                     <i class="fa fa-server"></i> Server 1 (Wapilot)
                 </div>
             </div>
+            *@
 
+            @* ================================================================
+               Wapilot + WhatsApp Bot Cloud معطّلين مؤقتاً.
+               نشتغل على WhaStack فقط حالياً.
+               لإعادة التفعيل: احذف بداية ونهاية بلوك التعليق حول البلوكين.
+               ================================================================ *@
+            @*
             <!-- Wapilot Settings -->
             <div class="provider-content @(activeProviderName == "Wapilot" ? "active" : "")" id="WapilotContent">
                 @using (Html.BeginForm("Index", "WapilotSettings", FormMethod.Post, new { @class = "form-horizontal" }))
@@ -564,6 +578,7 @@
                     </div>
                 </div>
             </div>
+            *@
 
             <!-- WhaStack Settings -->
             <div class="provider-content @(activeProviderName == "WhaStack" ? "active" : "")" id="WhaStackContent">
@@ -615,23 +630,9 @@
                                 </div>
                             </div>
 
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label">Session ID</label>
-                                        <div class="input-group">
-                                            @Html.TextBoxFor(m => m.WhaStackSettings.SessionId, new { @class = "form-control", placeholder = "ادخل الـ Session ID أو اختر من القائمة" })
-                                            <span class="input-group-btn">
-                                                <button type="button" id="btnLoadWhaStackSessions" class="btn btn-info">
-                                                    <i class="fa fa-refresh"></i> جلب الجلسات
-                                                </button>
-                                            </span>
-                                        </div>
-                                        <small class="text-muted">معرف الجلسة - اضغط "جلب الجلسات" لعرض كل الجلسات المتاحة</small>
-                                        <div id="whaStackSessionsList" style="display: none; margin-top: 10px; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;"></div>
-                                    </div>
-                                </div>
-                            </div>
+                            @* Session ID القديم اتشال - دلوقتي كل سيشن ليها صف خاص في جدول الجلسات بالأسفل
+                               نخفي الحقل لكن نسيبه hidden عشان الفورم لا يكسر *@
+                            @Html.HiddenFor(m => m.WhaStackSettings.SessionId)
 
                             <div class="row">
                                 <div class="col-md-6">
@@ -676,20 +677,20 @@
                     </div>
                 }
 
-                <!-- WhaStack QR Code Management -->
+                @* قسم "ربط واتساب - QR Code" القديم اتشال — كل سيشن دلوقتي ليها QR خاص بيها
+                   من خلال صفحة الإضافة/التعديل في WhaStackSessions *@
+                @*
                 <div class="panel panel-default" style="margin-top: 20px;">
                     <div class="panel-heading">
                         <h4 class="panel-title"><i class="fa fa-qrcode"></i> ربط واتساب - QR Code</h4>
                     </div>
                     <div class="panel-body">
-                        <!-- Session Status Indicator -->
                         <div id="whaStackSessionStatusBar" class="alert alert-info" style="display: none;">
                             <i class="fa fa-circle" id="whaStackStatusIcon"></i>
                             <span id="whaStackStatusText">جاري التحقق من حالة الاتصال...</span>
                             <span id="whaStackStatusPhone" style="margin-right: 15px; font-weight: bold;"></span>
                         </div>
 
-                        <!-- Disconnected Warning -->
                         <div id="whaStackDisconnectedAlert" class="alert alert-danger" style="display: none;">
                             <i class="fa fa-exclamation-triangle"></i>
                             <strong>تنبيه!</strong> الجلسة غير متصلة. يرجى إعادة مسح الـ QR Code للاتصال مرة أخرى.
@@ -745,6 +746,543 @@
                         <div id="whaStackQrResult" class="alert" style="display:none; margin-top: 15px;"></div>
                     </div>
                 </div>
+                *@
+
+                <!-- WhaStack Sessions Pool (multi-number rotation) -->
+                <style>
+                    .ws-pool { font-family: 'Cairo', 'Tajawal', sans-serif; padding: 4px; }
+                    .ws-pool .ws-head {
+                        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+                        color: #fff; padding: 18px 22px; border-radius: 14px;
+                        display: flex; justify-content: space-between; align-items: center;
+                        flex-wrap: wrap; gap: 12px; margin-bottom: 16px;
+                    }
+                    .ws-pool .ws-head h4 { margin: 0; font-size: 17px; font-weight: 700; }
+                    .ws-pool .ws-head p  { margin: 4px 0 0; opacity: .92; font-size: 13px; }
+                    .ws-pool .ws-head .btn-full {
+                        background: #fff; color: #128C7E; padding: 9px 16px; border-radius: 10px;
+                        font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+                        font-size: 13px; border: none;
+                    }
+                    .ws-pool .ws-head .btn-full:hover { background: #f0fdf4; color: #0a5d52; text-decoration: none; }
+
+                    .ws-pool .add-form {
+                        background: #f8fafc; padding: 16px; border-radius: 12px; margin-bottom: 16px;
+                        border: 1px dashed #cbd5e1;
+                    }
+                    .ws-pool .add-form-grid {
+                        display: grid; grid-template-columns: 1fr 1fr 1.3fr auto; gap: 10px; align-items: end;
+                    }
+                    .ws-pool .add-form label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px; }
+                    .ws-pool .add-form input {
+                        width: 100%; padding: 9px 12px; border-radius: 8px;
+                        border: 1.5px solid #e2e8f0; font-size: 13px; font-family: inherit;
+                    }
+                    .ws-pool .add-form input:focus { outline: none; border-color: #25D366; box-shadow: 0 0 0 3px rgba(37,211,102,.12); }
+                    .ws-pool .btn-add-session {
+                        background: linear-gradient(135deg,#25D366,#128C7E); color: #fff; border: none;
+                        padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13px;
+                        display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+                    }
+                    .ws-pool .btn-add-session:hover { transform: translateY(-1px); }
+
+                    .ws-pool .sessions-table { width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; }
+                    .ws-pool .sessions-table thead th {
+                        background: #f1f5f9; color: #475569; padding: 10px 12px; font-size: 12px;
+                        font-weight: 700; text-align: right; border-bottom: 2px solid #e2e8f0;
+                    }
+                    .ws-pool .sessions-table tbody td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; }
+                    .ws-pool .sessions-table tbody tr:hover { background: #fafbfd; }
+                    .ws-pool .sid-tag {
+                        background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 6px;
+                        font-family: 'Courier New', monospace; font-size: 11px; font-weight: 600;
+                    }
+                    .ws-pool .badge-on, .ws-pool .badge-off {
+                        display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px;
+                        border-radius: 20px; font-size: 11px; font-weight: 700;
+                    }
+                    .ws-pool .badge-on  { background: #dcfce7; color: #166534; }
+                    .ws-pool .badge-off { background: #f1f5f9; color: #64748b; }
+                    .ws-pool .badge-on  .dot { width: 7px; height: 7px; border-radius: 50%; background: #16a34a; }
+                    .ws-pool .badge-off .dot { width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; }
+                    .ws-pool .stat-mini { font-weight: 700; font-size: 12px; }
+                    .ws-pool .stat-mini.s { color: #16a34a; }
+                    .ws-pool .stat-mini.f { color: #dc2626; }
+
+                    .ws-pool .row-actions { display: flex; gap: 5px; flex-wrap: wrap; }
+                    .ws-pool .ws-mini-btn {
+                        padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+                        border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+                        text-decoration: none;
+                    }
+                    .ws-pool .ws-mini-btn:hover { transform: translateY(-1px); text-decoration: none; }
+                    .ws-pool .mini-edit  { background: #3b82f6; color: #fff; }
+                    .ws-pool .mini-warn  { background: #f59e0b; color: #fff; }
+                    .ws-pool .mini-success { background: #10b981; color: #fff; }
+                    .ws-pool .mini-danger { background: #ef4444; color: #fff; }
+
+                    .ws-pool .empty-state {
+                        text-align: center; padding: 30px 15px; color: #94a3b8;
+                        background: #f8fafc; border-radius: 10px;
+                    }
+                    .ws-pool .empty-state i { font-size: 32px; color: #cbd5e1; margin-bottom: 8px; display: block; }
+                    .ws-pool .empty-state strong { color: #475569; display: block; margin-bottom: 4px; }
+
+                    .ws-pool .toast-msg {
+                        padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-weight: 600; font-size: 13px;
+                        animation: slideIn .3s ease;
+                    }
+                    .ws-pool .toast-msg.ok  { background: #dcfce7; color: #166534; border-right: 3px solid #16a34a; }
+                    .ws-pool .toast-msg.err { background: #fee2e2; color: #991b1b; border-right: 3px solid #dc2626; }
+                    @@keyframes slideIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+                    @@media (max-width: 768px) {
+                        .ws-pool .add-form-grid { grid-template-columns: 1fr; }
+                    }
+                </style>
+
+                <div class="panel panel-default" style="margin-top: 20px;">
+                    <div class="panel-body ws-pool">
+                        <div class="ws-head">
+                            <div>
+                                <h4><i class="fa fa-mobile"></i> جلسات الواتساب (التوزيع التلقائي)</h4>
+                                <p>أضف عدة Session IDs لتوزيع الرسائل تلقائياً وتجنّب الحظر. لو فشل رقم، يُجرَّب التالي تلقائياً.</p>
+                            </div>
+                            <a href="@Url.Action("Index", "WhaStackSessions")" class="btn-full">
+                                <i class="fa fa-cog"></i> الإدارة الكاملة
+                            </a>
+                        </div>
+
+                        <style>
+                            /* Wizard styles */
+                            .ws-wizard { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+                            .ws-wizard.collapsed { padding: 14px 18px; }
+                            .ws-wizard-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+                            .ws-wizard-header h5 { margin: 0; font-size: 15px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+                            .btn-open-wizard {
+                                background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; border: none;
+                                padding: 9px 18px; border-radius: 9px; font-weight: 700; font-size: 13px;
+                                display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+                            }
+                            .btn-open-wizard:hover { transform: translateY(-1px); }
+                            .btn-close-wizard { background: #f1f5f9; color: #64748b; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+
+                            .wizard-stages { display: flex; gap: 6px; margin: 14px 0 16px; }
+                            .wizard-stage { flex: 1; padding: 9px 12px; border-radius: 9px; background: #f1f5f9; color: #94a3b8; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+                            .wizard-stage .num { width: 22px; height: 22px; border-radius: 50%; background: #cbd5e1; color: #fff; display: grid; place-items: center; font-size: 11px; }
+                            .wizard-stage.active { background: #ecfdf5; color: #166534; }
+                            .wizard-stage.active .num { background: #25D366; }
+                            .wizard-stage.done { color: #16a34a; }
+                            .wizard-stage.done .num { background: #16a34a; }
+
+                            .wizard-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+                            @@media (max-width: 768px) { .wizard-grid2 { grid-template-columns: 1fr; } }
+
+                            .qr-stage { display: grid; grid-template-columns: 280px 1fr; gap: 18px; align-items: start; }
+                            @@media (max-width: 768px) { .qr-stage { grid-template-columns: 1fr; } }
+                            .qr-display {
+                                background: #f0fdf4; border: 2px dashed #25D366; border-radius: 14px; padding: 14px;
+                                text-align: center; min-height: 280px;
+                            }
+                            .qr-display img { max-width: 240px; max-height: 240px; background:#fff; padding: 8px; border-radius: 10px; }
+                            .qr-display .loading-q { padding: 50px 16px; color: #128C7E; font-weight: 600; }
+                            .qr-display .loading-q i { font-size: 28px; display:block; margin-bottom: 10px; }
+                            .qr-info { background: #f8fafc; border-radius: 12px; padding: 14px; }
+                            .qr-info .info-line { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+                            .qr-info .info-line:last-child { border-bottom: none; }
+                            .qr-info .info-line .k { color: #64748b; font-weight: 600; }
+                            .qr-info .info-line .v { color: #0f172a; font-weight: 700; font-family: 'Courier New', monospace; font-size: 12px; }
+                            .qr-status {
+                                margin-top: 10px; padding: 10px 14px; border-radius: 10px; display:flex; align-items:center; gap:10px;
+                                font-size: 13px; font-weight: 600;
+                            }
+                            .qr-status.connecting { background: #fef3c7; color: #92400e; }
+                            .qr-status.connected  { background: #dcfce7; color: #166534; }
+                            .qr-status.failed     { background: #fee2e2; color: #991b1b; }
+
+                            .stage-done {
+                                text-align: center; padding: 30px 16px;
+                            }
+                            .stage-done .check {
+                                width: 70px; height: 70px; background: #dcfce7; border-radius: 50%;
+                                display: grid; place-items: center; margin: 0 auto 14px; font-size: 32px; color: #16a34a;
+                            }
+                            .stage-done h3 { color: #16a34a; margin: 0 0 6px; font-weight: 700; }
+
+                            /* Session cards grid */
+                            .ws-cards-grid {
+                                display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+                                gap: 16px;
+                            }
+                            .ws-card {
+                                background: #fff; border-radius: 16px; padding: 18px; border: 1px solid #eef0f5;
+                                box-shadow: 0 4px 18px -10px rgba(15,23,42,.1); transition: all .25s;
+                                position: relative; overflow: hidden;
+                            }
+                            .ws-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px -10px rgba(15,23,42,.18); }
+                            .ws-card.disabled { opacity: .75; }
+                            .ws-card .card-strip {
+                                position: absolute; top: 0; right: 0; width: 5px; height: 100%;
+                                background: linear-gradient(180deg, #25D366, #128C7E);
+                            }
+                            .ws-card.disabled .card-strip { background: linear-gradient(180deg, #cbd5e1, #94a3b8); }
+
+                            .ws-card .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+                            .ws-card .card-name { font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; line-height: 1.4; }
+                            .ws-card .card-phone { font-size: 13px; color: #475569; font-weight: 600; direction: ltr; display: inline-block; margin-top: 3px; }
+                            .ws-card .card-sid {
+                                background: #f1f5f9; color: #475569; padding: 4px 9px; border-radius: 6px;
+                                font-family: 'Courier New', monospace; font-size: 11px; font-weight: 600; display: inline-block; margin-top: 6px; word-break: break-all;
+                            }
+
+                            .ws-card .card-stats {
+                                display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+                                background: #f8fafc; padding: 10px; border-radius: 10px; margin: 12px 0;
+                            }
+                            .ws-card .card-stats .cell { text-align: center; }
+                            .ws-card .card-stats .cell .lbl { font-size: 10px; color: #64748b; font-weight: 600; }
+                            .ws-card .card-stats .cell .val { font-size: 16px; font-weight: 700; margin-top: 2px; }
+                            .ws-card .card-stats .cell.s .val { color: #16a34a; }
+                            .ws-card .card-stats .cell.f .val { color: #dc2626; }
+                            .ws-card .card-stats .cell.w .val { color: #d97706; }
+
+                            .ws-card .card-meta { font-size: 11px; color: #94a3b8; margin-bottom: 12px; }
+                            .ws-card .card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+                        </style>
+
+                        <div id="wsPoolMessage"></div>
+
+                        <!-- Wizard for adding a new session (collapsed by default) -->
+                        <div class="ws-wizard collapsed" id="wsWizard">
+                            <div class="ws-wizard-header">
+                                <h5><i class="fa fa-plus-circle" style="color:#25D366;"></i> أضف رقم واتساب جديد للتوزيع</h5>
+                                <button type="button" id="btnOpenWizard" class="btn-open-wizard">
+                                    <i class="fa fa-magic"></i> إنشاء جلسة جديدة
+                                </button>
+                            </div>
+
+                            <div id="wizardBody" style="display:none;">
+                                <div class="wizard-stages">
+                                    <div class="wizard-stage active" data-s="1"><span class="num">1</span> بيانات الجلسة</div>
+                                    <div class="wizard-stage" data-s="2"><span class="num">2</span> مسح QR</div>
+                                    <div class="wizard-stage" data-s="3"><span class="num">3</span> تم الربط</div>
+                                </div>
+
+                                <!-- Stage 1 -->
+                                <div id="wzStage1">
+                                    <div class="wizard-grid2">
+                                        <div>
+                                            <label style="font-size:12px; font-weight:700; color:#475569;">اسم الجلسة *</label>
+                                            <input type="text" id="wzName" class="form-control" placeholder="مثال: رقم القاهرة الرئيسي" />
+                                        </div>
+                                        <div>
+                                            <label style="font-size:12px; font-weight:700; color:#475569;">رقم الهاتف (اختياري)</label>
+                                            <input type="text" id="wzPhone" class="form-control" placeholder="201001234567" dir="ltr" style="text-align:left;" />
+                                        </div>
+                                    </div>
+                                    <div style="margin-top: 14px; display: flex; gap: 8px; justify-content: flex-end;">
+                                        <button type="button" id="btnCloseWizard" class="btn-close-wizard">إلغاء</button>
+                                        <button type="button" id="btnWzCreate" class="btn-add-session">
+                                            <i class="fa fa-magic"></i> إنشاء و عرض QR
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Stage 2 -->
+                                <div id="wzStage2" style="display:none;">
+                                    <div class="qr-stage">
+                                        <div class="qr-display" id="wzQrBox">
+                                            <div id="wzQrLoading" class="loading-q">
+                                                <i class="fa fa-spinner fa-spin"></i>
+                                                <p>جاري تجهيز الـ QR...</p>
+                                            </div>
+                                            <div id="wzQrShow" style="display:none;">
+                                                <img id="wzQrImg" src="" alt="QR" />
+                                                <p style="font-size:11px; color:#475569; margin-top:8px;">واتساب ← الأجهزة المرتبطة ← ربط جهاز</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="qr-info">
+                                                <div class="info-line"><span class="k">الاسم:</span><span class="v" id="wzInfoName">—</span></div>
+                                                <div class="info-line"><span class="k">الهاتف:</span><span class="v" id="wzInfoPhone">—</span></div>
+                                                <div class="info-line"><span class="k">Session ID:</span><span class="v" id="wzInfoSid" style="word-break:break-all;">—</span></div>
+                                            </div>
+                                            <div class="qr-status connecting" id="wzStatus">
+                                                <i class="fa fa-spinner fa-spin"></i>
+                                                <span id="wzStatusText">في انتظار المسح...</span>
+                                            </div>
+                                            <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
+                                                <button type="button" id="btnWzConfirmScan" class="btn-add-session" style="font-size:13px;">
+                                                    <i class="fa fa-check"></i> تم المسح، استكمال الحفظ
+                                                </button>
+                                                <button type="button" id="btnWzRefreshQr" class="btn-close-wizard">
+                                                    <i class="fa fa-refresh"></i> تحديث QR
+                                                </button>
+                                                <button type="button" id="btnWzCancel" class="btn-close-wizard">
+                                                    <i class="fa fa-times"></i> إلغاء
+                                                </button>
+                                            </div>
+                                            <small style="color:#94a3b8; font-size:11px; display:block; margin-top:8px;">
+                                                بعد ما تمسح الـ QR، اضغط "تم المسح، استكمال الحفظ" لحفظ الجلسة.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Stage 3 -->
+                                <div id="wzStage3" style="display:none;">
+                                    <div class="stage-done">
+                                        <div class="check"><i class="fa fa-check"></i></div>
+                                        <h3>تم الربط بنجاح! 🎉</h3>
+                                        <p id="wzDoneMsg" style="color:#475569;"></p>
+                                        <button type="button" id="btnWzAddAnother" class="btn-add-session" style="margin-top:10px;">
+                                            <i class="fa fa-plus"></i> إضافة جلسة أخرى
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sessions cards -->
+                        <div id="wsSessionsListWrap">
+                            <div class="empty-state"><i class="fa fa-spinner fa-spin"></i> جاري التحميل...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    if (typeof jQuery === 'undefined') {
+                        document.write('<script src="https://code.jquery.com/jquery-3.6.4.min.js"><\/script>');
+                    }
+                </script>
+                <script>
+                    jQuery(function ($) {
+                        var token = $('input[name="__RequestVerificationToken"]').first().val();
+                        var $wrap = $('#wsSessionsListWrap');
+                        var $msg  = $('#wsPoolMessage');
+                        var wz = { sessionId: null, name: null, phone: null, qrTimer: null, statusTimer: null, connectedPhone: null };
+
+                        function showMsg(text, ok) {
+                            $msg.html('<div class="toast-msg ' + (ok ? 'ok' : 'err') + '">' +
+                                '<i class="fa fa-' + (ok ? 'check-circle' : 'times-circle') + '"></i> ' + text + '</div>');
+                            setTimeout(function () { $msg.empty(); }, 3500);
+                        }
+
+                        function fmtDate(s) {
+                            if (!s) return null;
+                            var d = new Date(s); if (isNaN(d.getTime())) return null;
+                            var pad = function (n) { return n < 10 ? '0' + n : n; };
+                            return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+                        }
+
+                        function escapeHtml(s) {
+                            return (s || '').toString().replace(/[&<>"']/g, function (c) {
+                                return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+                            });
+                        }
+
+                        // -------- Cards rendering --------
+                        function cardHtml(item) {
+                            var statusBadge = item.isActive
+                                ? '<span class="badge-on"><span class="dot"></span> مفعل</span>'
+                                : '<span class="badge-off"><span class="dot"></span> معطل</span>';
+                            var toggleBtn = item.isActive
+                                ? '<button type="button" class="ws-mini-btn mini-warn" data-action="toggle" data-id="' + item.id + '"><i class="fa fa-pause"></i> تعطيل</button>'
+                                : '<button type="button" class="ws-mini-btn mini-success" data-action="toggle" data-id="' + item.id + '"><i class="fa fa-play"></i> تفعيل</button>';
+                            var lastUsed = fmtDate(item.lastUsedAt);
+
+                            return '<div class="ws-card ' + (item.isActive ? '' : 'disabled') + '">' +
+                                '<div class="card-strip"></div>' +
+                                '<div class="card-head">' +
+                                    '<div>' +
+                                        '<h4 class="card-name">' + escapeHtml(item.displayName) + '</h4>' +
+                                        (item.phoneNumber ? '<div class="card-phone"><i class="fa fa-phone"></i> ' + escapeHtml(item.phoneNumber) + '</div>' : '') +
+                                    '</div>' +
+                                    statusBadge +
+                                '</div>' +
+                                '<div class="card-sid"><i class="fa fa-key"></i> ' + escapeHtml(item.sessionId) + '</div>' +
+                                '<div class="card-stats">' +
+                                    '<div class="cell s"><div class="lbl">ناجحة</div><div class="val">' + item.totalSentSuccess + '</div></div>' +
+                                    '<div class="cell f"><div class="lbl">فاشلة</div><div class="val">' + item.totalSentFailed + '</div></div>' +
+                                    '<div class="cell w"><div class="lbl">فشل متتالي</div><div class="val">' + item.consecutiveFailures + '</div></div>' +
+                                '</div>' +
+                                '<div class="card-meta">' +
+                                    '<i class="fa fa-clock-o"></i> آخر استخدام: ' + (lastUsed || 'لم تُستخدم بعد') +
+                                '</div>' +
+                                '<div class="card-actions">' +
+                                    '<a href="@Url.Action("Edit", "WhaStackSessions")/' + item.id + '" class="ws-mini-btn mini-edit"><i class="fa fa-edit"></i> تعديل</a>' +
+                                    toggleBtn +
+                                    '<button type="button" class="ws-mini-btn mini-danger" data-action="delete" data-id="' + item.id + '"><i class="fa fa-trash"></i> حذف</button>' +
+                                '</div>' +
+                            '</div>';
+                        }
+
+                        function loadSessions() {
+                            $wrap.html('<div class="empty-state"><i class="fa fa-spinner fa-spin"></i> جاري التحميل...</div>');
+                            $.getJSON('@Url.Action("ListJson", "WhaStackSessions")').done(function (res) {
+                                if (!res.success || !res.items || res.items.length === 0) {
+                                    $wrap.html('<div class="empty-state"><i class="fa fa-mobile"></i><strong>لا توجد جلسات بعد</strong>اضغط "إنشاء جلسة جديدة" بالأعلى لإضافة أول جلسة.</div>');
+                                    return;
+                                }
+                                var html = '<div class="ws-cards-grid">';
+                                res.items.forEach(function (it) { html += cardHtml(it); });
+                                html += '</div>';
+                                $wrap.html(html);
+                            }).fail(function () {
+                                $wrap.html('<div class="empty-state err"><i class="fa fa-times"></i> فشل تحميل الجلسات</div>');
+                            });
+                        }
+
+                        // Card actions (delegated)
+                        $wrap.on('click', '[data-action]', function () {
+                            var $btn = $(this);
+                            var action = $btn.data('action');
+                            var id = $btn.data('id');
+
+                            if (action === 'delete') {
+                                if (!confirm('متأكد من حذف الجلسة؟')) return;
+                                $.post('@Url.Action("DeleteJson", "WhaStackSessions")', { __RequestVerificationToken: token, id: id })
+                                    .done(function (res) { showMsg(res.message, res.success); if (res.success) loadSessions(); })
+                                    .fail(function () { showMsg('فشل الحذف', false); });
+                            } else if (action === 'toggle') {
+                                $.post('@Url.Action("ToggleActiveJson", "WhaStackSessions")', { __RequestVerificationToken: token, id: id })
+                                    .done(function (res) { showMsg(res.message, res.success); if (res.success) loadSessions(); })
+                                    .fail(function () { showMsg('فشل التحديث', false); });
+                            }
+                        });
+
+                        loadSessions();
+
+                        // -------- Wizard logic --------
+                        function setStage(n) {
+                            $('.wizard-stage').removeClass('active done');
+                            for (var i = 1; i < n; i++) $('.wizard-stage[data-s="' + i + '"]').addClass('done');
+                            $('.wizard-stage[data-s="' + n + '"]').addClass('active');
+                            $('#wzStage1, #wzStage2, #wzStage3').hide();
+                            $('#wzStage' + n).show();
+                        }
+                        function setStatus(state, text) {
+                            $('#wzStatus').removeClass('connecting connected failed').addClass(state);
+                            $('#wzStatusText').text(text);
+                            var icon = state === 'connected' ? 'fa-check-circle' : (state === 'failed' ? 'fa-times-circle' : 'fa-spinner fa-spin');
+                            $('#wzStatus').find('i').attr('class', 'fa ' + icon);
+                        }
+                        function stopTimers() {
+                            if (wz.qrTimer) { clearTimeout(wz.qrTimer); wz.qrTimer = null; }
+                            if (wz.statusTimer) { clearInterval(wz.statusTimer); wz.statusTimer = null; }
+                        }
+                        function openWizard() {
+                            $('#wsWizard').removeClass('collapsed');
+                            $('#wizardBody').slideDown(180);
+                            $('#btnOpenWizard').hide();
+                            setStage(1);
+                            $('#wzName, #wzPhone').val('');
+                        }
+                        function closeWizard() {
+                            stopTimers();
+                            $('#wsWizard').addClass('collapsed');
+                            $('#wizardBody').slideUp(180);
+                            $('#btnOpenWizard').show();
+                            wz = { sessionId: null, name: null, phone: null, qrTimer: null, statusTimer: null, connectedPhone: null };
+                        }
+
+                        $('#btnOpenWizard').on('click', openWizard);
+                        $('#btnCloseWizard, #btnWzCancel').on('click', closeWizard);
+                        $('#btnWzAddAnother').on('click', function () { setStage(1); $('#wzName, #wzPhone').val(''); });
+
+                        $('#btnWzCreate').on('click', function () {
+                            var name = $('#wzName').val().trim();
+                            var phone = $('#wzPhone').val().trim();
+                            if (!name) { showMsg('برجاء إدخال اسم الجلسة', false); return; }
+                            wz.name = name; wz.phone = phone;
+
+                            var $btn = $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الإنشاء...');
+                            $.post('@Url.Action("CreateWhaStackSession", "WapilotSettings")', { name: 'Tasahel_' + name.replace(/\s+/g, '_') + '_' + Date.now() })
+                                .done(function (res) {
+                                    if (!res.success || !res.sessionId) { showMsg(res.message || 'فشل إنشاء الجلسة', false); return; }
+                                    wz.sessionId = res.sessionId;
+                                    $('#wzInfoName').text(wz.name);
+                                    $('#wzInfoPhone').text(wz.phone || '—');
+                                    $('#wzInfoSid').text(wz.sessionId);
+                                    setStage(2);
+                                    fetchQr();
+                                    startStatusPolling();
+                                })
+                                .fail(function () { showMsg('خطأ في الاتصال بـ WhaStack', false); })
+                                .always(function () { $btn.prop('disabled', false).html('<i class="fa fa-magic"></i> إنشاء و عرض QR'); });
+                        });
+
+                        function fetchQr() {
+                            $('#wzQrLoading').show(); $('#wzQrShow').hide();
+                            $.post('@Url.Action("GetWhaStackSessionQr", "WapilotSettings")', { sessionId: wz.sessionId })
+                                .done(function (res) {
+                                    if (res.success && res.qrCode) {
+                                        var src = res.qrCode.indexOf('data:') === 0 ? res.qrCode : ('data:image/png;base64,' + res.qrCode);
+                                        $('#wzQrImg').attr('src', src);
+                                        $('#wzQrLoading').hide(); $('#wzQrShow').show();
+                                    } else if (res.pending) {
+                                        if (wz.qrTimer) clearTimeout(wz.qrTimer);
+                                        wz.qrTimer = setTimeout(fetchQr, 2000);
+                                    } else {
+                                        $('#wzQrLoading').html('<i class="fa fa-exclamation-triangle" style="color:#dc2626;"></i><p style="color:#991b1b;">' + (res.message || 'فشل جلب QR') + '</p>');
+                                    }
+                                })
+                                .fail(function () {
+                                    $('#wzQrLoading').html('<i class="fa fa-times" style="color:#dc2626;"></i><p style="color:#991b1b;">خطأ في الاتصال</p>');
+                                });
+                        }
+                        $('#btnWzRefreshQr').on('click', function () { if (wz.qrTimer) clearTimeout(wz.qrTimer); fetchQr(); });
+
+                        function startStatusPolling() {
+                            if (wz.statusTimer) clearInterval(wz.statusTimer);
+                            wz.statusTimer = setInterval(checkStatus, 3000);
+                            checkStatus();
+                        }
+                        function checkStatus() {
+                            $.post('@Url.Action("GetWhaStackSessionStatus", "WapilotSettings")', { sessionId: wz.sessionId })
+                                .done(function (res) {
+                                    if (!res.success) return;
+                                    var status = (res.status || '').toLowerCase();
+                                    if (status === 'ready' || status === 'authenticated' || status === 'connected' || status === 'open' || status === 'active') {
+                                        // Connected — show success but DON'T auto-save. User must click confirm.
+                                        wz.connectedPhone = res.phoneNumber || wz.phone;
+                                        if (wz.statusTimer) { clearInterval(wz.statusTimer); wz.statusTimer = null; }
+                                        setStatus('connected', 'تم الربط ✓ — اضغط زرار "تم المسح" للحفظ');
+                                    } else if (status === 'qr' || status === 'scan_qr' || status === 'qrcode' || status === 'pending') {
+                                        setStatus('connecting', 'في انتظار المسح...');
+                                    } else if (status === 'loading' || status === 'connecting') {
+                                        setStatus('connecting', 'جاري الاتصال...');
+                                    }
+                                });
+                        }
+
+                        // Manual confirm
+                        $('#btnWzConfirmScan').on('click', function () {
+                            stopTimers();
+                            saveSession();
+                        });
+                        function saveSession() {
+                            setStatus('connecting', 'جاري حفظ الجلسة...');
+                            $.post('@Url.Action("CreateJson", "WhaStackSessions")', {
+                                __RequestVerificationToken: token,
+                                displayName: wz.name,
+                                phoneNumber: wz.connectedPhone || wz.phone,
+                                sessionId: wz.sessionId,
+                                isActive: true
+                            }).done(function (res) {
+                                if (res.success) {
+                                    setStatus('connected', 'تم الربط بنجاح!');
+                                    $('#wzDoneMsg').text(wz.connectedPhone ? ('الرقم المربوط: ' + wz.connectedPhone) : 'الجلسة جاهزة دلوقتي.');
+                                    setTimeout(function () { setStage(3); loadSessions(); }, 800);
+                                } else {
+                                    setStatus('failed', res.message || 'فشل الحفظ');
+                                }
+                            }).fail(function () { setStatus('failed', 'خطأ في حفظ الجلسة'); });
+                        }
+
+                        window.addEventListener('beforeunload', stopTimers);
+                    });
+                </script>
 
                 <!-- WhaStack Test Section -->
                 <div class="panel panel-default" style="margin-top: 20px;">

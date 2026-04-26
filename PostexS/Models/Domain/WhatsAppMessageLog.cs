@@ -29,6 +29,10 @@ namespace PostexS.Models.Domain
 
         public string OrderCode { get; set; }
 
+        public long? WhaStackSessionInstanceId { get; set; }
+        [ForeignKey("WhaStackSessionInstanceId")]
+        public virtual WhaStackSessionInstance WhaStackSessionInstance { get; set; }
+
         public double RequestDurationMs { get; set; }
 
         public DateTime RequestedAt { get; set; }

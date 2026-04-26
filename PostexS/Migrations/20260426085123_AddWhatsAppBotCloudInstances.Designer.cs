@@ -3,15 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PostexS.Models.Data;
 
-namespace PostexS.Migrations
+namespace TasahelExpress.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260426085123_AddWhatsAppBotCloudInstances")]
+    partial class AddWhatsAppBotCloudInstances
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1268,62 +1270,6 @@ namespace PostexS.Migrations
                     b.ToTable("WapilotSettings");
                 });
 
-            modelBuilder.Entity("PostexS.Models.Domain.WhaStackSessionInstance", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                    b.Property<int>("ConsecutiveFailures")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreateOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DeletedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsModified")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastFailureAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("LastUsedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("ModifiedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SessionId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("TotalSentFailed")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("TotalSentSuccess")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("WhaStackSessionInstances");
-                });
-
             modelBuilder.Entity("PostexS.Models.Domain.WhaStackSettings", b =>
                 {
                     b.Property<long>("Id")
@@ -1373,6 +1319,66 @@ namespace PostexS.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("WhaStackSettings");
+                });
+
+            modelBuilder.Entity("PostexS.Models.Domain.WhatsAppBotCloudInstance", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ConsecutiveFailures")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreateOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("InstanceId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsModified")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastFailureAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("TotalSentFailed")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TotalSentSuccess")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WhatsAppBotCloudInstances");
                 });
 
             modelBuilder.Entity("PostexS.Models.Domain.WhatsAppBotCloudSettings", b =>
@@ -1433,6 +1439,9 @@ namespace PostexS.Migrations
                         .HasColumnType("bigint")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
+                    b.Property<long?>("BotCloudInstanceId")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("datetime2");
 
@@ -1488,14 +1497,11 @@ namespace PostexS.Migrations
                     b.Property<int?>("ResponseStatusCode")
                         .HasColumnType("int");
 
-                    b.Property<long?>("WhaStackSessionInstanceId")
-                        .HasColumnType("bigint");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("QueueItemId");
+                    b.HasIndex("BotCloudInstanceId");
 
-                    b.HasIndex("WhaStackSessionInstanceId");
+                    b.HasIndex("QueueItemId");
 
                     b.ToTable("WhatsAppMessageLogs");
                 });
@@ -2009,17 +2015,17 @@ namespace PostexS.Migrations
 
             modelBuilder.Entity("PostexS.Models.Domain.WhatsAppMessageLog", b =>
                 {
+                    b.HasOne("PostexS.Models.Domain.WhatsAppBotCloudInstance", "BotCloudInstance")
+                        .WithMany()
+                        .HasForeignKey("BotCloudInstanceId");
+
                     b.HasOne("PostexS.Models.Domain.WhatsAppMessageQueue", "QueueItem")
                         .WithMany()
                         .HasForeignKey("QueueItemId");
 
-                    b.HasOne("PostexS.Models.Domain.WhaStackSessionInstance", "WhaStackSessionInstance")
-                        .WithMany()
-                        .HasForeignKey("WhaStackSessionInstanceId");
+                    b.Navigation("BotCloudInstance");
 
                     b.Navigation("QueueItem");
-
-                    b.Navigation("WhaStackSessionInstance");
                 });
 
             modelBuilder.Entity("PostexS.Models.Domain.WhatsAppMessageQueue", b =>

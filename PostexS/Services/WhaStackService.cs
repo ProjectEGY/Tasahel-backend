@@ -1,9 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PostexS.Interfaces;
 using PostexS.Models.Data;
 using PostexS.Models.Domain;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
@@ -74,340 +75,319 @@ namespace PostexS.Services
 
         #endregion
 
-        #region Message Sending
+        #region Session Instances Management (Round-Robin)
+
+        public async Task<List<WhaStackSessionInstance>> GetSessionInstancesAsync()
+        {
+            await EnsureSeedFromLegacySettingsAsync();
+            return await _context.WhaStackSessionInstances
+                .Where(i => !i.IsDeleted)
+                .OrderBy(i => i.Id)
+                .ToListAsync();
+        }
+
+        public async Task<WhaStackSessionInstance> GetSessionInstanceByIdAsync(long id)
+        {
+            return await _context.WhaStackSessionInstances
+                .FirstOrDefaultAsync(i => i.Id == id && !i.IsDeleted);
+        }
+
+        public async Task<bool> AddSessionInstanceAsync(WhaStackSessionInstance instance)
+        {
+            instance.CreateOn = DateTime.UtcNow;
+            await _context.WhaStackSessionInstances.AddAsync(instance);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> UpdateSessionInstanceAsync(WhaStackSessionInstance instance)
+        {
+            var existing = await _context.WhaStackSessionInstances
+                .FirstOrDefaultAsync(i => i.Id == instance.Id && !i.IsDeleted);
+            if (existing == null) return false;
+
+            existing.DisplayName = instance.DisplayName;
+            existing.PhoneNumber = instance.PhoneNumber;
+            existing.SessionId = instance.SessionId;
+            existing.IsActive = instance.IsActive;
+            existing.ModifiedOn = DateTime.UtcNow;
+            existing.IsModified = true;
+
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> DeleteSessionInstanceAsync(long id)
+        {
+            var instance = await _context.WhaStackSessionInstances
+                .FirstOrDefaultAsync(i => i.Id == id && !i.IsDeleted);
+            if (instance == null) return false;
+
+            // Try to delete the remote session in WhaStack first; don't block local cleanup if it fails
+            if (!string.IsNullOrEmpty(instance.SessionId))
+            {
+                try
+                {
+                    var remote = await DeleteRemoteSessionAsync(instance.SessionId);
+                    if (!remote.Success)
+                    {
+                        _logger.LogWarning("Local delete will proceed despite remote delete failure for session {Id} ({SessionId}): {Error}",
+                            instance.Id, instance.SessionId, remote.ErrorMessage);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Remote delete threw for session {Id}; proceeding with local delete", instance.Id);
+                }
+            }
+
+            instance.IsDeleted = true;
+            instance.DeletedOn = DateTime.UtcNow;
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> ToggleSessionInstanceActiveAsync(long id)
+        {
+            var instance = await _context.WhaStackSessionInstances
+                .FirstOrDefaultAsync(i => i.Id == id && !i.IsDeleted);
+            if (instance == null) return false;
+
+            instance.IsActive = !instance.IsActive;
+            instance.ModifiedOn = DateTime.UtcNow;
+            instance.IsModified = true;
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        /// <summary>
+        /// Auto-create the first session instance from legacy WhaStackSettings.SessionId
+        /// to preserve the currently-running configuration on first access.
+        /// </summary>
+        private async Task EnsureSeedFromLegacySettingsAsync()
+        {
+            var any = await _context.WhaStackSessionInstances.AnyAsync(i => !i.IsDeleted);
+            if (any) return;
+
+            var legacy = await _context.WhaStackSettings
+                .Where(s => !s.IsDeleted && !string.IsNullOrEmpty(s.SessionId))
+                .OrderByDescending(s => s.Id)
+                .FirstOrDefaultAsync();
+            if (legacy == null) return;
+
+            var seeded = new WhaStackSessionInstance
+            {
+                DisplayName = "الجلسة الأساسية",
+                SessionId = legacy.SessionId,
+                IsActive = legacy.IsActive,
+                CreateOn = DateTime.UtcNow
+            };
+            _context.WhaStackSessionInstances.Add(seeded);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Auto-seeded first WhaStack session instance from legacy settings");
+        }
+
+        /// <summary>
+        /// Returns active sessions ordered for round-robin balancing:
+        /// fewest successful sends in last 24h first, tie-break by oldest LastUsedAt.
+        /// </summary>
+        private async Task<List<WhaStackSessionInstance>> GetActiveSessionsOrderedForSendingAsync()
+        {
+            await EnsureSeedFromLegacySettingsAsync();
+
+            var instances = await _context.WhaStackSessionInstances
+                .Where(i => !i.IsDeleted && i.IsActive)
+                .ToListAsync();
+            if (instances.Count == 0) return instances;
+
+            var since = DateTime.UtcNow.AddHours(-24);
+            var ids = instances.Select(i => i.Id).ToList();
+            var counts = await _context.WhatsAppMessageLogs
+                .Where(l => l.WhaStackSessionInstanceId.HasValue
+                            && ids.Contains(l.WhaStackSessionInstanceId.Value)
+                            && l.IsSuccess
+                            && l.RequestedAt >= since)
+                .GroupBy(l => l.WhaStackSessionInstanceId.Value)
+                .Select(g => new { Id = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var countMap = counts.ToDictionary(x => x.Id, x => x.Count);
+
+            return instances
+                .OrderBy(i => countMap.TryGetValue(i.Id, out var c) ? c : 0)
+                .ThenBy(i => i.LastUsedAt ?? DateTime.MinValue)
+                .ToList();
+        }
+
+        #endregion
+
+        #region Message Sending (with rotation)
 
         public async Task<WhaStackSendResult> SendMessageAsync(string phoneNumber, string message)
         {
-            var settings = await GetSettingsAsync();
-            var stopwatch = Stopwatch.StartNew();
-            var result = new WhaStackSendResult();
-
-            try
-            {
-                var client = _httpClientFactory.CreateClient();
-                var baseUrl = settings.BaseUrl.TrimEnd('/');
-                var url = $"{baseUrl}/messages/send";
-
-                // Format phone number (remove + if present and any spaces)
-                var formattedPhone = phoneNumber.TrimStart('+').Replace(" ", "").Replace("-", "");
-
-                _logger.LogInformation("WhaStack: Sending message to {Phone} via {Url}", formattedPhone, url);
-
-                var jsonBody = new
-                {
-                    session_id = settings.SessionId,
-                    to = formattedPhone,
-                    message = message
-                };
-
-                using var jsonContent = new StringContent(
-                    JsonSerializer.Serialize(jsonBody),
-                    System.Text.Encoding.UTF8,
-                    "application/json"
-                );
-
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
-
-                using var response = await client.PostAsync(url, jsonContent);
-                stopwatch.Stop();
-
-                result.StatusCode = (int)response.StatusCode;
-                result.ResponseBody = await response.Content.ReadAsStringAsync();
-                result.Success = response.IsSuccessStatusCode;
-                result.DurationMs = stopwatch.ElapsedMilliseconds;
-
-                _logger.LogInformation("WhaStack API response: Status={StatusCode}, Body={Body}", result.StatusCode, result.ResponseBody);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
-                    _logger.LogWarning("WhaStack message failed: {Error}", result.ErrorMessage);
-                }
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                result.Success = false;
-                result.ErrorMessage = ex.Message;
-                result.DurationMs = stopwatch.ElapsedMilliseconds;
-                _logger.LogError(ex, "Error sending WhaStack message to {Phone}", phoneNumber);
-            }
-
-            return result;
+            var formattedPhone = (phoneNumber ?? "").TrimStart('+').Replace(" ", "").Replace("-", "");
+            return await SendWithRotationAsync(
+                endpoint: "/messages/send",
+                buildBody: sid => new { session_id = sid, to = formattedPhone, message },
+                target: formattedPhone);
         }
 
         public async Task<WhaStackSendResult> SendGroupMessageAsync(string groupId, string message)
         {
-            var settings = await GetSettingsAsync();
-            var stopwatch = Stopwatch.StartNew();
-            var result = new WhaStackSendResult();
-
-            try
-            {
-                var client = _httpClientFactory.CreateClient();
-                var baseUrl = settings.BaseUrl.TrimEnd('/');
-                var url = $"{baseUrl}/groups/send";
-
-                _logger.LogInformation("WhaStack: Sending message to group {GroupId} via {Url}", groupId, url);
-
-                var jsonBody = new
-                {
-                    session_id = settings.SessionId,
-                    group_id = groupId,
-                    message = message
-                };
-
-                using var jsonContent = new StringContent(
-                    JsonSerializer.Serialize(jsonBody),
-                    System.Text.Encoding.UTF8,
-                    "application/json"
-                );
-
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
-
-                using var response = await client.PostAsync(url, jsonContent);
-                stopwatch.Stop();
-
-                result.StatusCode = (int)response.StatusCode;
-                result.ResponseBody = await response.Content.ReadAsStringAsync();
-                result.Success = response.IsSuccessStatusCode;
-                result.DurationMs = stopwatch.ElapsedMilliseconds;
-
-                _logger.LogInformation("WhaStack API response: Status={StatusCode}, Body={Body}", result.StatusCode, result.ResponseBody);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
-                    _logger.LogWarning("WhaStack group message failed: {Error}", result.ErrorMessage);
-                }
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                result.Success = false;
-                result.ErrorMessage = ex.Message;
-                result.DurationMs = stopwatch.ElapsedMilliseconds;
-                _logger.LogError(ex, "Error sending WhaStack message to group {GroupId}", groupId);
-            }
-
-            return result;
+            return await SendWithRotationAsync(
+                endpoint: "/groups/send",
+                buildBody: sid => new { session_id = sid, group_id = groupId, message },
+                target: groupId);
         }
 
         public async Task<WhaStackSendResult> SendImageAsync(string phoneNumber, string mediaUrl, string caption = null)
         {
-            var settings = await GetSettingsAsync();
-            var stopwatch = Stopwatch.StartNew();
-            var result = new WhaStackSendResult();
-
-            try
-            {
-                var client = _httpClientFactory.CreateClient();
-                var baseUrl = settings.BaseUrl.TrimEnd('/');
-                var url = $"{baseUrl}/messages/send-image";
-
-                var formattedPhone = phoneNumber.TrimStart('+').Replace(" ", "").Replace("-", "");
-
-                _logger.LogInformation("WhaStack: Sending image to {Phone} via {Url}", formattedPhone, url);
-
-                var jsonBody = new
-                {
-                    session_id = settings.SessionId,
-                    to = formattedPhone,
-                    media_url = mediaUrl,
-                    caption = caption ?? ""
-                };
-
-                using var jsonContent = new StringContent(
-                    JsonSerializer.Serialize(jsonBody),
-                    System.Text.Encoding.UTF8,
-                    "application/json"
-                );
-
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
-
-                using var response = await client.PostAsync(url, jsonContent);
-                stopwatch.Stop();
-
-                result.StatusCode = (int)response.StatusCode;
-                result.ResponseBody = await response.Content.ReadAsStringAsync();
-                result.Success = response.IsSuccessStatusCode;
-                result.DurationMs = stopwatch.ElapsedMilliseconds;
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
-                    _logger.LogWarning("WhaStack send image failed: {Error}", result.ErrorMessage);
-                }
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                result.Success = false;
-                result.ErrorMessage = ex.Message;
-                result.DurationMs = stopwatch.ElapsedMilliseconds;
-                _logger.LogError(ex, "Error sending WhaStack image to {Phone}", phoneNumber);
-            }
-
-            return result;
+            var formattedPhone = (phoneNumber ?? "").TrimStart('+').Replace(" ", "").Replace("-", "");
+            return await SendWithRotationAsync(
+                endpoint: "/messages/send-image",
+                buildBody: sid => new { session_id = sid, to = formattedPhone, media_url = mediaUrl, caption = caption ?? "" },
+                target: formattedPhone);
         }
 
         public async Task<WhaStackSendResult> SendDocumentAsync(string phoneNumber, string mediaUrl, string fileName, string mimetype)
         {
-            var settings = await GetSettingsAsync();
-            var stopwatch = Stopwatch.StartNew();
-            var result = new WhaStackSendResult();
-
-            try
-            {
-                var client = _httpClientFactory.CreateClient();
-                var baseUrl = settings.BaseUrl.TrimEnd('/');
-                var url = $"{baseUrl}/messages/send-document";
-
-                var formattedPhone = phoneNumber.TrimStart('+').Replace(" ", "").Replace("-", "");
-
-                _logger.LogInformation("WhaStack: Sending document to {Phone} via {Url}", formattedPhone, url);
-
-                var jsonBody = new
-                {
-                    session_id = settings.SessionId,
-                    to = formattedPhone,
-                    media_url = mediaUrl,
-                    file_name = fileName,
-                    mimetype = mimetype
-                };
-
-                using var jsonContent = new StringContent(
-                    JsonSerializer.Serialize(jsonBody),
-                    System.Text.Encoding.UTF8,
-                    "application/json"
-                );
-
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
-
-                using var response = await client.PostAsync(url, jsonContent);
-                stopwatch.Stop();
-
-                result.StatusCode = (int)response.StatusCode;
-                result.ResponseBody = await response.Content.ReadAsStringAsync();
-                result.Success = response.IsSuccessStatusCode;
-                result.DurationMs = stopwatch.ElapsedMilliseconds;
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
-                    _logger.LogWarning("WhaStack send document failed: {Error}", result.ErrorMessage);
-                }
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                result.Success = false;
-                result.ErrorMessage = ex.Message;
-                result.DurationMs = stopwatch.ElapsedMilliseconds;
-                _logger.LogError(ex, "Error sending WhaStack document to {Phone}", phoneNumber);
-            }
-
-            return result;
+            var formattedPhone = (phoneNumber ?? "").TrimStart('+').Replace(" ", "").Replace("-", "");
+            return await SendWithRotationAsync(
+                endpoint: "/messages/send-document",
+                buildBody: sid => new { session_id = sid, to = formattedPhone, media_url = mediaUrl, file_name = fileName, mimetype },
+                target: formattedPhone);
         }
 
         public async Task<WhaStackSendResult> SendGroupImageAsync(string groupId, string mediaUrl, string caption = null)
         {
-            var settings = await GetSettingsAsync();
-            var stopwatch = Stopwatch.StartNew();
-            var result = new WhaStackSendResult();
-
-            try
-            {
-                var client = _httpClientFactory.CreateClient();
-                var baseUrl = settings.BaseUrl.TrimEnd('/');
-                var url = $"{baseUrl}/groups/send-image";
-
-                _logger.LogInformation("WhaStack: Sending image to group {GroupId} via {Url}", groupId, url);
-
-                var jsonBody = new
-                {
-                    session_id = settings.SessionId,
-                    group_id = groupId,
-                    media_url = mediaUrl,
-                    caption = caption ?? ""
-                };
-
-                using var jsonContent = new StringContent(
-                    JsonSerializer.Serialize(jsonBody),
-                    System.Text.Encoding.UTF8,
-                    "application/json"
-                );
-
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
-
-                using var response = await client.PostAsync(url, jsonContent);
-                stopwatch.Stop();
-
-                result.StatusCode = (int)response.StatusCode;
-                result.ResponseBody = await response.Content.ReadAsStringAsync();
-                result.Success = response.IsSuccessStatusCode;
-                result.DurationMs = stopwatch.ElapsedMilliseconds;
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
-                    _logger.LogWarning("WhaStack send group image failed: {Error}", result.ErrorMessage);
-                }
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                result.Success = false;
-                result.ErrorMessage = ex.Message;
-                result.DurationMs = stopwatch.ElapsedMilliseconds;
-                _logger.LogError(ex, "Error sending WhaStack image to group {GroupId}", groupId);
-            }
-
-            return result;
+            return await SendWithRotationAsync(
+                endpoint: "/groups/send-image",
+                buildBody: sid => new { session_id = sid, group_id = groupId, media_url = mediaUrl, caption = caption ?? "" },
+                target: groupId);
         }
 
         public async Task<WhaStackSendResult> SendGroupDocumentAsync(string groupId, string mediaUrl, string fileName)
         {
+            return await SendWithRotationAsync(
+                endpoint: "/groups/send-document",
+                buildBody: sid => new { session_id = sid, group_id = groupId, media_url = mediaUrl, file_name = fileName },
+                target: groupId);
+        }
+
+        /// <summary>
+        /// Core rotation routine: tries each active session in priority order,
+        /// retrying on failure with the next session until one succeeds or all are exhausted.
+        /// </summary>
+        private async Task<WhaStackSendResult> SendWithRotationAsync(string endpoint, Func<string, object> buildBody, string target)
+        {
             var settings = await GetSettingsAsync();
+            var result = new WhaStackSendResult();
+            var sessions = await GetActiveSessionsOrderedForSendingAsync();
+
+            // Fallback to legacy settings session if no instances are configured/active
+            if (sessions.Count == 0)
+            {
+                if (string.IsNullOrEmpty(settings.SessionId))
+                {
+                    result.Success = false;
+                    result.ErrorMessage = "لا توجد جلسات واتساب مفعلة في النظام";
+                    return result;
+                }
+                sessions.Add(new WhaStackSessionInstance
+                {
+                    Id = 0,
+                    DisplayName = "Legacy Session",
+                    SessionId = settings.SessionId,
+                    IsActive = true
+                });
+            }
+
+            if (string.IsNullOrEmpty(settings.BaseUrl) || string.IsNullOrEmpty(settings.ApiKey))
+            {
+                result.Success = false;
+                result.ErrorMessage = "إعدادات WhaStack الأساسية غير مكتملة (BaseUrl / ApiKey)";
+                return result;
+            }
+
+            var url = $"{settings.BaseUrl.TrimEnd('/')}{endpoint}";
+
+            foreach (var session in sessions)
+            {
+                result.AttemptsCount++;
+                result.UsedSessionInstanceId = session.Id == 0 ? (long?)null : session.Id;
+                result.UsedSessionName = session.DisplayName;
+
+                var attempt = await TrySendOnceAsync(url, buildBody(session.SessionId), settings.ApiKey);
+
+                // Persist usage stats only for real session instances (not the legacy fallback)
+                if (session.Id != 0)
+                {
+                    session.LastUsedAt = DateTime.UtcNow;
+                    if (attempt.Success)
+                    {
+                        session.ConsecutiveFailures = 0;
+                        session.TotalSentSuccess++;
+                    }
+                    else
+                    {
+                        session.ConsecutiveFailures++;
+                        session.LastFailureAt = DateTime.UtcNow;
+                        session.TotalSentFailed++;
+                    }
+                    session.ModifiedOn = DateTime.UtcNow;
+                    session.IsModified = true;
+                    try { await _context.SaveChangesAsync(); }
+                    catch (Exception saveEx) { _logger.LogWarning(saveEx, "Failed to update WhaStack session stats for {Id}", session.Id); }
+                }
+
+                result.Success = attempt.Success;
+                result.StatusCode = attempt.StatusCode;
+                result.ResponseBody = attempt.ResponseBody;
+                result.ErrorMessage = attempt.ErrorMessage;
+                result.DurationMs = attempt.DurationMs;
+
+                if (attempt.Success)
+                {
+                    _logger.LogInformation("WhaStack: sent to {Target} via session {Name} ({Id}) on attempt {Attempt}",
+                        target, session.DisplayName, session.Id, result.AttemptsCount);
+                    return result;
+                }
+
+                var attemptErr = $"#{result.AttemptsCount} [{session.DisplayName}]: {attempt.ErrorMessage}";
+                result.AttemptErrors.Add(attemptErr);
+                _logger.LogWarning("WhaStack: send attempt failed via session {Name} ({Id}): {Error}. Trying next.",
+                    session.DisplayName, session.Id, attempt.ErrorMessage);
+            }
+
+            result.Success = false;
+            result.ErrorMessage = $"فشل الإرسال عبر كل الجلسات ({result.AttemptsCount} محاولة): {string.Join(" | ", result.AttemptErrors)}";
+            _logger.LogError("WhaStack: All {Count} sessions failed to send to {Target}", result.AttemptsCount, target);
+            return result;
+        }
+
+        private async Task<WhaStackSendResult> TrySendOnceAsync(string url, object body, string apiKey)
+        {
             var stopwatch = Stopwatch.StartNew();
             var result = new WhaStackSendResult();
 
             try
             {
                 var client = _httpClientFactory.CreateClient();
-                var baseUrl = settings.BaseUrl.TrimEnd('/');
-                var url = $"{baseUrl}/groups/send-document";
-
-                _logger.LogInformation("WhaStack: Sending document to group {GroupId} via {Url}", groupId, url);
-
-                var jsonBody = new
-                {
-                    session_id = settings.SessionId,
-                    group_id = groupId,
-                    media_url = mediaUrl,
-                    file_name = fileName
-                };
-
                 using var jsonContent = new StringContent(
-                    JsonSerializer.Serialize(jsonBody),
+                    JsonSerializer.Serialize(body),
                     System.Text.Encoding.UTF8,
                     "application/json"
                 );
 
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
                 using var response = await client.PostAsync(url, jsonContent);
                 stopwatch.Stop();
 
                 result.StatusCode = (int)response.StatusCode;
                 result.ResponseBody = await response.Content.ReadAsStringAsync();
-                result.Success = response.IsSuccessStatusCode;
                 result.DurationMs = stopwatch.ElapsedMilliseconds;
+                result.Success = response.IsSuccessStatusCode;
 
                 if (!response.IsSuccessStatusCode)
                 {
                     result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
-                    _logger.LogWarning("WhaStack send group document failed: {Error}", result.ErrorMessage);
                 }
             }
             catch (Exception ex)
@@ -416,7 +396,6 @@ namespace PostexS.Services
                 result.Success = false;
                 result.ErrorMessage = ex.Message;
                 result.DurationMs = stopwatch.ElapsedMilliseconds;
-                _logger.LogError(ex, "Error sending WhaStack document to group {GroupId}", groupId);
             }
 
             return result;
@@ -431,11 +410,15 @@ namespace PostexS.Services
             var settings = await GetSettingsAsync();
             var result = new WhaStackGetGroupsResult();
 
+            // Use first active session if available, else fallback to settings
+            var sessions = await GetActiveSessionsOrderedForSendingAsync();
+            string sessionId = sessions.Count > 0 ? sessions[0].SessionId : settings.SessionId;
+
             try
             {
                 var client = _httpClientFactory.CreateClient();
                 var baseUrl = settings.BaseUrl.TrimEnd('/');
-                var url = $"{baseUrl}/groups?session_id={Uri.EscapeDataString(settings.SessionId)}";
+                var url = $"{baseUrl}/groups?session_id={Uri.EscapeDataString(sessionId ?? "")}";
 
                 _logger.LogInformation("WhaStack: Getting groups via {Url}", url);
 
@@ -453,24 +436,13 @@ namespace PostexS.Services
                     {
                         var jsonResponse = JsonDocument.Parse(result.ResponseBody);
 
-                        // Try to parse groups from response
                         JsonElement? groupsElement = null;
-
-                        // Try "data" property first
                         if (jsonResponse.RootElement.TryGetProperty("data", out var dataElement) && dataElement.ValueKind == JsonValueKind.Array)
-                        {
                             groupsElement = dataElement;
-                        }
-                        // Try "groups" property
                         else if (jsonResponse.RootElement.TryGetProperty("groups", out var groupsProp) && groupsProp.ValueKind == JsonValueKind.Array)
-                        {
                             groupsElement = groupsProp;
-                        }
-                        // Response is directly an array
                         else if (jsonResponse.RootElement.ValueKind == JsonValueKind.Array)
-                        {
                             groupsElement = jsonResponse.RootElement;
-                        }
 
                         if (groupsElement.HasValue)
                         {
@@ -478,52 +450,35 @@ namespace PostexS.Services
                             {
                                 var groupInfo = new WhatsAppGroupInfo();
 
-                                // Get Group ID
                                 if (group.TryGetProperty("id", out var idElement))
-                                {
                                     groupInfo.GroupId = idElement.GetString();
-                                }
                                 else if (group.TryGetProperty("group_id", out var groupIdElement))
-                                {
                                     groupInfo.GroupId = groupIdElement.GetString();
-                                }
 
-                                // Get Group Name
                                 if (group.TryGetProperty("name", out var nameElement))
-                                {
                                     groupInfo.GroupName = nameElement.GetString();
-                                }
                                 else if (group.TryGetProperty("subject", out var subjectElement))
-                                {
                                     groupInfo.GroupName = subjectElement.GetString();
-                                }
 
-                                // Get Description
                                 if (group.TryGetProperty("description", out var descElement))
-                                {
                                     groupInfo.Description = descElement.GetString();
-                                }
                                 else if (group.TryGetProperty("desc", out var descProp))
-                                {
                                     groupInfo.Description = descProp.GetString();
-                                }
 
                                 if (!string.IsNullOrEmpty(groupInfo.GroupId))
-                                {
                                     result.Groups.Add(groupInfo);
-                                }
                             }
                         }
 
                         if (result.Groups.Count == 0)
                         {
                             result.ErrorMessage = "لم يتم العثور على جروبات في الاستجابة";
-                            _logger.LogWarning("WhaStack: No groups found in response. Response body: {Response}", result.ResponseBody);
+                            _logger.LogWarning("WhaStack: No groups found. Response: {Response}", result.ResponseBody);
                         }
                     }
                     catch (Exception parseEx)
                     {
-                        _logger.LogWarning(parseEx, "WhaStack: Could not parse groups from response: {Response}", result.ResponseBody);
+                        _logger.LogWarning(parseEx, "WhaStack: Could not parse groups");
                         result.Success = false;
                         result.ErrorMessage = "فشل في تحليل استجابة الـ API";
                     }
@@ -545,7 +500,7 @@ namespace PostexS.Services
 
         #endregion
 
-        #region Sessions
+        #region Sessions (remote API)
 
         public async Task<WhaStackSessionsResult> GetSessionsAsync()
         {
@@ -559,9 +514,6 @@ namespace PostexS.Services
                 var url = $"{baseUrl}/sessions";
 
                 var apiKey = settings.ApiKey?.Trim();
-                _logger.LogInformation("WhaStack: Getting sessions via {Url}, ApiKey length={Length}, starts={Start}",
-                    url, apiKey?.Length ?? 0, apiKey?.Length > 4 ? apiKey.Substring(0, 4) + "..." : "EMPTY");
-
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
                 using var response = await client.GetAsync(url);
@@ -575,24 +527,14 @@ namespace PostexS.Services
                     try
                     {
                         var jsonResponse = JsonDocument.Parse(result.ResponseBody);
-
                         JsonElement? sessionsElement = null;
 
-                        // Try "data" property first
                         if (jsonResponse.RootElement.TryGetProperty("data", out var dataElement) && dataElement.ValueKind == JsonValueKind.Array)
-                        {
                             sessionsElement = dataElement;
-                        }
-                        // Try "sessions" property
                         else if (jsonResponse.RootElement.TryGetProperty("sessions", out var sessionsProp) && sessionsProp.ValueKind == JsonValueKind.Array)
-                        {
                             sessionsElement = sessionsProp;
-                        }
-                        // Response is directly an array
                         else if (jsonResponse.RootElement.ValueKind == JsonValueKind.Array)
-                        {
                             sessionsElement = jsonResponse.RootElement;
-                        }
 
                         if (sessionsElement.HasValue)
                         {
@@ -600,25 +542,21 @@ namespace PostexS.Services
                             {
                                 var sessionInfo = new WhaStackSessionInfo();
 
-                                // Get Session ID
                                 if (session.TryGetProperty("session_id", out var sidElement))
                                     sessionInfo.SessionId = sidElement.GetString();
                                 else if (session.TryGetProperty("id", out var idElement))
                                     sessionInfo.SessionId = idElement.GetString();
 
-                                // Get Name
                                 if (session.TryGetProperty("name", out var nameElement))
                                     sessionInfo.Name = nameElement.GetString();
                                 else if (session.TryGetProperty("session_name", out var snameElement))
                                     sessionInfo.Name = snameElement.GetString();
 
-                                // Get Status
                                 if (session.TryGetProperty("status", out var statusElement))
                                     sessionInfo.Status = statusElement.GetString();
                                 else if (session.TryGetProperty("state", out var stateElement))
                                     sessionInfo.Status = stateElement.GetString();
 
-                                // Get Phone Number
                                 if (session.TryGetProperty("phone", out var phoneElement))
                                     sessionInfo.PhoneNumber = phoneElement.GetString();
                                 else if (session.TryGetProperty("phone_number", out var pnElement))
@@ -627,21 +565,18 @@ namespace PostexS.Services
                                     sessionInfo.PhoneNumber = numElement.GetString();
 
                                 if (!string.IsNullOrEmpty(sessionInfo.SessionId))
-                                {
                                     result.Sessions.Add(sessionInfo);
-                                }
                             }
                         }
 
                         if (result.Sessions.Count == 0)
                         {
                             result.ErrorMessage = "لم يتم العثور على جلسات في الاستجابة";
-                            _logger.LogWarning("WhaStack: No sessions found in response. Response body: {Response}", result.ResponseBody);
                         }
                     }
                     catch (Exception parseEx)
                     {
-                        _logger.LogWarning(parseEx, "WhaStack: Could not parse sessions from response: {Response}", result.ResponseBody);
+                        _logger.LogWarning(parseEx, "WhaStack: Could not parse sessions");
                         result.Success = false;
                         result.ErrorMessage = "فشل في تحليل استجابة الـ API";
                     }
@@ -676,8 +611,6 @@ namespace PostexS.Services
                 var baseUrl = settings.BaseUrl.TrimEnd('/');
                 var url = $"{baseUrl}/messages/quota";
 
-                _logger.LogInformation("WhaStack: Getting quota via {Url}", url);
-
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
 
                 using var response = await client.GetAsync(url);
@@ -693,22 +626,15 @@ namespace PostexS.Services
                         var jsonResponse = JsonDocument.Parse(result.ResponseBody);
 
                         if (jsonResponse.RootElement.TryGetProperty("total", out var totalElement))
-                        {
                             result.TotalQuota = totalElement.GetInt32();
-                        }
                         if (jsonResponse.RootElement.TryGetProperty("remaining", out var remainingElement))
-                        {
                             result.RemainingQuota = remainingElement.GetInt32();
-                        }
-                        // Try alternative property names
                         if (result.RemainingQuota == null && jsonResponse.RootElement.TryGetProperty("quota", out var quotaElement))
-                        {
                             result.RemainingQuota = quotaElement.GetInt32();
-                        }
                     }
                     catch (Exception parseEx)
                     {
-                        _logger.LogWarning(parseEx, "WhaStack: Could not parse quota from response: {Response}", result.ResponseBody);
+                        _logger.LogWarning(parseEx, "WhaStack: Could not parse quota");
                     }
                 }
                 else
@@ -741,9 +667,7 @@ namespace PostexS.Services
                 var baseUrl = settings.BaseUrl.TrimEnd('/');
                 var url = $"{baseUrl}/sessions";
 
-                _logger.LogInformation("WhaStack: Creating new session with name '{Name}' via {Url}", name, url);
-
-                var jsonBody = new { name = name };
+                var jsonBody = new { name };
 
                 using var jsonContent = new StringContent(
                     JsonSerializer.Serialize(jsonBody),
@@ -773,25 +697,18 @@ namespace PostexS.Services
                                 result.SessionId = idElement.GetString();
                         }
                         else if (jsonResponse.RootElement.TryGetProperty("session_id", out var sidElement))
-                        {
                             result.SessionId = sidElement.GetString();
-                        }
                         else if (jsonResponse.RootElement.TryGetProperty("id", out var idElement))
-                        {
                             result.SessionId = idElement.GetString();
-                        }
-
-                        _logger.LogInformation("WhaStack: Session created successfully. SessionId={SessionId}", result.SessionId);
                     }
                     catch (Exception parseEx)
                     {
-                        _logger.LogWarning(parseEx, "WhaStack: Could not parse create session response: {Response}", result.ResponseBody);
+                        _logger.LogWarning(parseEx, "WhaStack: Could not parse create session response");
                     }
                 }
                 else
                 {
                     result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
-                    _logger.LogWarning("WhaStack create session failed: {Error}", result.ErrorMessage);
                 }
             }
             catch (Exception ex)
@@ -814,8 +731,6 @@ namespace PostexS.Services
                 var client = _httpClientFactory.CreateClient();
                 var baseUrl = settings.BaseUrl.TrimEnd('/');
                 var url = $"{baseUrl}/sessions/{Uri.EscapeDataString(sessionId)}/qr";
-
-                _logger.LogInformation("WhaStack: Getting QR for session {SessionId} via {Url}", sessionId, url);
 
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
 
@@ -850,26 +765,19 @@ namespace PostexS.Services
                                     result.QrCode = imgElement.GetString();
                             }
                             else if (jsonResponse.RootElement.TryGetProperty("qr", out var qrElement))
-                            {
                                 result.QrCode = qrElement.GetString();
-                            }
                             else if (jsonResponse.RootElement.TryGetProperty("qr_code", out var qrcElement))
-                            {
                                 result.QrCode = qrcElement.GetString();
-                            }
                         }
-
-                        _logger.LogInformation("WhaStack: QR code retrieved successfully for session {SessionId}", sessionId);
                     }
                     catch (Exception parseEx)
                     {
-                        _logger.LogWarning(parseEx, "WhaStack: Could not parse QR response: {Response}", result.ResponseBody);
+                        _logger.LogWarning(parseEx, "WhaStack: Could not parse QR response");
                     }
                 }
                 else
                 {
                     result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
-                    _logger.LogWarning("WhaStack get QR failed: {Error}", result.ErrorMessage);
                 }
             }
             catch (Exception ex)
@@ -906,7 +814,6 @@ namespace PostexS.Services
                     try
                     {
                         var jsonResponse = JsonDocument.Parse(result.ResponseBody);
-
                         JsonElement root = jsonResponse.RootElement;
 
                         if (root.TryGetProperty("data", out var dataElement))
@@ -924,7 +831,7 @@ namespace PostexS.Services
                     }
                     catch (Exception parseEx)
                     {
-                        _logger.LogWarning(parseEx, "WhaStack: Could not parse status response: {Response}", result.ResponseBody);
+                        _logger.LogWarning(parseEx, "WhaStack: Could not parse status response");
                     }
                 }
                 else
@@ -942,6 +849,48 @@ namespace PostexS.Services
             return result;
         }
 
+        public async Task<WhaStackSendResult> DeleteRemoteSessionAsync(string sessionId)
+        {
+            var settings = await GetSettingsAsync();
+            var result = new WhaStackSendResult();
+
+            if (string.IsNullOrEmpty(settings.BaseUrl) || string.IsNullOrEmpty(settings.ApiKey))
+            {
+                result.Success = false;
+                result.ErrorMessage = "إعدادات WhaStack غير مكتملة";
+                return result;
+            }
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                var baseUrl = settings.BaseUrl.TrimEnd('/');
+                var url = $"{baseUrl}/sessions/{Uri.EscapeDataString(sessionId)}";
+
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
+
+                using var response = await client.DeleteAsync(url);
+                result.StatusCode = (int)response.StatusCode;
+                result.ResponseBody = await response.Content.ReadAsStringAsync();
+                // 404 means already gone — treat as success for cleanup purposes
+                result.Success = response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NotFound;
+
+                if (!result.Success)
+                {
+                    result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
+                    _logger.LogWarning("WhaStack delete session failed for {SessionId}: {Error}", sessionId, result.ErrorMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+                _logger.LogError(ex, "Error deleting WhaStack session {SessionId}", sessionId);
+            }
+
+            return result;
+        }
+
         public async Task<WhaStackSendResult> ReconnectSessionAsync(string sessionId)
         {
             var settings = await GetSettingsAsync();
@@ -952,8 +901,6 @@ namespace PostexS.Services
                 var client = _httpClientFactory.CreateClient();
                 var baseUrl = settings.BaseUrl.TrimEnd('/');
                 var url = $"{baseUrl}/sessions/{Uri.EscapeDataString(sessionId)}/reconnect";
-
-                _logger.LogInformation("WhaStack: Reconnecting session {SessionId} via {Url}", sessionId, url);
 
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
 
@@ -966,11 +913,6 @@ namespace PostexS.Services
                 if (!response.IsSuccessStatusCode)
                 {
                     result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
-                    _logger.LogWarning("WhaStack reconnect session failed: {Error}", result.ErrorMessage);
-                }
-                else
-                {
-                    _logger.LogInformation("WhaStack: Session {SessionId} reconnected successfully", sessionId);
                 }
             }
             catch (Exception ex)
@@ -985,5 +927,4 @@ namespace PostexS.Services
 
         #endregion
     }
-
 }

@@ -29,8 +29,6 @@ namespace PostexS.Services
             _logger = logger;
         }
 
-        #region Settings Management
-
         public async Task<WhatsAppBotCloudSettings> GetSettingsAsync()
         {
             var settings = await _context.WhatsAppBotCloudSettings
@@ -72,10 +70,6 @@ namespace PostexS.Services
             return await _context.SaveChangesAsync() > 0;
         }
 
-        #endregion
-
-        #region Group Management
-
         public async Task<WhatsAppBotCloudGetGroupsResult> GetGroupsAsync()
         {
             var settings = await GetSettingsAsync();
@@ -85,13 +79,9 @@ namespace PostexS.Services
             {
                 var client = _httpClientFactory.CreateClient();
                 var baseUrl = settings.BaseUrl.TrimEnd('/');
-                // API endpoint: GET /get_groups?instance_id=XXX&access_token=XXX
-                var url = $"{baseUrl}/get_groups?instance_id={Uri.EscapeDataString(settings.InstanceId)}&access_token={Uri.EscapeDataString(settings.AccessToken)}";
-
-                _logger.LogInformation("Getting groups via {Url}", url);
+                var url = $"{baseUrl}/get_groups?instance_id={Uri.EscapeDataString(settings.InstanceId ?? "")}&access_token={Uri.EscapeDataString(settings.AccessToken ?? "")}";
 
                 using var response = await client.GetAsync(url);
-
                 result.StatusCode = (int)response.StatusCode;
                 result.ResponseBody = await response.Content.ReadAsStringAsync();
                 result.Success = response.IsSuccessStatusCode;
@@ -102,7 +92,6 @@ namespace PostexS.Services
                     {
                         var jsonResponse = JsonDocument.Parse(result.ResponseBody);
 
-                        // Check response status first
                         if (jsonResponse.RootElement.TryGetProperty("status", out var statusElement))
                         {
                             var status = statusElement.GetString();
@@ -110,84 +99,43 @@ namespace PostexS.Services
                             {
                                 result.Success = false;
                                 if (jsonResponse.RootElement.TryGetProperty("message", out var msgElement))
-                                {
                                     result.ErrorMessage = msgElement.GetString();
-                                }
                                 return result;
                             }
                         }
 
-                        // Parse groups array - API returns data in "data" property
                         JsonElement? groupsElement = null;
-                        
-                        // Try "data" property first (WhatsApp Bot Cloud format)
                         if (jsonResponse.RootElement.TryGetProperty("data", out var dataElement) && dataElement.ValueKind == JsonValueKind.Array)
-                        {
                             groupsElement = dataElement;
-                        }
-                        // Try "groups" property (alternative format)
                         else if (jsonResponse.RootElement.TryGetProperty("groups", out var groupsProp) && groupsProp.ValueKind == JsonValueKind.Array)
-                        {
                             groupsElement = groupsProp;
-                        }
-                        // Response is directly an array
                         else if (jsonResponse.RootElement.ValueKind == JsonValueKind.Array)
-                        {
                             groupsElement = jsonResponse.RootElement;
-                        }
 
                         if (groupsElement.HasValue)
                         {
                             foreach (var group in groupsElement.Value.EnumerateArray())
                             {
                                 var groupInfo = new WhatsAppGroupInfo();
+                                if (group.TryGetProperty("id", out var idElement)) groupInfo.GroupId = idElement.GetString();
+                                else if (group.TryGetProperty("group_id", out var groupIdElement)) groupInfo.GroupId = groupIdElement.GetString();
 
-                                // Get Group ID
-                                if (group.TryGetProperty("id", out var idElement))
-                                {
-                                    groupInfo.GroupId = idElement.GetString();
-                                }
-                                else if (group.TryGetProperty("group_id", out var groupIdElement))
-                                {
-                                    groupInfo.GroupId = groupIdElement.GetString();
-                                }
+                                if (group.TryGetProperty("name", out var nameElement)) groupInfo.GroupName = nameElement.GetString();
+                                else if (group.TryGetProperty("subject", out var subjectElement)) groupInfo.GroupName = subjectElement.GetString();
 
-                                // Get Group Name
-                                if (group.TryGetProperty("name", out var nameElement))
-                                {
-                                    groupInfo.GroupName = nameElement.GetString();
-                                }
-                                else if (group.TryGetProperty("subject", out var subjectElement))
-                                {
-                                    groupInfo.GroupName = subjectElement.GetString();
-                                }
+                                if (group.TryGetProperty("description", out var descElement)) groupInfo.Description = descElement.GetString();
+                                else if (group.TryGetProperty("desc", out var descProp)) groupInfo.Description = descProp.GetString();
 
-                                // Get Description
-                                if (group.TryGetProperty("description", out var descElement))
-                                {
-                                    groupInfo.Description = descElement.GetString();
-                                }
-                                else if (group.TryGetProperty("desc", out var descProp))
-                                {
-                                    groupInfo.Description = descProp.GetString();
-                                }
-
-                                if (!string.IsNullOrEmpty(groupInfo.GroupId))
-                                {
-                                    result.Groups.Add(groupInfo);
-                                }
+                                if (!string.IsNullOrEmpty(groupInfo.GroupId)) result.Groups.Add(groupInfo);
                             }
                         }
 
                         if (result.Groups.Count == 0)
-                        {
                             result.ErrorMessage = "لم يتم العثور على جروبات في الاستجابة";
-                            _logger.LogWarning("No groups found in response. Response body: {Response}", result.ResponseBody);
-                        }
                     }
                     catch (Exception parseEx)
                     {
-                        _logger.LogWarning(parseEx, "Could not parse groups from response: {Response}", result.ResponseBody);
+                        _logger.LogWarning(parseEx, "Could not parse groups");
                         result.Success = false;
                         result.ErrorMessage = "فشل في تحليل استجابة الـ API";
                     }
@@ -210,90 +158,38 @@ namespace PostexS.Services
         public async Task<WhatsAppBotCloudSendResult> SendGroupMessageAsync(string groupId, string message)
         {
             var settings = await GetSettingsAsync();
-            var stopwatch = Stopwatch.StartNew();
-            var result = new WhatsAppBotCloudSendResult();
-
-            try
+            return await SendCoreAsync($"{settings.BaseUrl?.TrimEnd('/')}/send_group", new
             {
-                var client = _httpClientFactory.CreateClient();
-                var baseUrl = settings.BaseUrl.TrimEnd('/');
-                // API endpoint: POST /send_group
-                var url = $"{baseUrl}/send_group";
-
-                _logger.LogInformation("Sending WhatsApp message to group {GroupId} via {Url}", groupId, url);
-
-                // JSON body according to API documentation
-                var jsonBody = new
-                {
-                    group_id = groupId,
-                    type = "text",
-                    message = message,
-                    instance_id = settings.InstanceId,
-                    access_token = settings.AccessToken
-                };
-
-                using var jsonContent = new StringContent(
-                    System.Text.Json.JsonSerializer.Serialize(jsonBody),
-                    System.Text.Encoding.UTF8,
-                    "application/json"
-                );
-
-                using var response = await client.PostAsync(url, jsonContent);
-                stopwatch.Stop();
-
-                result.StatusCode = (int)response.StatusCode;
-                result.ResponseBody = await response.Content.ReadAsStringAsync();
-                result.Success = response.IsSuccessStatusCode;
-                result.DurationMs = stopwatch.ElapsedMilliseconds;
-
-                _logger.LogInformation("WhatsApp Bot Cloud API response: Status={StatusCode}, Body={Body}", result.StatusCode, result.ResponseBody);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
-                    _logger.LogWarning("WhatsApp Bot Cloud message failed: {Error}", result.ErrorMessage);
-                }
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                result.Success = false;
-                result.ErrorMessage = ex.Message;
-                result.DurationMs = stopwatch.ElapsedMilliseconds;
-                _logger.LogError(ex, "Error sending WhatsApp Bot Cloud message to group {GroupId}", groupId);
-            }
-
-            return result;
+                group_id = groupId,
+                type = "text",
+                message,
+                instance_id = settings.InstanceId,
+                access_token = settings.AccessToken
+            });
         }
 
         public async Task<WhatsAppBotCloudSendResult> SendMessageAsync(string phoneNumber, string message)
         {
             var settings = await GetSettingsAsync();
+            var formattedPhone = (phoneNumber ?? "").TrimStart('+').Replace(" ", "").Replace("-", "");
+            return await SendCoreAsync($"{settings.BaseUrl?.TrimEnd('/')}/send", new
+            {
+                number = formattedPhone,
+                type = "text",
+                message,
+                instance_id = settings.InstanceId,
+                access_token = settings.AccessToken
+            });
+        }
+
+        private async Task<WhatsAppBotCloudSendResult> SendCoreAsync(string url, object jsonBody)
+        {
             var stopwatch = Stopwatch.StartNew();
             var result = new WhatsAppBotCloudSendResult();
 
             try
             {
                 var client = _httpClientFactory.CreateClient();
-                var baseUrl = settings.BaseUrl.TrimEnd('/');
-                // API endpoint: POST /send
-                var url = $"{baseUrl}/send";
-
-                // Format phone number (remove + if present and any spaces)
-                var formattedPhone = phoneNumber.TrimStart('+').Replace(" ", "").Replace("-", "");
-
-                _logger.LogInformation("Sending WhatsApp message to {Phone} via {Url}", formattedPhone, url);
-
-                // JSON body according to API documentation
-                var jsonBody = new
-                {
-                    number = formattedPhone,
-                    type = "text",
-                    message = message,
-                    instance_id = settings.InstanceId,
-                    access_token = settings.AccessToken
-                };
-
                 using var jsonContent = new StringContent(
                     System.Text.Json.JsonSerializer.Serialize(jsonBody),
                     System.Text.Encoding.UTF8,
@@ -308,12 +204,9 @@ namespace PostexS.Services
                 result.Success = response.IsSuccessStatusCode;
                 result.DurationMs = stopwatch.ElapsedMilliseconds;
 
-                _logger.LogInformation("WhatsApp Bot Cloud API response: Status={StatusCode}, Body={Body}", result.StatusCode, result.ResponseBody);
-
                 if (!response.IsSuccessStatusCode)
                 {
                     result.ErrorMessage = $"HTTP {result.StatusCode}: {result.ResponseBody}";
-                    _logger.LogWarning("WhatsApp Bot Cloud message failed: {Error}", result.ErrorMessage);
                 }
             }
             catch (Exception ex)
@@ -322,12 +215,10 @@ namespace PostexS.Services
                 result.Success = false;
                 result.ErrorMessage = ex.Message;
                 result.DurationMs = stopwatch.ElapsedMilliseconds;
-                _logger.LogError(ex, "Error sending WhatsApp Bot Cloud message to {Phone}", phoneNumber);
+                _logger.LogError(ex, "Error sending WhatsApp Bot Cloud message");
             }
 
             return result;
         }
-
-        #endregion
     }
 }
