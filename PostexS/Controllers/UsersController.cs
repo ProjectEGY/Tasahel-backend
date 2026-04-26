@@ -2008,17 +2008,21 @@ namespace PostexS.Controllers
         }
         public FileContentResult Downloadfile()
         {
-            //var sDocument = System.IO.Path.GetFullPath("OrdersDetails.xlsx");
+            // ===== الملف الجديد بـ 10 أعمدة (فيه عمود "رقم إضافي للمرسل إليه") =====
+            // الترتيب لازم يطابق منطق القراءة في createOrders (وضع الفورمات الجديد):
+            // 0: اسم المرسل إليه | 1: رقم هاتف | 2: رقم إضافي | 3: عنوان | 4: محافظة
+            // 5: سعر الطلب | 6: خدمة التوصيل | 7: ملاحظات | 8: كود العميل | 9: كود الطلب
             string webRootPath = _webHostEnvironment.WebRootPath;
-            string contentRootPath = _webHostEnvironment.ContentRootPath;
-            string path = "";
-            path = Path.Combine(webRootPath, "ExcelOrdersDetails.xlsx");
+            string newPath = Path.Combine(webRootPath, "New-ExcelOrdersDetails.xlsx");
+            string legacyPath = Path.Combine(webRootPath, "ExcelOrdersDetails.xlsx");
 
+            // الأولوية للملف الجديد، fallback للقديم لو الجديد لأي سبب مش موجود
+            string path = System.IO.File.Exists(newPath) ? newPath : legacyPath;
 
             byte[] fileBytes = System.IO.File.ReadAllBytes(path);
-            string fileName = "OrdersDetails.xlsx";
-            return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
-
+            return File(fileBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "OrdersDetails.xlsx");
         }
 
         public ActionResult createUsers()
@@ -2069,6 +2073,21 @@ namespace PostexS.Controllers
                     var file = $"{Directory.GetCurrentDirectory()}{@"\wwwroot\"}" + "\\" + "Orders.xlsx";
                     List<Order> orders = new List<Order>();
 
+                    // ===== ترتيب الأعمدة حسب الفورمات (قديم بدون رقم إضافي / جديد بـ رقم إضافي بعد رقم الهاتف) =====
+                    // القديم: 0:اسم 1:هاتف 2:عنوان 3:محافظة 4:سعر 5:خدمة 6:ملاحظات 7:كود عميل 8:كود طلب
+                    // الجديد: 0:اسم 1:هاتف 2:رقم_إضافي 3:عنوان 4:محافظة 5:سعر 6:خدمة 7:ملاحظات 8:كود عميل 9:كود طلب
+                    bool oldFmt = model.IsOldFileFormat;
+                    int colName        = 0;
+                    int colPhone       = 1;
+                    int colSecPhone    = oldFmt ? -1 : 2; // -1 يعني العمود مش موجود
+                    int colAddress     = oldFmt ? 2 : 3;
+                    int colCity        = oldFmt ? 3 : 4;
+                    int colCost        = oldFmt ? 4 : 5;
+                    int colDelivery    = oldFmt ? 5 : 6;
+                    int colNotes       = oldFmt ? 6 : 7;
+                    int colClientCode  = oldFmt ? 7 : 8;
+                    int colOrderCode   = oldFmt ? 8 : 9;
+
                     // First Pass: Validate all codes if user wants to use uploaded codes
                     #region ValidationCodes
                     if (model.UseUploadedCodes)
@@ -2086,9 +2105,9 @@ namespace PostexS.Controllers
                                 {
                                     if (x >= 1)
                                     {
-                                        if (reader.GetValue(8) != null)
+                                        if (reader.GetValue(colOrderCode) != null)
                                         {
-                                            string code = reader.GetValue(8).ToString();
+                                            string code = reader.GetValue(colOrderCode).ToString();
                                             // Check for duplicate codes within the Excel file
                                             if (excelCodes.Contains(code))
                                             {
@@ -2147,40 +2166,44 @@ namespace PostexS.Controllers
                             while (reader.Read())
                             {
                                 string tips = GeneralNote;
-                                var temp = reader.GetValue(6);
+                                var temp = reader.GetValue(colNotes);
                                 if (temp != null)
-                                    tips = reader.GetValue(6).ToString();
-                                //new product 
+                                    tips = reader.GetValue(colNotes).ToString();
+                                //new product
 
                                 if (x >= 1)
                                 {
                                     try
                                     {
-                                        //var barcodeWriter = new BarcodeWriter
-                                        //{
-                                        //    Format = BarcodeFormat.CODE_128,
-                                        //    Options = new EncodingOptions
-                                        //    {
-                                        //        Height = 30,
-                                        //        Width = 75
-                                        //    }
-                                        //};
+                                        // قراءة الرقم الإضافي (لو الفورمات الجديد) — اختياري، ممكن يكون فاضي
+                                        string secondaryPhone = null;
+                                        if (colSecPhone >= 0)
+                                        {
+                                            var rawSec = reader.GetValue(colSecPhone);
+                                            var secStr = rawSec?.ToString()?.Trim();
+                                            if (!string.IsNullOrEmpty(secStr))
+                                            {
+                                                // نضيف الـ "0" لو ناقص للتنسيق الموحد
+                                                secondaryPhone = secStr.StartsWith("0") ? secStr : "0" + secStr;
+                                            }
+                                        }
 
                                         orders.Add(new Order()
                                         {
                                             ClientId = model.ClientId,
-                                            ClientName = reader.GetValue(0).ToString(),
-                                            ClientPhone = "0" + reader.GetValue(1).ToString(),
-                                            Address = reader.GetValue(2).ToString(),
-                                            AddressCity = reader.GetValue(3).ToString(),
-                                            Cost = Convert.ToDouble(reader.GetValue(4)),
-                                            DeliveryFees = Convert.ToDouble(reader.GetValue(5)),
+                                            ClientName = reader.GetValue(colName).ToString(),
+                                            ClientPhone = "0" + reader.GetValue(colPhone).ToString(),
+                                            ClientSecondaryPhone = secondaryPhone,
+                                            Address = reader.GetValue(colAddress).ToString(),
+                                            AddressCity = reader.GetValue(colCity).ToString(),
+                                            Cost = Convert.ToDouble(reader.GetValue(colCost)),
+                                            DeliveryFees = Convert.ToDouble(reader.GetValue(colDelivery)),
                                             Pending = b,
-                                            TotalCost = Convert.ToDouble(reader.GetValue(4)) + Convert.ToDouble(reader.GetValue(5)),
+                                            TotalCost = Convert.ToDouble(reader.GetValue(colCost)) + Convert.ToDouble(reader.GetValue(colDelivery)),
                                             Status = OrderStatus.Placed,
                                             BranchId = user.BranchId,
                                             Notes = tips,
-                                            ClientCode = reader.GetValue(7).ToString()
+                                            ClientCode = reader.GetValue(colClientCode).ToString()
 
                                         });
 
@@ -2192,7 +2215,7 @@ namespace PostexS.Controllers
                                     if (model.UseUploadedCodes)
                                     {
 
-                                        var existingOrder = _orders.Get(o => o.Code == reader.GetValue(8).ToString()).FirstOrDefault();
+                                        var existingOrder = _orders.Get(o => o.Code == reader.GetValue(colOrderCode).ToString()).FirstOrDefault();
                                         if (existingOrder != null)
                                         {
                                             goto skip;
@@ -2215,7 +2238,7 @@ namespace PostexS.Controllers
                                     orders[x - 1].OrderOperationHistoryId = history.Id;
                                     if (model.UseUploadedCodes)
                                     {
-                                        orders[x - 1].Code = reader.GetValue(8).ToString();
+                                        orders[x - 1].Code = reader.GetValue(colOrderCode).ToString();
                                         orders[x - 1].UseCustomCode = true;
                                     }
                                     else

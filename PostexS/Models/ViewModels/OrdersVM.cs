@@ -16,6 +16,10 @@ namespace PostexS.Models.ViewModels
         [Display(Name = "استخدام الأكواد المرفوعة؟")]
         public bool UseUploadedCodes { get; set; } = false; // القيمة الافتراضية false
 
+        // الملف القديم بدون عمود "رقم إضافي للمرسل إليه"
+        // عند تفعيله — يقرأ النظام نفس ترتيب الأعمدة القديم. الافتراضي: false (الملف الجديد)
+        [Display(Name = "هذا ملف بالنسخة القديمة (بدون رقم إضافي)؟")]
+        public bool IsOldFileFormat { get; set; } = false;
     }
     public class UsersVM
     {
