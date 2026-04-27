@@ -23,14 +23,18 @@ namespace PostexS.Controllers.API
     /// </summary>
     public class AccountController : DriverBaseController
     {
+        private readonly IGeneric<DeviceTokens> _deviceTokens;
+
         public AccountController(
             UserManager<ApplicationUser> userManager,
             IGeneric<ApplicationUser> user,
             IGeneric<Location> locations,
             IConfiguration configuration,
-            IHttpClientFactory httpClientFactory)
+            IHttpClientFactory httpClientFactory,
+            IGeneric<DeviceTokens> deviceTokens)
             : base(userManager, user, locations, configuration, httpClientFactory)
         {
+            _deviceTokens = deviceTokens;
         }
 
         /// <summary>
@@ -216,6 +220,78 @@ namespace PostexS.Controllers.API
             await _user.Update(user);
             await UpdateLocationIfProvided(latitude, longitude, user);
             return Ok(baseResponse);
+        }
+
+        /// <summary>
+        /// حذف الحساب نهائياً - مطلوب من Apple App Store و Google Play
+        /// </summary>
+        /// <remarks>
+        /// يحتاج JWT Token + كلمة السر الحالية للتأكيد.
+        /// بعد الحذف:
+        ///   - الحساب لن يقدر يسجل دخول مرة أخرى
+        ///   - تُحذف الـ Device Tokens (لا يستقبل إشعارات)
+        ///   - بياناته تظل في النظام للسجلات والمحاسبة (Soft Delete)
+        ///   - الطلبات الجارية تظل سارية لحين معالجتها
+        /// </remarks>
+        /// <param name="dto">DeleteAccountDto: Password (مطلوب) + Reason (اختياري)</param>
+        [HttpDelete("Account")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> DeleteAccount(DeleteAccountDto dto)
+        {
+            var (user, errorResult) = await GetCurrentDriverAsync();
+            if (errorResult != null) return errorResult;
+
+            if (dto == null || string.IsNullOrEmpty(dto.Password))
+            {
+                baseResponse.ErrorCode = Errors.SomeThingWentwrong;
+                baseResponse.ErrorMessage = "كلمة السر مطلوبة لتأكيد الحذف";
+                return StatusCode((int)HttpStatusCode.BadRequest, baseResponse);
+            }
+
+            var isPasswordCorrect = _userManager.PasswordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
+            if (isPasswordCorrect == PasswordVerificationResult.Failed)
+            {
+                baseResponse.ErrorCode = Errors.TheOldPasswordIsInCorrect;
+                baseResponse.ErrorMessage = "كلمة السر غير صحيحة";
+                return StatusCode((int)HttpStatusCode.BadRequest, baseResponse);
+            }
+
+            try
+            {
+                // حذف الـ Device Tokens (إيقاف الإشعارات)
+                var tokens = _deviceTokens.Get(t => t.UserId == user.Id).ToList();
+                foreach (var t in tokens)
+                {
+                    t.IsDeleted = true;
+                    t.DeletedOn = DateTime.UtcNow;
+                    await _deviceTokens.Update(t);
+                }
+
+                // Soft delete للحساب
+                user.IsDeleted = true;
+                user.Tracking = false; // إيقاف تتبع الموقع
+
+                // إبطال إمكانية الدخول مستقبلاً
+                user.LockoutEnabled = true;
+                user.LockoutEnd = DateTimeOffset.MaxValue;
+
+                // سجّل سبب الحذف في الـ logs لو متبعت
+                if (!string.IsNullOrWhiteSpace(dto.Reason))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DriverApp] Account {user.Id} deleted. Reason: {dto.Reason.Trim()}");
+                }
+
+                await _user.Update(user);
+
+                baseResponse.Data = "تم حذف الحساب نهائياً. لن تقدر تسجل دخول مرة أخرى بهذه البيانات.";
+                return Ok(baseResponse);
+            }
+            catch (Exception ex)
+            {
+                baseResponse.ErrorCode = Errors.SomeThingWentwrong;
+                baseResponse.ErrorMessage = "حدث خطأ أثناء حذف الحساب: " + ex.Message;
+                return StatusCode((int)HttpStatusCode.InternalServerError, baseResponse);
+            }
         }
 
         /// <summary>

@@ -494,6 +494,78 @@ namespace PostexS.Controllers.API
             return Ok(_baseResponse);
         }
 
+        /// <summary>
+        /// حذف الحساب نهائياً - يقوم بحذف حساب المستخدم (Soft Delete) بعد التحقق من كلمة السر.
+        /// مطلوب من Apple App Store و Google Play لأي تطبيق فيه إنشاء حسابات.
+        /// </summary>
+        /// <remarks>
+        /// يحتاج JWT Token + كلمة السر الحالية للتأكيد.
+        /// بعد الحذف:
+        ///   - الحساب لن يقدر يسجل دخول مرة أخرى
+        ///   - تُحذف الـ Device Tokens (لا يستقبل إشعارات)
+        ///   - بياناته تظل في النظام للسجلات والمحاسبة (Soft Delete)
+        ///   - الطلبات الجارية تظل سارية لحين معالجتها (لا تُلغى تلقائياً)
+        /// </remarks>
+        /// <param name="dto">DeleteAccountDto: Password (مطلوب) + Reason (اختياري)</param>
+        [HttpDelete("Account")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountDto dto)
+        {
+            var (user, errorResult) = await GetCurrentSenderAsync();
+            if (errorResult != null) return errorResult;
+
+            if (dto == null || string.IsNullOrEmpty(dto.Password))
+            {
+                _baseResponse.ErrorCode = Errors.SomeThingWentwrong;
+                _baseResponse.ErrorMessage = "كلمة السر مطلوبة لتأكيد الحذف";
+                return StatusCode((int)HttpStatusCode.BadRequest, _baseResponse);
+            }
+
+            // التحقق من كلمة السر للتأكد من هوية المستخدم
+            if (!await _userManager.CheckPasswordAsync(user, dto.Password))
+            {
+                _baseResponse.ErrorCode = Errors.TheOldPasswordIsInCorrect;
+                _baseResponse.ErrorMessage = "كلمة السر غير صحيحة";
+                return StatusCode((int)HttpStatusCode.BadRequest, _baseResponse);
+            }
+
+            try
+            {
+                // حذف الـ Device Tokens (إيقاف الإشعارات)
+                var tokens = _deviceTokens.Get(t => t.UserId == user.Id).ToList();
+                foreach (var t in tokens)
+                {
+                    t.IsDeleted = true;
+                    t.DeletedOn = DateTime.UtcNow;
+                    await _deviceTokens.Update(t);
+                }
+
+                // Soft delete للحساب
+                user.IsDeleted = true;
+
+                // إبطال إمكانية الدخول مستقبلاً
+                user.LockoutEnabled = true;
+                user.LockoutEnd = DateTimeOffset.MaxValue;
+
+                // سجّل سبب الحذف في الـ logs (لو متبعت) — مش بنخزن في user لأنه مش عنده Note
+                if (!string.IsNullOrWhiteSpace(dto.Reason))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SenderApp] Account {user.Id} deleted. Reason: {dto.Reason.Trim()}");
+                }
+
+                await _user.Update(user);
+
+                _baseResponse.Data = "تم حذف الحساب نهائياً. لن تقدر تسجل دخول مرة أخرى بهذه البيانات.";
+                return Ok(_baseResponse);
+            }
+            catch (Exception ex)
+            {
+                _baseResponse.ErrorCode = Errors.SomeThingWentwrong;
+                _baseResponse.ErrorMessage = "حدث خطأ أثناء حذف الحساب: " + ex.Message;
+                return StatusCode((int)HttpStatusCode.InternalServerError, _baseResponse);
+            }
+        }
+
         #endregion
 
         #region Orders (JWT Required)
