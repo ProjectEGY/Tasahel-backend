@@ -26,6 +26,12 @@
                 <div class="form-group row">
                     <label>رقم هاتف العميل @(": " + Model.ClientPhone)</label>
                 </div>
+                @if (!string.IsNullOrWhiteSpace(Model.ClientSecondaryPhone))
+                {
+                    <div class="form-group row">
+                        <label>رقم هاتف إضافي @(": " + Model.ClientSecondaryPhone)</label>
+                    </div>
+                }
                 <div class="form-group row">
                     <label>العنوان @(": " + Model.Address)</label>
                 </div>

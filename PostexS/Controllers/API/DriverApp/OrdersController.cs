@@ -551,73 +551,43 @@ namespace PostexS.Controllers.API
             return barcodeImage;
         }
 
+        private static readonly TimeSpan LocationSnapshotInterval = TimeSpan.FromMinutes(5);
+
         private async Task<bool> UpdateLocationMethod(UpdateUserLocation dto, ApplicationUser user)
         {
-            if (user.Tracking)
+            if (!user.Tracking) return true;
+            if (!dto.Longitude.HasValue || !dto.Latitude.HasValue) return true;
+
+            TimeZoneInfo egyptTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+            DateTime egyptNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, egyptTimeZone);
+
+            var lastSnapshotAt = _locations.GetAllAsIQueryable(
+                    x => !x.IsDeleted && x.DeliveryId == user.Id,
+                    orderby: q => q.OrderByDescending(x => x.CreateOn),
+                    asNoTracking: true)
+                .Select(x => (DateTime?)x.CreateOn)
+                .FirstOrDefault();
+
+            if (lastSnapshotAt.HasValue && (egyptNow - lastSnapshotAt.Value) < LocationSnapshotInterval)
             {
-                if (dto.Longitude.HasValue)
-                    user.Longitude = dto.Longitude;
-
-                if (dto.Latitude.HasValue)
-                    user.Latitude = dto.Latitude;
-                var address = await GetAddressFromCoordinatesAsync(dto.Latitude.Value, dto.Longitude.Value);
-
-                await _user.Update(user);
-
-                //add to locations list 
-                // Define the Egypt time zone
-                TimeZoneInfo egyptTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
-
-                // Get the current UTC time
-                DateTime utcNow = DateTime.UtcNow;
-
-                // Convert the UTC time to Egypt time
-                DateTime egyptTime = TimeZoneInfo.ConvertTimeFromUtc(utcNow, egyptTimeZone);
-
-                Location location = new Location()
-                {
-                    DeliveryId = user.Id,
-                    Longitude = dto.Longitude,
-                    Latitude = dto.Latitude,
-                    CreateOn = egyptTime,
-                    Address = address,
-                };
-                await _locations.Add(location);
+                return true;
             }
+
+            user.Longitude = dto.Longitude;
+            user.Latitude = dto.Latitude;
+
+            await _user.Update(user);
+
+            Location location = new Location()
+            {
+                DeliveryId = user.Id,
+                Longitude = dto.Longitude,
+                Latitude = dto.Latitude,
+                CreateOn = egyptNow,
+            };
+            await _locations.Add(location);
+
             return true;
-        }
-        private async Task<string> GetAddressFromCoordinatesAsync(double latitude, double longitude)
-        {
-            string apiKey = "AIzaSyDR45xVCCyl8qLGg7tnQZcsAm4DGrhypFY";  // Replace with your actual API key
-            string language = "ar";  // Arabic language code
-
-            string url = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={latitude},{longitude}&key={apiKey}&language={language}";
-
-            var client = _httpClientFactory.CreateClient();
-            using var response = await client.GetAsync(url);
-            response.EnsureSuccessStatusCode();
-
-            string responseBody = await response.Content.ReadAsStringAsync();
-            JObject json = JObject.Parse(responseBody);
-
-            // Check if the status returned is OK
-            string status = json["status"]?.ToString();
-            if (status != "OK")
-            {
-                return "Address not found";
-            }
-
-            // Retrieve the formatted address in Arabic if available
-            var results = json["results"];
-            if (results == null || results.Count() == 0)
-            {
-                return "Address not found";
-            }
-
-
-            // If no detailed address found, return the first formatted_address
-            string fallbackAddress = results[1]["formatted_address"]?.ToString();
-            return fallbackAddress ?? "Address not found";
         }
 
     }
