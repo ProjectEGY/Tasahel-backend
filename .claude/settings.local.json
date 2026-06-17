@@ -39,7 +39,11 @@
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
       "Bash(git push:*)",
-      "Bash(dotnet ef *)"
+      "Bash(dotnet ef *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\ProjectEGY\\\\Tasahel-backend\" -Directory -Depth 0)",
+      "Bash(Select-Object Name)",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget"
     ]
   }
 }

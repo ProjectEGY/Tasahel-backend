@@ -473,7 +473,12 @@ namespace PostexS.Controllers
                 {
                     var userid = _userManger.GetUserId(User);
                     var user = await _user.GetObj(x => x.Id == userid);
-                    var wallet = await InitializeWallet(OrderId, user);
+
+                    var deliveryId = await ValidateOrdersBelongToSameDriver(OrderId);
+                    if (deliveryId == null)
+                        throw new Exception("لا توجد طلبات للتقفيل");
+
+                    var wallet = await InitializeWallet(deliveryId, user);
                     double total = 0;
 
                     for (int i = 0; i < OrderId.Count; i++)
@@ -1012,6 +1017,7 @@ namespace PostexS.Controllers
                 }
                 catch (Exception ex)
                 {
+                    TempData["CountryErrors"] = new List<string> { ex.Message };
                     var ID = (await _orders.GetObj(x => x.Id == OrderId[0]))?.DeliveryId;
                     if (Returned)
                         return RedirectToAction(nameof(FinshedReturnedOrders), new { id = ID });
@@ -1052,7 +1058,12 @@ namespace PostexS.Controllers
                 {
                     var userid = _userManger.GetUserId(User);
                     var user = await _user.GetObj(x => x.Id == userid);
-                    var wallet = await InitializeWallet(OrderId, user);
+
+                    var deliveryId = await ValidateOrdersBelongToSameDriver(OrderId);
+                    if (deliveryId == null)
+                        throw new Exception("لا توجد طلبات للتقفيل");
+
+                    var wallet = await InitializeWallet(deliveryId, user);
                     double total = 0;
 
                     for (int i = 0; i < OrderId.Count; i++)
@@ -1157,6 +1168,7 @@ namespace PostexS.Controllers
                 }
                 catch (Exception ex)
                 {
+                    TempData["CountryErrors"] = new List<string> { ex.Message };
                     var ID = (await _orders.GetObj(x => x.Id == OrderId[0]))?.DeliveryId;
                     if (Returned)
                         return RedirectToAction(nameof(FinshedPaidReturnedOrders), new { id = ID });
@@ -1201,24 +1213,39 @@ namespace PostexS.Controllers
                 }
             }
         }
-        private async Task<Wallet> InitializeWallet(List<long> orderIds, ApplicationUser user)
+        private async Task<Wallet> InitializeWallet(string deliveryId, ApplicationUser user)
         {
-            var wallet = new Wallet();
-            if (orderIds.Count > 0)
+            var wallet = new Wallet()
             {
-                var firstOrder = await _orders.GetObj(x => x.Id == orderIds[0]);
-                wallet = new Wallet()
-                {
-                    UserId = user.Id,
-                    Amount = 0,
-                    TransactionType = TransactionType.OrderFinished,
-                    ActualUserId = firstOrder.DeliveryId,
-                    UserWalletLast = user.Wallet,
-                    AddedToAdminWallet = false
-                };
-                await _wallet.Add(wallet);
-            }
+                UserId = user.Id,
+                Amount = 0,
+                TransactionType = TransactionType.OrderFinished,
+                ActualUserId = deliveryId,
+                UserWalletLast = user.Wallet,
+                AddedToAdminWallet = false
+            };
+            await _wallet.Add(wallet);
             return wallet;
+        }
+
+        private async Task<string> ValidateOrdersBelongToSameDriver(List<long> orderIds)
+        {
+            if (orderIds == null || orderIds.Count == 0)
+                return null;
+
+            string deliveryId = null;
+            foreach (var orderId in orderIds)
+            {
+                var order = await _orders.GetObj(x => x.Id == orderId);
+                if (order == null)
+                    throw new Exception($"الطلب رقم {orderId} غير موجود");
+
+                if (deliveryId == null)
+                    deliveryId = order.DeliveryId;
+                else if (order.DeliveryId != deliveryId)
+                    throw new Exception("لا يمكن تقفيل طلبات لمناديب مختلفين في نفس التقفيلة");
+            }
+            return deliveryId;
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
         public async Task<IActionResult> Edit(string id, string type = "")
