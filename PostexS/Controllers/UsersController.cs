@@ -203,6 +203,12 @@ namespace PostexS.Controllers
 
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
+        public IActionResult PendingDrivers()
+        {
+            return View(_user.Get(x => x.UserType == UserType.Driver && x.IsApproved == false
+            && !x.IsDeleted).ToList());
+        }
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
         public async Task<IActionResult> Accpet(string UserId)
         {
             var user = await _user.GetObj(x => x.Id == UserId);

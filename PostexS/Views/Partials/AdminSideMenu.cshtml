@@ -98,10 +98,15 @@
             }
             @if (!User.IsInRole("Accountant"))
             {
-                <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("users/index?q=d") ? "active" : "")">
-                    <a href="@Url.Action("Index", "Users", new {q = "d"})">
+                <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("users/index?q=d") || Context.Request.Path.ToString().ToLower().Contains("pendingdrivers") ? "active" : "")">
+                    <a href="#">
                         <i class="fa fa-motorcycle"></i> <span>المناديب</span>
+                        <i class="fa fa-angle-left pull-left"></i>
                     </a>
+                    <ul class="treeview-menu">
+                        <li><a href="@Url.Action("Index", "Users", new {q = "d"})"><i class="fa fa-list"></i> جميع المناديب</a></li>
+                        <li><a href="@Url.Action("PendingDrivers", "Users")"><i class="fa fa-user-plus"></i> طلبات الانضمام</a></li>
+                    </ul>
                 </li>
             }
             @* <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("video") ? "active" : "")">

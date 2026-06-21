@@ -38,6 +38,55 @@ namespace PostexS.Controllers.API
         }
 
         /// <summary>
+        /// تسجيل حساب مندوب جديد - الحساب يكون في انتظار موافقة الإدارة
+        /// </summary>
+        [HttpPost("Register")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Register([FromBody] DriverRegisterDto model)
+        {
+            if (model == null)
+            {
+                baseResponse.ErrorCode = Errors.TheModelIsInvalid;
+                baseResponse.ErrorMessage = "البيانات مطلوبة";
+                return StatusCode((int)HttpStatusCode.BadRequest, baseResponse);
+            }
+
+            if (await _user.IsExist(x => x.PhoneNumber == model.Phone && !x.IsDeleted))
+            {
+                baseResponse.ErrorCode = Errors.PhoneAlreadyRegistered;
+                baseResponse.ErrorMessage = "رقم الهاتف مسجل بالفعل";
+                return StatusCode((int)HttpStatusCode.BadRequest, baseResponse);
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName = model.Phone,
+                PhoneNumber = model.Phone,
+                Name = model.Name,
+                Email = model.Email,
+                WhatsappPhone = model.WhatsappPhone,
+                Address = model.Address,
+                UserType = UserType.Driver,
+                IsApproved = false,
+                Tracking = false,
+                BranchId = 1,
+            };
+
+            var result = await _userManager.CreateAsync(user, model.Password);
+            if (!result.Succeeded)
+            {
+                baseResponse.ErrorCode = Errors.SomeThingWentwrong;
+                baseResponse.ErrorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
+                return StatusCode((int)HttpStatusCode.BadRequest, baseResponse);
+            }
+
+            await _userManager.AddToRoleAsync(user, "Driver");
+
+            baseResponse.ErrorMessage = "تم إنشاء الحساب بنجاح وهو في انتظار موافقة الإدارة";
+            return Ok(baseResponse);
+        }
+
+        /// <summary>
         /// تسجيل دخول المندوب
         /// </summary>
         [HttpPost("Login")]
@@ -56,6 +105,13 @@ namespace PostexS.Controllers.API
                 {
                     baseResponse.ErrorCode = Errors.InvalidUserType;
                     baseResponse.ErrorMessage = "هذا الحساب خاص بالراسل، استخدم تطبيق الراسل لتسجيل الدخول";
+                    return StatusCode((int)HttpStatusCode.Forbidden, baseResponse);
+                }
+
+                if (!user.IsApproved)
+                {
+                    baseResponse.ErrorCode = Errors.UserNotApproved;
+                    baseResponse.ErrorMessage = "حسابك في انتظار موافقة الإدارة";
                     return StatusCode((int)HttpStatusCode.Forbidden, baseResponse);
                 }
 
