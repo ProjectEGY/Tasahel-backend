@@ -139,7 +139,9 @@ namespace PostexS.Helper
                     row["رقم الطلب"] = item.Code;
                     row["التاريخ"] = formattedDateTime;
                     row["المرسل إليه"] = item.ClientName;
-                    row["تليفون المرسل إليه"] = item.ClientPhone;
+                    row["تليفون المرسل إليه"] = string.IsNullOrEmpty(item.ClientSecondaryPhone)
+                        ? item.ClientPhone
+                        : item.ClientPhone + " / " + item.ClientSecondaryPhone;
                     row["المحافظة"] = item.AddressCity ?? "";
                     row["العنوان"] = item.Address ?? "";
                     row["المطلوب دفعه"] = item.TotalCost;

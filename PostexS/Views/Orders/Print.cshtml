@@ -127,6 +127,10 @@
                             <div>
                                 <strong>@item.ClientName <span class="badge bg-blue-active"> @item.ClientCode</span></strong><br />
                                 <span class="phone-number">@item.ClientPhone</span><br />
+                                @if (!string.IsNullOrEmpty(item.ClientSecondaryPhone))
+                                {
+                                    <span class="phone-number">@item.ClientSecondaryPhone</span><br />
+                                }
                                 <span>@item.AddressCity - @item.Address</span>
                             </div>
                         </td>

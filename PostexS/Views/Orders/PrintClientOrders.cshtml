@@ -267,6 +267,10 @@
 
                                     <td>
                                         @Model[i].ClientPhone
+                                        @if (!string.IsNullOrEmpty(Model[i].ClientSecondaryPhone))
+                                        {
+                                            <br />@Model[i].ClientSecondaryPhone
+                                        }
                                     </td>
 
                                     <td style="width:150px">

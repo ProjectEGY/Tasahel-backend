@@ -128,6 +128,10 @@
                                     <p class="badge">@order.ClientCode</p>
                                     <p>@order.ClientName</p>
                                     <p>الهاتف :  <a dir="auto" href="tel:@order.ClientPhone">@order.ClientPhone</a> </p>
+                                    @if (!string.IsNullOrEmpty(order.ClientSecondaryPhone))
+                                    {
+                                        <p>هاتف إضافي :  <a dir="auto" href="tel:@order.ClientSecondaryPhone">@order.ClientSecondaryPhone</a> </p>
+                                    }
                                     <p>العنوان : @order.AddressCity - @order.Address</p>
                                 </td>
                                 <td><input class="check-box no-print" type="checkbox" name="Orders" value="@order.Id" /></td>
@@ -248,6 +252,7 @@
                                 ReceiverName: '@order.ClientName',
                                 ClientCode: '@order.ClientCode',
                                 ReceiverPhone: '@order.ClientPhone',
+                                ReceiverSecondaryPhone: '@(order.ClientSecondaryPhone ?? "")',
                                 Address: '@order.AddressCity - @order.Address',
                                 Status: '@order.Status',
                                 IsDeleted: @order.IsDeleted.ToString().ToLower(),
@@ -303,6 +308,7 @@
                             <div style="margin-bottom:${marginBottom};">
                                 <div><strong>المرسل اليه:</strong> ${order.ReceiverName}</div>
                                 <div><strong>الهاتف:</strong> ${order.ReceiverPhone}</div>
+                                ${order.ReceiverSecondaryPhone ? `<div><strong>هاتف إضافي:</strong> ${order.ReceiverSecondaryPhone}</div>` : ''}
                                 <div><strong>العنوان:</strong> ${order.Address}</div>
                             </div>
 
