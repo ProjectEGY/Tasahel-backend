@@ -57,7 +57,8 @@ namespace PostexS
                 options.Cookie.IsEssential = true;
             });
             services.AddControllersWithViews();
-            services.AddDbContext<ApplicationDbContext>(x => x.UseSqlServer(Configuration.GetConnectionString("default")));
+            services.AddMemoryCache();
+            services.AddDbContext<ApplicationDbContext>(x => x.UseSqlServer(Configuration.GetConnectionString("default"), sqlOptions => sqlOptions.CommandTimeout(60)));
             services.AddIdentity<ApplicationUser, IdentityRole>(option =>
             {
                 option.Password.RequireNonAlphanumeric = false;

@@ -171,61 +171,16 @@ namespace PostexS.Controllers
             //    }
 
             //}
-            var orders = _orderService.GetList(x => /*x.Id > 459653 &&*/ x.CreateOn > new DateTime(2024, 10, 1, 0, 0, 0, 0) && x.Client.BranchId != x.BranchId && x.PreviousBranchId == null && x.TransferredConfirmed == false && !x.IsDeleted).ToList();
-
-            foreach (var order in orders)
-            {
-                order.PreviousBranchId = order.Client.BranchId;
-                await _orders.Update(order);
-                await _CRUD.Update(order.Id);
-            }
-
-
-            var ordersWithoutCode = _orderService.GetList(x => x.Code == null && x.Status != OrderStatus.PartialReturned && !x.IsDeleted).ToList();
-            foreach (var order in ordersWithoutCode)
-            {
-                //string datetoday = DateTime.Now.ToString("ddMMyyyy");
-                order.Code = "Tas" + /*datetoday +*/ order.Id.ToString();
-                order.BarcodeImage = getBarcode(order.Code);
-                await _orders.Update(order);
-                await _CRUD.Update(order.Id);
-            }
-
-
-
-            var ordersWithoutHistory = _orderService.GetList(x => x.OrderOperationHistoryId == null
-             && x.CreateOn > new DateTime(2023, 12, 28, 0, 0, 0, 0)).ToList();
-            foreach (var order in ordersWithoutHistory.OrderByDescending(x => x.CreateOn))
-            {
-                OrderOperationHistory history = new OrderOperationHistory()
-                {
-                    OrderId = order.Id,
-                    Create_UserId = order.ClientId,
-                    CreateDate = order.CreateOn,
-                };
-                if (!await _Histories.Add(history))
-                {
-                    if (!await _Histories.Add(history))
-                    {
-                        return BadRequest("من فضلك حاول لاحقاً");
-                    }
-                }
-                order.OrderOperationHistoryId = history.Id;
-                await _orders.Update(order);
-                await _CRUD.Update(order.Id);
-            }
-
-
-            var ordersWithoutBarCode = _orderService.GetList(x => x.BarcodeImage == null && !x.Code.StartsWith("R") && !x.IsDeleted
-           && x.Status != OrderStatus.PartialReturned && x.Status != OrderStatus.Delivered && x.Status != OrderStatus.Rejected
-           && x.CreateOn > new DateTime(2023, 12, 30, 0, 0, 0, 0)).ToList();
-
-            foreach (var order in ordersWithoutBarCode.OrderByDescending(x => x.CreateOn).ToList())
-            {
-                order.BarcodeImage = getBarcode(order.Code);
-                await _orders.Update(order);
-                await _CRUD.Update(order.Id);
-            }
+            // === كود صيانة البيانات القديمة — تم تعطيله لأنه كان يشتغل مع كل فتح صفحة ===
+            // === لو محتاج تشغله تاني، شغله مرة واحدة من endpoint منفصل ===
+            // var orders = _orderService.GetList(x => x.CreateOn > new DateTime(2024, 10, 1, 0, 0, 0, 0) && x.Client.BranchId != x.BranchId && x.PreviousBranchId == null && x.TransferredConfirmed == false && !x.IsDeleted).ToList();
+            // foreach (var order in orders) { order.PreviousBranchId = order.Client.BranchId; await _orders.Update(order); await _CRUD.Update(order.Id); }
+            // var ordersWithoutCode = _orderService.GetList(x => x.Code == null && x.Status != OrderStatus.PartialReturned && !x.IsDeleted).ToList();
+            // foreach (var order in ordersWithoutCode) { order.Code = "Tas" + order.Id.ToString(); order.BarcodeImage = getBarcode(order.Code); await _orders.Update(order); await _CRUD.Update(order.Id); }
+            // var ordersWithoutHistory = _orderService.GetList(x => x.OrderOperationHistoryId == null && x.CreateOn > new DateTime(2023, 12, 28, 0, 0, 0, 0)).ToList();
+            // foreach (var order in ordersWithoutHistory.OrderByDescending(x => x.CreateOn)) { ... }
+            // var ordersWithoutBarCode = _orderService.GetList(x => x.BarcodeImage == null && !x.Code.StartsWith("R") && !x.IsDeleted && x.Status != OrderStatus.PartialReturned && x.Status != OrderStatus.Delivered && x.Status != OrderStatus.Rejected && x.CreateOn > new DateTime(2023, 12, 30, 0, 0, 0, 0)).ToList();
+            // foreach (var order in ordersWithoutBarCode.OrderByDescending(x => x.CreateOn).ToList()) { order.BarcodeImage = getBarcode(order.Code); await _orders.Update(order); await _CRUD.Update(order.Id); }
 
             //////////
             if (User.IsInRole("Client"))
@@ -3587,8 +3542,10 @@ namespace PostexS.Controllers
             /*  var orders = _orders.Get(filter).ToList();
               ViewBag.TotalPrice = orders.Sum(x => x.Cost+x.DeliveryFees);*/
             ViewBag.PageStartRowNum = ((pageNumber - 1) * pageSize) + 1;
+            var countQuery = _orders.GetAllAsIQueryable(filter, orderBy, null, asNoTracking: true);
             return await PagedList<Order>.CreateAsync(
                 _orders.GetAllAsIQueryable(filter, orderBy, "Client,Client.Branch,Delivery,OrderNotes,Branch,PreviousBranch", asNoTracking: true),
+                countQuery,
                 pageNumber, pageSize);
         }
 

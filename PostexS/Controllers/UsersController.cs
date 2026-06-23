@@ -1234,28 +1234,25 @@ namespace PostexS.Controllers
             return wallet;
         }
 
-        private async Task<string> ValidateOrdersBelongToSameDriver(List<long> orderIds, string expectedDriverId = null)
+        private async Task<string> ValidateOrdersBelongToSameDriver(List<long> orderIds, string expectedDriverId)
         {
+            if (string.IsNullOrEmpty(expectedDriverId))
+                throw new Exception("خطأ في البيانات المرسلة. يرجى إعادة فتح صفحة التقفيل والمحاولة مرة أخرى.");
+
             if (orderIds == null || orderIds.Count == 0)
                 return null;
 
-            string deliveryId = null;
             foreach (var orderId in orderIds)
             {
                 var order = await _orders.GetObj(x => x.Id == orderId);
                 if (order == null)
                     throw new Exception($"الطلب رقم {orderId} غير موجود");
 
-                if (deliveryId == null)
-                    deliveryId = order.DeliveryId;
-                else if (order.DeliveryId != deliveryId)
-                    throw new Exception("لا يمكن تقفيل طلبات لمناديب مختلفين في نفس التقفيلة");
+                if (order.DeliveryId != expectedDriverId)
+                    throw new Exception($"تم تغيير المندوب على الطلب رقم {orderId} أثناء عملية التقفيل. يرجى إعادة فتح صفحة التقفيل.");
             }
 
-            if (!string.IsNullOrEmpty(expectedDriverId) && deliveryId != expectedDriverId)
-                throw new Exception($"تم تغيير المندوب على هذه الطلبات أثناء عملية التقفيل. المندوب المتوقع لم يعد مطابقاً. يرجى إعادة فتح صفحة التقفيل.");
-
-            return deliveryId;
+            return expectedDriverId;
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]
         public async Task<IActionResult> Edit(string id, string type = "")

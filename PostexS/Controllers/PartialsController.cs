@@ -61,22 +61,18 @@ namespace PostexS.Controllers
 
 
             var user = _userManger.GetUserId(User);
-            var Notifications = _notifiaction.Get(x => x.UserId == user).OrderByDescending(d => d.CreateOn).ToList();
-            headerVM.NotificationsNumber = Notifications.Count(d => !d.IsSeen && !d.IsDeleted);
-            if (Notifications != null && Notifications.Count > 0)
+            headerVM.NotificationsNumber = _notifiaction.GetCount(x => x.UserId == user && !x.IsSeen && !x.IsDeleted);
+            var recentNotifications = _notifiaction.Get(x => x.UserId == user && !x.IsDeleted)
+                .OrderByDescending(d => d.CreateOn).Take(20).ToList();
+            foreach (var item in recentNotifications)
             {
-                foreach (var item in Notifications)
+                headerVM.Notifications.Add(new NotificationVM()
                 {
-                    headerVM.Notifications.Add(new NotificationVM()
-                    {
-                        Body = item.Body,
-                        //NotificationType = item.NotificationType,
-                        IsSeen = item.IsSeen,
-                        Id = item.Id,
-                        Title = item.Title,
-                        //Link = item.NotificationLink
-                    });
-                }
+                    Body = item.Body,
+                    IsSeen = item.IsSeen,
+                    Id = item.Id,
+                    Title = item.Title,
+                });
             }
             return PartialView(headerVM);
         }

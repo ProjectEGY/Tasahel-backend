@@ -51,6 +51,13 @@ namespace PostexS.Helper
             return new PagedList<T>(items, count, pageIndex, pageSize);
         }
 
+        public static async Task<PagedList<T>> CreateAsync(IQueryable<T> source, IQueryable<T> countSource, int pageIndex, int pageSize)
+        {
+            var count = await countSource.CountAsync();
+            var items = await source.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToListAsync();
+            return new PagedList<T>(items, count, pageIndex, pageSize);
+        }
+
         public static PagedList<T> Create(List<T> source, int pageIndex, int pageSize)
         {
             var count = source.Count();

@@ -281,14 +281,12 @@ namespace PostexS.Controllers
         [HttpPost]
         public async Task<ActionResult> MarkAllNotificationAsSeenAsync(List<long> ids, string ReturnUrl)
         {
-            foreach (var id in ids)
+            var userId = _userManger.GetUserId(User);
+            var unseenNotifications = _notification.Get(x => x.UserId == userId && !x.IsSeen && !x.IsDeleted).ToList();
+            foreach (var notify in unseenNotifications)
             {
-                var notify = await _notification.GetObj(x => x.Id == id);
-                if (notify != null)
-                {
-                    notify.IsSeen = true;
-                    await _notification.Update(notify);
-                }
+                notify.IsSeen = true;
+                await _notification.Update(notify);
             }
             return Redirect(ReturnUrl);
         }

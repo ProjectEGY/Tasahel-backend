@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using PostexS.Interfaces;
 using PostexS.Models.Data;
 using PostexS.Models.Domain;
@@ -12,20 +13,28 @@ namespace PostexS.Services
     public class WhatsAppProviderService : IWhatsAppProviderService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IMemoryCache _cache;
+        private const string SettingsCacheKey = "WhatsAppProviderSettings";
 
-        public WhatsAppProviderService(ApplicationDbContext context)
+        public WhatsAppProviderService(ApplicationDbContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         public async Task<WhatsAppProviderSettings> GetProviderSettingsAsync()
         {
+            if (_cache.TryGetValue(SettingsCacheKey, out WhatsAppProviderSettings cached))
+                return cached;
+
             var settings = await _context.WhatsAppProviderSettings
                 .Where(s => !s.IsDeleted)
                 .OrderByDescending(s => s.Id)
                 .FirstOrDefaultAsync();
 
-            return settings ?? new WhatsAppProviderSettings();
+            settings = settings ?? new WhatsAppProviderSettings();
+            _cache.Set(SettingsCacheKey, settings, TimeSpan.FromMinutes(5));
+            return settings;
         }
 
         public async Task<bool> UpdateProviderAsync(WhatsAppProvider provider, string updatedBy)
@@ -55,7 +64,6 @@ namespace PostexS.Services
                 };
                 await _context.WhatsAppProviderSettings.AddAsync(newSettings);
             }
-            // لما يتفعل مزود، التانيين يتعطلوا تلقائي
             var wapilotSettings = await _context.WapilotSettings.Where(s => !s.IsDeleted).FirstOrDefaultAsync();
             if (wapilotSettings != null)
             {
@@ -80,7 +88,13 @@ namespace PostexS.Services
                 whaStackSettings.IsModified = true;
             }
 
-            return await _context.SaveChangesAsync() > 0;
+            var result = await _context.SaveChangesAsync() > 0;
+            if (result)
+            {
+                _cache.Remove(SettingsCacheKey);
+                _cache.Remove("WhaStackSettings");
+            }
+            return result;
         }
 
         public async Task<WhatsAppProvider> GetActiveProviderAsync()

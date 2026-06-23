@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using PostexS.Interfaces;
 using PostexS.Models.Data;
@@ -19,27 +20,36 @@ namespace PostexS.Services
         private readonly ApplicationDbContext _context;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<WhaStackService> _logger;
+        private readonly IMemoryCache _cache;
+        private const string SettingsCacheKey = "WhaStackSettings";
 
         public WhaStackService(
             ApplicationDbContext context,
             IHttpClientFactory httpClientFactory,
-            ILogger<WhaStackService> logger)
+            ILogger<WhaStackService> logger,
+            IMemoryCache cache)
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
             _logger = logger;
+            _cache = cache;
         }
 
         #region Settings Management
 
         public async Task<WhaStackSettings> GetSettingsAsync()
         {
+            if (_cache.TryGetValue(SettingsCacheKey, out WhaStackSettings cached))
+                return cached;
+
             var settings = await _context.WhaStackSettings
                 .Where(s => !s.IsDeleted)
                 .OrderByDescending(s => s.Id)
                 .FirstOrDefaultAsync();
 
-            return settings ?? new WhaStackSettings();
+            settings = settings ?? new WhaStackSettings();
+            _cache.Set(SettingsCacheKey, settings, TimeSpan.FromMinutes(5));
+            return settings;
         }
 
         public async Task<bool> UpdateSettingsAsync(WhaStackSettings settings, string updatedBy)
@@ -70,7 +80,9 @@ namespace PostexS.Services
                 await _context.WhaStackSettings.AddAsync(settings);
             }
 
-            return await _context.SaveChangesAsync() > 0;
+            var result = await _context.SaveChangesAsync() > 0;
+            if (result) _cache.Remove(SettingsCacheKey);
+            return result;
         }
 
         #endregion
