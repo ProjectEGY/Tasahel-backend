@@ -1594,9 +1594,8 @@ namespace PostexS.Controllers
         #region Complete Returned Orders
         [Route("Store/Returned")]
         [Authorize(Roles = "Admin,HighAdmin,TrustAdmin,Accountant")]
-        public async Task<IActionResult> AllReturnedComplete(List<string> UserIds, long branchId = -1)
+        public async Task<IActionResult> AllReturnedComplete(List<string> UserIds, long branchId = -1, int pageNumber = 1, int pageSize = 50, bool loadAll = false)
         {
-
             bool authHighAdmin = User.IsInRole("HighAdmin");
             bool authHighAccountant = User.IsInRole("Accountant");
             var BranchAdmin = new ApplicationUser();
@@ -1608,47 +1607,50 @@ namespace PostexS.Controllers
                 ViewBag.branchId = BranchAdmin.BranchId;
             }
 
-            var orders = new List<Order>();
-            if (UserIds.Count > 0)
+            var query = _orderService.GetQueryableList(x =>
+                ((x.OrderCompleted == OrderCompleted.NOK && (x.Status == OrderStatus.Returned ||
+                    x.Status == OrderStatus.PartialReturned))
+                || (x.ReturnedOrderCompleted == OrderCompleted.NOK && x.ReturnedFinished &&
+                    (x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender ||
+                     x.Status == OrderStatus.Returned_And_Paid_DeliveryCost)))
+                && !x.IsDeleted);
+
+            if (authHighAdmin || authHighAccountant)
             {
-                orders = _orderService.GetList(x => ((x.OrderCompleted == OrderCompleted.NOK && (x.Status == OrderStatus.Returned ||
-                                                          x.Status == OrderStatus.PartialReturned))
-                                                          || (x.ReturnedOrderCompleted == OrderCompleted.NOK && x.ReturnedFinished &&
-                                                          (x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender ||
-                                                         x.Status == OrderStatus.Returned_And_Paid_DeliveryCost)))
-                                                    && !x.IsDeleted
-                                                    && ((branchId == -1) || (x.BranchId == branchId &&
-                    (x.Client.BranchId == branchId || x.TransferredConfirmed)))
-                                                    && (UserIds.Contains(x.ClientId))).ToList();
-                if (authHighAdmin || authHighAccountant)
-                {
-                    orders = orders.Where(x =>
-                    x.BranchId == BranchAdmin.BranchId &&
-                    (x.Client.BranchId == BranchAdmin.BranchId || x.TransferredConfirmed)).ToList();
-                }
+                query = query.Where(x => x.BranchId == BranchAdmin.BranchId &&
+                    (x.Client.BranchId == BranchAdmin.BranchId || x.TransferredConfirmed));
             }
-            else if (authHighAdmin || authHighAccountant)
+            else if (branchId != -1)
             {
-                orders = _orderService.GetList(x => ((x.OrderCompleted == OrderCompleted.NOK && (x.Status == OrderStatus.Returned ||
-                                                          x.Status == OrderStatus.PartialReturned))
-                                                          || (x.ReturnedOrderCompleted == OrderCompleted.NOK && x.ReturnedFinished &&
-                                                          (x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender ||
-                                                         x.Status == OrderStatus.Returned_And_Paid_DeliveryCost)))
-                                                     && !x.IsDeleted
-                                                    && x.BranchId == BranchAdmin.BranchId
-                                                    && (x.Client.BranchId == BranchAdmin.BranchId || x.TransferredConfirmed)).ToList();
+                query = query.Where(x => x.BranchId == branchId &&
+                    (x.Client.BranchId == branchId || x.TransferredConfirmed));
+            }
+
+            if (UserIds != null && UserIds.Count > 0)
+            {
+                query = query.Where(x => UserIds.Contains(x.ClientId));
+            }
+
+            query = query.Include(x => x.Client).ThenInclude(c => c.Branch);
+
+            var totalCount = await query.CountAsync();
+            ViewBag.TotalCount = totalCount;
+            ViewBag.PageNumber = pageNumber;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+            ViewBag.LoadAll = loadAll;
+
+            List<Order> orders;
+            if (loadAll)
+            {
+                orders = await query.OrderByDescending(x => x.Id).ToListAsync();
             }
             else
             {
-                orders = _orderService.GetList(x => ((x.OrderCompleted == OrderCompleted.NOK && (x.Status == OrderStatus.Returned ||
-                                                          x.Status == OrderStatus.PartialReturned))
-                                                          || (x.ReturnedOrderCompleted == OrderCompleted.NOK && x.ReturnedFinished &&
-                                                          (x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender ||
-                                                         x.Status == OrderStatus.Returned_And_Paid_DeliveryCost)))
-                                                    && !x.IsDeleted
-                                                    && ((branchId == -1) || (x.BranchId == branchId &&
-                    (x.Client.BranchId == branchId || x.TransferredConfirmed)))).ToList();
+                orders = await query.OrderByDescending(x => x.Id)
+                    .Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
             }
+
             ViewBag.senders = _orderService.GetUsers(x => ((x.OrderCompleted == OrderCompleted.NOK && (x.Status == OrderStatus.Returned ||
                                                           x.Status == OrderStatus.PartialReturned))
                                                           || (x.ReturnedOrderCompleted == OrderCompleted.NOK && x.ReturnedFinished &&
