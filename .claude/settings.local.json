@@ -43,7 +43,11 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\iT\\\\source\\\\repos\\\\ProjectEGY\\\\Tasahel-backend\" -Directory -Depth 0)",
       "Bash(Select-Object Name)",
       "mcp__visualize__read_me",
-      "mcp__visualize__show_widget"
+      "mcp__visualize__show_widget",
+      "Bash(grep -E \"\\\\.cs$\")",
+      "PowerShell(dotnet build PostexS\\\\PostexS.csproj --no-restore 2>&1)",
+      "Bash(ls \"C:\\\\Users\\\\iT\\\\Downloads\\\\صور فيديو المشكله\")",
+      "Bash(git status *)"
     ]
   }
 }

@@ -469,7 +469,7 @@ namespace PostexS.Controllers
 
         [HttpPost]
         [Authorize(Roles = "HighAdmin")]
-        public async Task<IActionResult> FinshedOrders(List<long> OrderId, List<double> DeliveryCost, List<double> ArrivedCost, List<string> OrderNotes, List<OrderStatus> orderStatus, bool Returned)
+        public async Task<IActionResult> FinshedOrders(List<long> OrderId, List<double> DeliveryCost, List<double> ArrivedCost, List<string> OrderNotes, List<OrderStatus> orderStatus, bool Returned, string ExpectedDriverId)
         {
             using (var scope = new TransactionScope(TransactionScopeOption.Required,
                             new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted, Timeout = TimeSpan.FromMinutes(10) },
@@ -480,7 +480,7 @@ namespace PostexS.Controllers
                     var userid = _userManger.GetUserId(User);
                     var user = await _user.GetObj(x => x.Id == userid);
 
-                    var deliveryId = await ValidateOrdersBelongToSameDriver(OrderId);
+                    var deliveryId = await ValidateOrdersBelongToSameDriver(OrderId, ExpectedDriverId);
                     if (deliveryId == null)
                         throw new Exception("لا توجد طلبات للتقفيل");
 
@@ -1054,7 +1054,7 @@ namespace PostexS.Controllers
         [HttpPost]
         [Authorize(Roles = "HighAdmin")]
         [Route("Returns-Paid-Shipping")]
-        public async Task<IActionResult> FinshedPaidReturnedOrders(List<long> OrderId, List<double> DeliveryCost, List<double> ArrivedCost, List<string> OrderNotes, List<OrderStatus> orderStatus, bool Returned)
+        public async Task<IActionResult> FinshedPaidReturnedOrders(List<long> OrderId, List<double> DeliveryCost, List<double> ArrivedCost, List<string> OrderNotes, List<OrderStatus> orderStatus, bool Returned, string ExpectedDriverId)
         {
             using (var scope = new TransactionScope(TransactionScopeOption.Required,
                             new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted, Timeout = TimeSpan.FromMinutes(10) },
@@ -1065,7 +1065,7 @@ namespace PostexS.Controllers
                     var userid = _userManger.GetUserId(User);
                     var user = await _user.GetObj(x => x.Id == userid);
 
-                    var deliveryId = await ValidateOrdersBelongToSameDriver(OrderId);
+                    var deliveryId = await ValidateOrdersBelongToSameDriver(OrderId, ExpectedDriverId);
                     if (deliveryId == null)
                         throw new Exception("لا توجد طلبات للتقفيل");
 
@@ -1234,7 +1234,7 @@ namespace PostexS.Controllers
             return wallet;
         }
 
-        private async Task<string> ValidateOrdersBelongToSameDriver(List<long> orderIds)
+        private async Task<string> ValidateOrdersBelongToSameDriver(List<long> orderIds, string expectedDriverId = null)
         {
             if (orderIds == null || orderIds.Count == 0)
                 return null;
@@ -1251,6 +1251,10 @@ namespace PostexS.Controllers
                 else if (order.DeliveryId != deliveryId)
                     throw new Exception("لا يمكن تقفيل طلبات لمناديب مختلفين في نفس التقفيلة");
             }
+
+            if (!string.IsNullOrEmpty(expectedDriverId) && deliveryId != expectedDriverId)
+                throw new Exception($"تم تغيير المندوب على هذه الطلبات أثناء عملية التقفيل. المندوب المتوقع لم يعد مطابقاً. يرجى إعادة فتح صفحة التقفيل.");
+
             return deliveryId;
         }
         [Authorize(Roles = "Admin,HighAdmin,Accountant,LowAdmin,TrustAdmin")]

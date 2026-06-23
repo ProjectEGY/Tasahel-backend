@@ -75,7 +75,7 @@ namespace PostexS.Controllers.API
         {
             var UserId = User.Identity.Name;
             var user = _user.Get(x => x.Id == UserId).First();
-            var Notifiaction = _notification.Get(x => !x.IsDeleted && x.UserId == UserId && !x.IsSeen).ToList().Count;
+            var Notifiaction = _notification.GetCount(x => !x.IsDeleted && x.UserId == UserId && !x.IsSeen);
             baseResponse.Data = new
             {
                 Count = Notifiaction
@@ -93,12 +93,15 @@ namespace PostexS.Controllers.API
         }
         [HttpGet("Notification")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> Notification([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude)
+        public async Task<IActionResult> Notification([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude, int page = 1, int size = 30)
         {
             var UserId = User.Identity.Name;
             var user = _user.Get(x => x.Id == UserId).First();
             var dto = new List<NotificationVM>();
-            var Notifiaction = _notification.Get(x => !x.IsDeleted && x.UserId == UserId).OrderByDescending(x => x.Id).ToList();
+            var Notifiaction = _notification.Get(x => !x.IsDeleted && x.UserId == UserId)
+                .OrderByDescending(x => x.Id)
+                .Skip((page - 1) * size).Take(size)
+                .ToList();
             foreach (var item in Notifiaction)
             {
                 dto.Add(new NotificationVM()
@@ -108,9 +111,11 @@ namespace PostexS.Controllers.API
                     Id = item.Id,
                     Title = item.Title
                 });
-                var seen = _notification.Get(x => x.Id == item.Id).First();
-                seen.IsSeen = true;
-                await _notification.Update(seen);
+                if (!item.IsSeen)
+                {
+                    item.IsSeen = true;
+                    await _notification.Update(item);
+                }
             }
             if (latitude.HasValue && longitude.HasValue)
             {

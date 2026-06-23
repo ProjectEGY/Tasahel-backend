@@ -61,11 +61,13 @@ namespace PostexS.Controllers.API
             }
 
             string dilvertNotFound = "لم يتم تحديد السائق";
+            var clientIds = orders.Select(x => x.ClientId).Where(id => id != null).Distinct().ToList();
+            var senders = _user.Get(x => clientIds.Contains(x.Id)).ToDictionary(x => x.Id);
             var dto = new List<OrderDto>();
             foreach (var item in orders)
             {
                 var model = new OrderDto(item);
-                var sender = (await _user.GetObj(x => x.Id == item.ClientId));
+                senders.TryGetValue(item.ClientId ?? "", out var sender);
                 model.AgentName = sender?.Name ?? dilvertNotFound;
                 model.SenderName = sender?.Name ?? dilvertNotFound;
                 model.SenderNumber = sender?.PhoneNumber ?? "-1";
@@ -83,7 +85,7 @@ namespace PostexS.Controllers.API
         /// </summary>
         [HttpGet("SearchOrders")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> SearchOrders([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude, string Search, string lang = "ar", int page = 1)
+        public async Task<IActionResult> SearchOrders([FromHeader(Name = "Latitude")] double? latitude, [FromHeader(Name = "Longitude")] double? longitude, string Search, string lang = "ar", int page = 1, int size = 15)
         {
             var (user, errorResult) = await GetCurrentDriverAsync();
             if (errorResult != null) return errorResult;
@@ -92,24 +94,29 @@ namespace PostexS.Controllers.API
             var orders = new List<Order>();
             if (user.UserType == UserType.Driver)
             {
-                orders = _orders.Get(x => x.DeliveryId == userid &&
+                var query = _orders.Get(x => x.DeliveryId == userid &&
                         (x.Status == OrderStatus.Assigned || x.Status == OrderStatus.Waiting)
-                        && !x.IsDeleted).ToList();
-            }
-            if (!string.IsNullOrEmpty(Search))
-            {
-                Search = Search.ToLower();
-                orders = orders.Where(x =>
-                    x.ClientPhone.ToLower().Contains(Search) ||
-                    x.Code.ToLower().Contains(Search)).ToList();
+                        && !x.IsDeleted);
+
+                if (!string.IsNullOrEmpty(Search))
+                {
+                    var searchLower = Search.ToLower();
+                    query = query.Where(x =>
+                        x.ClientPhone.ToLower().Contains(searchLower) ||
+                        x.Code.ToLower().Contains(searchLower));
+                }
+
+                orders = query.OrderBy(x => x.Id).Skip((page - 1) * size).Take(size).ToList();
             }
 
             string dilvertNotFound = "لم يتم تحديد السائق";
+            var clientIds = orders.Select(x => x.ClientId).Where(id => id != null).Distinct().ToList();
+            var senders = _user.Get(x => clientIds.Contains(x.Id)).ToDictionary(x => x.Id);
             var dto = new List<OrderDto>();
             foreach (var item in orders)
             {
                 var model = new OrderDto(item);
-                var sender = (await _user.GetObj(x => x.Id == item.ClientId));
+                senders.TryGetValue(item.ClientId ?? "", out var sender);
                 model.AgentName = sender?.Name ?? dilvertNotFound;
                 model.SenderName = sender?.Name ?? dilvertNotFound;
                 model.SenderNumber = sender?.PhoneNumber ?? "-1";
@@ -172,11 +179,13 @@ namespace PostexS.Controllers.API
                 .Skip((page - 1) * size).Take(size).ToList();
 
             string notFound = "لم يتم تحديد السائق";
+            var pendingClientIds = pagedOrders.Select(x => x.ClientId).Where(id => id != null).Distinct().ToList();
+            var pendingSenders = _user.Get(x => pendingClientIds.Contains(x.Id)).ToDictionary(x => x.Id);
             var dto = new System.Collections.Generic.List<OrderDto>();
             foreach (var item in pagedOrders)
             {
                 var model = new OrderDto(item);
-                var sender = await _user.GetObj(x => x.Id == item.ClientId);
+                pendingSenders.TryGetValue(item.ClientId ?? "", out var sender);
                 model.AgentName = sender?.Name ?? notFound;
                 model.SenderName = sender?.Name ?? notFound;
                 model.SenderNumber = sender?.PhoneNumber ?? "-1";
@@ -225,11 +234,13 @@ namespace PostexS.Controllers.API
                 .Skip((page - 1) * size).Take(size).ToList();
 
             string driverNotFound = "لم يتم تحديد السائق";
+            var historyClientIds = orders.Select(x => x.ClientId).Where(id => id != null).Distinct().ToList();
+            var historySenders = _user.Get(x => historyClientIds.Contains(x.Id)).ToDictionary(x => x.Id);
             var dto = new List<OrderDto>();
             foreach (var item in orders)
             {
                 var model = new OrderDto(item);
-                var sender = await _user.GetObj(x => x.Id == item.ClientId);
+                historySenders.TryGetValue(item.ClientId ?? "", out var sender);
                 model.AgentName = sender?.Name ?? driverNotFound;
                 model.SenderName = sender?.Name ?? driverNotFound;
                 model.SenderNumber = sender?.PhoneNumber ?? "-1";
@@ -293,9 +304,30 @@ namespace PostexS.Controllers.API
                 LastUpdated = order.LastUpdated.HasValue ? TimeZoneInfo.ConvertTimeFromUtc(order.LastUpdated.Value, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null,
             };
 
+            // batch-load all users needed for this order (sender, notes, timeline)
+            var allUserIds = new HashSet<string>();
+            if (!string.IsNullOrEmpty(order.ClientId)) allUserIds.Add(order.ClientId);
+            var notes = _orderNotes.Get(x => x.OrderId == orderId && !x.IsDeleted)
+                .OrderByDescending(x => x.CreateOn).ToList();
+            foreach (var note in notes)
+                if (!string.IsNullOrEmpty(note.UserId)) allUserIds.Add(note.UserId);
+            OrderOperationHistory history = null;
+            if (order.OrderOperationHistoryId.HasValue)
+            {
+                history = _histories.Get(x => x.Id == order.OrderOperationHistoryId.Value).FirstOrDefault();
+                if (history != null)
+                {
+                    if (!string.IsNullOrEmpty(history.Create_UserId)) allUserIds.Add(history.Create_UserId);
+                    if (!string.IsNullOrEmpty(history.Assign_To_Driver_UserId)) allUserIds.Add(history.Assign_To_Driver_UserId);
+                    if (!string.IsNullOrEmpty(history.Finish_UserId)) allUserIds.Add(history.Finish_UserId);
+                    if (!string.IsNullOrEmpty(history.Complete_UserId)) allUserIds.Add(history.Complete_UserId);
+                }
+            }
+            var userIds = allUserIds.ToList();
+            var usersMap = _user.Get(x => userIds.Contains(x.Id)).ToDictionary(x => x.Id);
+
             // بيانات الراسل
-            var sender = await _user.GetObj(x => x.Id == order.ClientId);
-            if (sender != null)
+            if (!string.IsNullOrEmpty(order.ClientId) && usersMap.TryGetValue(order.ClientId, out var sender))
             {
                 dto.SenderName = sender.Name;
                 dto.SenderPhone = sender.PhoneNumber;
@@ -304,11 +336,9 @@ namespace PostexS.Controllers.API
             }
 
             // الملاحظات
-            var notes = _orderNotes.Get(x => x.OrderId == orderId && !x.IsDeleted)
-                .OrderByDescending(x => x.CreateOn).ToList();
             foreach (var note in notes)
             {
-                var noteUser = await _user.GetObj(x => x.Id == note.UserId);
+                usersMap.TryGetValue(note.UserId ?? "", out var noteUser);
                 dto.OrderNotes.Add(new OrderNoteDto
                 {
                     Content = note.Content,
@@ -318,37 +348,29 @@ namespace PostexS.Controllers.API
             }
 
             // تاريخ العمليات (Timeline)
-            if (order.OrderOperationHistoryId.HasValue)
+            if (history != null)
             {
-                var history = _histories.Get(x => x.Id == order.OrderOperationHistoryId.Value).FirstOrDefault();
-                if (history != null)
-                {
-                    dto.Timeline = new OrderHistoryTimelineDto();
+                dto.Timeline = new OrderHistoryTimelineDto();
 
-                    if (!string.IsNullOrEmpty(history.Create_UserId))
-                    {
-                        var createUser = await _user.GetObj(x => x.Id == history.Create_UserId);
-                        dto.Timeline.CreatedDate = history.CreateDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.CreateDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
-                        dto.Timeline.CreatedBy = createUser?.Name;
-                    }
-                    if (!string.IsNullOrEmpty(history.Assign_To_Driver_UserId))
-                    {
-                        var assignUser = await _user.GetObj(x => x.Id == history.Assign_To_Driver_UserId);
-                        dto.Timeline.AssignedToDriverDate = history.Assign_To_DriverDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.Assign_To_DriverDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
-                        dto.Timeline.AssignedBy = assignUser?.Name;
-                    }
-                    if (!string.IsNullOrEmpty(history.Finish_UserId))
-                    {
-                        var finishUser = await _user.GetObj(x => x.Id == history.Finish_UserId);
-                        dto.Timeline.FinishDate = history.FinishDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.FinishDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
-                        dto.Timeline.FinishedBy = finishUser?.Name;
-                    }
-                    if (!string.IsNullOrEmpty(history.Complete_UserId))
-                    {
-                        var completeUser = await _user.GetObj(x => x.Id == history.Complete_UserId);
-                        dto.Timeline.CompleteDate = history.CompleteDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.CompleteDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
-                        dto.Timeline.CompletedBy = completeUser?.Name;
-                    }
+                if (!string.IsNullOrEmpty(history.Create_UserId) && usersMap.TryGetValue(history.Create_UserId, out var createUser))
+                {
+                    dto.Timeline.CreatedDate = history.CreateDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.CreateDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
+                    dto.Timeline.CreatedBy = createUser.Name;
+                }
+                if (!string.IsNullOrEmpty(history.Assign_To_Driver_UserId) && usersMap.TryGetValue(history.Assign_To_Driver_UserId, out var assignUser))
+                {
+                    dto.Timeline.AssignedToDriverDate = history.Assign_To_DriverDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.Assign_To_DriverDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
+                    dto.Timeline.AssignedBy = assignUser.Name;
+                }
+                if (!string.IsNullOrEmpty(history.Finish_UserId) && usersMap.TryGetValue(history.Finish_UserId, out var finishUser))
+                {
+                    dto.Timeline.FinishDate = history.FinishDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.FinishDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
+                    dto.Timeline.FinishedBy = finishUser.Name;
+                }
+                if (!string.IsNullOrEmpty(history.Complete_UserId) && usersMap.TryGetValue(history.Complete_UserId, out var completeUser))
+                {
+                    dto.Timeline.CompleteDate = history.CompleteDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.CompleteDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
+                    dto.Timeline.CompletedBy = completeUser.Name;
                 }
             }
 
@@ -413,9 +435,30 @@ namespace PostexS.Controllers.API
                 LastUpdated = order.LastUpdated.HasValue ? TimeZoneInfo.ConvertTimeFromUtc(order.LastUpdated.Value, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null,
             };
 
+            // batch-load all users needed for this order
+            var allUserIds2 = new HashSet<string>();
+            if (!string.IsNullOrEmpty(order.ClientId)) allUserIds2.Add(order.ClientId);
+            var notes = _orderNotes.Get(x => x.OrderId == order.Id && !x.IsDeleted)
+                .OrderByDescending(x => x.CreateOn).ToList();
+            foreach (var note in notes)
+                if (!string.IsNullOrEmpty(note.UserId)) allUserIds2.Add(note.UserId);
+            OrderOperationHistory history = null;
+            if (order.OrderOperationHistoryId.HasValue)
+            {
+                history = _histories.Get(x => x.Id == order.OrderOperationHistoryId.Value).FirstOrDefault();
+                if (history != null)
+                {
+                    if (!string.IsNullOrEmpty(history.Create_UserId)) allUserIds2.Add(history.Create_UserId);
+                    if (!string.IsNullOrEmpty(history.Assign_To_Driver_UserId)) allUserIds2.Add(history.Assign_To_Driver_UserId);
+                    if (!string.IsNullOrEmpty(history.Finish_UserId)) allUserIds2.Add(history.Finish_UserId);
+                    if (!string.IsNullOrEmpty(history.Complete_UserId)) allUserIds2.Add(history.Complete_UserId);
+                }
+            }
+            var userIds2 = allUserIds2.ToList();
+            var usersMap = _user.Get(x => userIds2.Contains(x.Id)).ToDictionary(x => x.Id);
+
             // بيانات الراسل
-            var sender = await _user.GetObj(x => x.Id == order.ClientId);
-            if (sender != null)
+            if (!string.IsNullOrEmpty(order.ClientId) && usersMap.TryGetValue(order.ClientId, out var sender))
             {
                 dto.SenderName = sender.Name;
                 dto.SenderPhone = sender.PhoneNumber;
@@ -424,11 +467,9 @@ namespace PostexS.Controllers.API
             }
 
             // الملاحظات
-            var notes = _orderNotes.Get(x => x.OrderId == order.Id && !x.IsDeleted)
-                .OrderByDescending(x => x.CreateOn).ToList();
             foreach (var note in notes)
             {
-                var noteUser = await _user.GetObj(x => x.Id == note.UserId);
+                usersMap.TryGetValue(note.UserId ?? "", out var noteUser);
                 dto.OrderNotes.Add(new OrderNoteDto
                 {
                     Content = note.Content,
@@ -438,37 +479,29 @@ namespace PostexS.Controllers.API
             }
 
             // تاريخ العمليات (Timeline)
-            if (order.OrderOperationHistoryId.HasValue)
+            if (history != null)
             {
-                var history = _histories.Get(x => x.Id == order.OrderOperationHistoryId.Value).FirstOrDefault();
-                if (history != null)
-                {
-                    dto.Timeline = new OrderHistoryTimelineDto();
+                dto.Timeline = new OrderHistoryTimelineDto();
 
-                    if (!string.IsNullOrEmpty(history.Create_UserId))
-                    {
-                        var createUser = await _user.GetObj(x => x.Id == history.Create_UserId);
-                        dto.Timeline.CreatedDate = history.CreateDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.CreateDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
-                        dto.Timeline.CreatedBy = createUser?.Name;
-                    }
-                    if (!string.IsNullOrEmpty(history.Assign_To_Driver_UserId))
-                    {
-                        var assignUser = await _user.GetObj(x => x.Id == history.Assign_To_Driver_UserId);
-                        dto.Timeline.AssignedToDriverDate = history.Assign_To_DriverDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.Assign_To_DriverDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
-                        dto.Timeline.AssignedBy = assignUser?.Name;
-                    }
-                    if (!string.IsNullOrEmpty(history.Finish_UserId))
-                    {
-                        var finishUser = await _user.GetObj(x => x.Id == history.Finish_UserId);
-                        dto.Timeline.FinishDate = history.FinishDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.FinishDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
-                        dto.Timeline.FinishedBy = finishUser?.Name;
-                    }
-                    if (!string.IsNullOrEmpty(history.Complete_UserId))
-                    {
-                        var completeUser = await _user.GetObj(x => x.Id == history.Complete_UserId);
-                        dto.Timeline.CompleteDate = history.CompleteDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.CompleteDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
-                        dto.Timeline.CompletedBy = completeUser?.Name;
-                    }
+                if (!string.IsNullOrEmpty(history.Create_UserId) && usersMap.TryGetValue(history.Create_UserId, out var createUser))
+                {
+                    dto.Timeline.CreatedDate = history.CreateDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.CreateDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
+                    dto.Timeline.CreatedBy = createUser.Name;
+                }
+                if (!string.IsNullOrEmpty(history.Assign_To_Driver_UserId) && usersMap.TryGetValue(history.Assign_To_Driver_UserId, out var assignUser))
+                {
+                    dto.Timeline.AssignedToDriverDate = history.Assign_To_DriverDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.Assign_To_DriverDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
+                    dto.Timeline.AssignedBy = assignUser.Name;
+                }
+                if (!string.IsNullOrEmpty(history.Finish_UserId) && usersMap.TryGetValue(history.Finish_UserId, out var finishUser))
+                {
+                    dto.Timeline.FinishDate = history.FinishDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.FinishDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
+                    dto.Timeline.FinishedBy = finishUser.Name;
+                }
+                if (!string.IsNullOrEmpty(history.Complete_UserId) && usersMap.TryGetValue(history.Complete_UserId, out var completeUser))
+                {
+                    dto.Timeline.CompleteDate = history.CompleteDate != DateTime.MinValue ? TimeZoneInfo.ConvertTimeFromUtc(history.CompleteDate, egyptTimeZone).ToString("yyyy-MM-dd hh:mm tt") : null;
+                    dto.Timeline.CompletedBy = completeUser.Name;
                 }
             }
 

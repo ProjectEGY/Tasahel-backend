@@ -967,8 +967,7 @@ namespace PostexS.Controllers
                 && (AccountantId == "0" || x.Complete_UserId == AccountantId)
                 && (x.Id.ToString().Contains(searchStr)
                                         || x.ActualUser.Name.Contains(searchStr)
-                                        || x.Amount.ToString().Contains(searchStr)
-                                        || x.Orders.ToList().Sum(x => x.ClientCost).ToString().Contains(searchStr));
+                                        || x.Amount.ToString().Contains(searchStr));
             }
             else
             {
@@ -978,8 +977,7 @@ namespace PostexS.Controllers
                 && (FilterTimeTo.Value >= x.CreateOn) &&
                       (String.IsNullOrWhiteSpace(searchStr) || (x.Id.ToString().Contains(searchStr)
                                         || x.ActualUser.Name.ToLower().Contains(searchStr)
-                                        || x.Amount.ToString().Contains(searchStr)
-                                        || x.Orders.ToList().Sum(x => x.ClientCost).ToString().Contains(searchStr))));
+                                        || x.Amount.ToString().Contains(searchStr))));
             }
 
             ViewBag.Users = _users.Get(x => !x.IsDeleted && x.UserType == UserType.Accountant).ToList();
@@ -1000,10 +998,12 @@ namespace PostexS.Controllers
                 AccountantId = _userManger.GetUserId(User);
             }
             var archive = (await getorders(searchStr, pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId)).ToList();
+            var walletIds = archive.Select(x => x.Id).ToList();
+            var allOrders = _orders.Get(x => x.CompletedId.HasValue && walletIds.Contains(x.CompletedId.Value)).ToList();
+            var ordersByWallet = allOrders.GroupBy(x => x.CompletedId.Value).ToDictionary(g => g.Key, g => g.ToList());
             foreach (var item in archive)
             {
-                item.Orders = new List<Order>();
-                item.Orders = _orders.Get(x => x.CompletedId == item.Id).ToList();
+                item.Orders = ordersByWallet.ContainsKey(item.Id) ? ordersByWallet[item.Id] : new List<Order>();
             }
             return PartialView("_TableListArchive",
                 archive);
@@ -1054,8 +1054,7 @@ namespace PostexS.Controllers
                 && (AccountantId == "0" || x.Complete_UserId == AccountantId)
                    && (x.Id.ToString().Contains(searchStr)
                                         || x.ActualUser.Name.Contains(searchStr)
-                                        || x.Amount.ToString().Contains(searchStr)
-                                        || x.Orders.ToList().Sum(x => x.ClientCost).ToString().Contains(searchStr));
+                                        || x.Amount.ToString().Contains(searchStr));
             }
             else
             {
@@ -1065,8 +1064,7 @@ namespace PostexS.Controllers
                 && (FilterTimeTo.Value >= x.CreateOn) &&
                       (String.IsNullOrWhiteSpace(searchStr) || (x.Id.ToString().Contains(searchStr)
                                         || x.ActualUser.Name.ToLower().Contains(searchStr)
-                                        || x.Amount.ToString().Contains(searchStr)
-                                        || x.Orders.ToList().Sum(x => x.ClientCost).ToString().Contains(searchStr))));
+                                        || x.Amount.ToString().Contains(searchStr))));
             }
 
             ViewBag.Users = _users.Get(x => !x.IsDeleted && x.UserType == UserType.Accountant).ToList();
@@ -1087,10 +1085,12 @@ namespace PostexS.Controllers
                 AccountantId = _userManger.GetUserId(User);
             }
             var archive = (await getReturnedorders(searchStr, pageNumber, pageSize, FilterTime, FilterTimeTo, AccountantId)).ToList();
+            var returnedWalletIds = archive.Select(x => x.Id).ToList();
+            var allReturnedOrders = _orders.Get(x => x.CompletedId.HasValue && returnedWalletIds.Contains(x.CompletedId.Value)).ToList();
+            var returnedOrdersByWallet = allReturnedOrders.GroupBy(x => x.CompletedId.Value).ToDictionary(g => g.Key, g => g.ToList());
             foreach (var item in archive)
             {
-                item.Orders = new List<Order>();
-                item.Orders = _orders.Get(x => x.CompletedId == item.Id).ToList();
+                item.Orders = returnedOrdersByWallet.ContainsKey(item.Id) ? returnedOrdersByWallet[item.Id] : new List<Order>();
             }
             return PartialView("_TableListArchiveReturned",
                 archive);
@@ -3588,7 +3588,7 @@ namespace PostexS.Controllers
               ViewBag.TotalPrice = orders.Sum(x => x.Cost+x.DeliveryFees);*/
             ViewBag.PageStartRowNum = ((pageNumber - 1) * pageSize) + 1;
             return await PagedList<Order>.CreateAsync(
-                _orders.GetAllAsIQueryable(filter, orderBy, "Client,Client.Branch,Delivery,OrderNotes,Branch,PreviousBranch"),
+                _orders.GetAllAsIQueryable(filter, orderBy, "Client,Client.Branch,Delivery,OrderNotes,Branch,PreviousBranch", asNoTracking: true),
                 pageNumber, pageSize);
         }
 

@@ -118,10 +118,12 @@ namespace PostexS.Controllers.API
                 (x.WalletId == walletId || x.ReturnedWalletId == walletId)
             ).ToList();
 
+            var settlementClientIds = orders.Select(x => x.ClientId).Where(id => id != null).Distinct().ToList();
+            var settlementSenders = _user.Get(x => settlementClientIds.Contains(x.Id)).ToDictionary(x => x.Id);
             var orderDtos = new List<DriverSettlementOrderDto>();
             foreach (var o in orders)
             {
-                var sender = await _user.GetObj(x => x.Id == o.ClientId);
+                settlementSenders.TryGetValue(o.ClientId ?? "", out var sender);
                 orderDtos.Add(new DriverSettlementOrderDto
                 {
                     Code = o.Code,
@@ -213,11 +215,13 @@ namespace PostexS.Controllers.API
             var pagedOrders = allPending.OrderByDescending(x => x.LastUpdated ?? x.CreateOn)
                 .Skip((page - 1) * size).Take(size).ToList();
 
+            var deliveryClientIds = pagedOrders.Select(x => x.ClientId).Where(id => id != null).Distinct().ToList();
+            var deliverySenders = _user.Get(x => deliveryClientIds.Contains(x.Id)).ToDictionary(x => x.Id);
             var dto = new List<OrderDto>();
             foreach (var item in pagedOrders)
             {
                 var model = new OrderDto(item);
-                var sender = await _user.GetObj(x => x.Id == item.ClientId);
+                deliverySenders.TryGetValue(item.ClientId ?? "", out var sender);
                 model.AgentName = sender?.Name ?? "-";
                 model.SenderName = sender?.Name ?? "-";
                 model.SenderNumber = sender?.PhoneNumber ?? "-1";
@@ -281,11 +285,13 @@ namespace PostexS.Controllers.API
             var pagedOrders = allPending.OrderByDescending(x => x.LastUpdated ?? x.CreateOn)
                 .Skip((page - 1) * size).Take(size).ToList();
 
+            var returnClientIds = pagedOrders.Select(x => x.ClientId).Where(id => id != null).Distinct().ToList();
+            var returnSenders = _user.Get(x => returnClientIds.Contains(x.Id)).ToDictionary(x => x.Id);
             var dto = new List<OrderDto>();
             foreach (var item in pagedOrders)
             {
                 var model = new OrderDto(item);
-                var sender = await _user.GetObj(x => x.Id == item.ClientId);
+                returnSenders.TryGetValue(item.ClientId ?? "", out var sender);
                 model.AgentName = sender?.Name ?? "-";
                 model.SenderName = sender?.Name ?? "-";
                 model.SenderNumber = sender?.PhoneNumber ?? "-1";

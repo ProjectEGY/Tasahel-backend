@@ -38,7 +38,12 @@ namespace PostexS.Services
 
         public IEnumerable<ApplicationUser> GetUsers(Expression<Func<Order, bool>> expression)
         {
-            return _context.Orders.Where(expression).Select(x => x.Client).Distinct().ToList();
+            var clientIds = _context.Orders.Where(expression)
+                .Select(x => x.ClientId).Distinct().ToList();
+            return _context.Users.OfType<ApplicationUser>()
+                .Where(x => clientIds.Contains(x.Id))
+                .AsNoTracking()
+                .ToList();
         }
 
         public IEnumerable<Order> GetList(Expression<Func<Order, bool>> expression)
