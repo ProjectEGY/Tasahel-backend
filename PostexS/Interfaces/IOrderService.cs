@@ -14,6 +14,8 @@ namespace PostexS.Interfaces
         int GetOrdersHistory(Expression<Func<OrderOperationHistory, bool>> expression);
         IEnumerable<Order> GetList(Expression<Func<Order, bool>> expression);
         IQueryable<Order> GetQueryableList(Expression<Func<Order, bool>> expression);
+        IQueryable<Order> GetQueryableListLight(Expression<Func<Order, bool>> expression);
+        IQueryable<Order> GetBaseQuery(Expression<Func<Order, bool>> expression);
         long Count(Expression<Func<Order, bool>> expression);
         IEnumerable<ApplicationUser> GetUsers(Expression<Func<Order, bool>> expression);
     }

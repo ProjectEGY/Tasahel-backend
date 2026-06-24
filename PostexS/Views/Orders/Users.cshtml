@@ -6,6 +6,18 @@
     // var Agent = Model.Sum(x => x.DeliveryCost);
     var AllArrivedCost = Model != null ? Model.Sum(x => x.ArrivedCost) : 0;
 }
+<div style="background: linear-gradient(135deg, #3c8dbc, #00a65a); border-radius: 8px; padding: 16px 20px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.15);">
+    <div style="color: #fff;">
+        <i class="fa fa-bolt" style="font-size:20px; margin-left:8px;"></i>
+        <strong style="font-size:15px;">متاح الآن: نسخة محسّنة وأسرع من هذه الصفحة!</strong>
+        <span style="display:block; font-size:13px; margin-top:4px; opacity:.9;">بحث لحظي، إحصائيات مباشرة، تحميل أسرع، بدون إعادة تحميل الصفحة</span>
+    </div>
+    <a href="/Orders/UserOrdersNew/@(ViewBag.UserId)?type=@(ViewBag.typ)"
+       class="btn btn-default" style="font-weight:bold; font-size:14px; padding:8px 24px; white-space:nowrap;">
+        <i class="fa fa-rocket"></i> جرّب الصفحة الجديدة
+    </a>
+</div>
+
 <div class="panel panel-primary">
     <div class="panel-heading">
         <h3 class="panel-title"><i class="fa fa-fw fa-globe"></i> طلبات المستخدم</h3>

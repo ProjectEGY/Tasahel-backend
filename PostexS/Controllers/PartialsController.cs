@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -62,63 +63,71 @@ namespace PostexS.Controllers
 
             var user = _userManger.GetUserId(User);
             headerVM.NotificationsNumber = _notifiaction.GetCount(x => x.UserId == user && !x.IsSeen && !x.IsDeleted);
-            var recentNotifications = _notifiaction.Get(x => x.UserId == user && !x.IsDeleted)
-                .OrderByDescending(d => d.CreateOn).Take(20).ToList();
-            foreach (var item in recentNotifications)
-            {
-                headerVM.Notifications.Add(new NotificationVM()
+            var recentNotifications = _notifiaction.GetAllAsIQueryable(
+                filter: x => x.UserId == user && !x.IsDeleted,
+                orderby: q => q.OrderByDescending(d => d.CreateOn),
+                asNoTracking: true)
+                .Take(20)
+                .Select(item => new NotificationVM
                 {
                     Body = item.Body,
                     IsSeen = item.IsSeen,
                     Id = item.Id,
                     Title = item.Title,
-                });
-            }
+                })
+                .ToList();
+            headerVM.Notifications = recentNotifications;
             return PartialView(headerVM);
         }
         public async Task<ActionResult> ClientSideMenu()
         {
             var userid = _userManger.GetUserId(User);
-            var user = await _userManger.FindByIdAsync(userid);
+            var userName = await _userManger.Users
+                .Where(u => u.Id == userid)
+                .Select(u => u.Name)
+                .FirstOrDefaultAsync();
             SideMenuVM sideMenuVM = new SideMenuVM()
             {
-                Name = user.Name,
-                //Name = "راسل",
-                /*Complaints = db.Complaints.Count(w => w.IsDeleted == false && w.IsViewed == false)*/
+                Name = userName ?? "راسل",
             };
             return PartialView(sideMenuVM);
         }
         public async Task<ActionResult> DriverSideMenu()
         {
             var userid = _userManger.GetUserId(User);
-            var user = await _userManger.FindByIdAsync(userid);
+            var userName = await _userManger.Users
+                .Where(u => u.Id == userid)
+                .Select(u => u.Name)
+                .FirstOrDefaultAsync();
             SideMenuVM sideMenuVM = new SideMenuVM()
             {
-                Name = user.Name,
-                //  Name = "مندوب",
-                /*Complaints = db.Complaints.Count(w => w.IsDeleted == false && w.IsViewed == false)*/
+                Name = userName ?? "مندوب",
             };
             return PartialView(sideMenuVM);
         }
         public async Task<ActionResult> AdminSideMenu()
         {
             var userid = _userManger.GetUserId(User);
-            var user = await _userManger.FindByIdAsync(userid);
+            var userName = await _userManger.Users
+                .Where(u => u.Id == userid)
+                .Select(u => u.Name)
+                .FirstOrDefaultAsync();
             SideMenuVM sideMenuVM = new SideMenuVM()
             {
-                Name = user.Name,
-                //  Name = "الأدمن",
-                /*Complaints = db.Complaints.Count(w => w.IsDeleted == false && w.IsViewed == false)*/
+                Name = userName ?? "الأدمن",
             };
             return PartialView(sideMenuVM);
         }
         public async Task<ActionResult> TrackingAdminSideMenu()
         {
             var userid = _userManger.GetUserId(User);
-            var user = await _userManger.FindByIdAsync(userid);
+            var userName = await _userManger.Users
+                .Where(u => u.Id == userid)
+                .Select(u => u.Name)
+                .FirstOrDefaultAsync();
             SideMenuVM sideMenuVM = new SideMenuVM()
             {
-                Name = user.Name,
+                Name = userName ?? "متابعه",
             };
             return PartialView(sideMenuVM);
         }

@@ -617,9 +617,8 @@ namespace PostexS.Controllers
                     ViewBag.FilterTimeTo = FilterTimeTo;
                     ViewBag.typ = type;
 
+                    IQueryable<Order> baseQuery = null;
                     IQueryable<Order> query = null;
-
-
 
                     if (string.IsNullOrWhiteSpace(state) && string.IsNullOrWhiteSpace(taswya))
                     {
@@ -627,19 +626,21 @@ namespace PostexS.Controllers
                         {
                             ViewBag.type = 0;
                             ViewBag.typ = "c";
-                            query = _orderService.GetQueryableList(x => x.ClientId == id && !x.IsDeleted &&
+                            Expression<Func<Order, bool>> filter = x => x.ClientId == id && !x.IsDeleted &&
                                    (!FilterTime.HasValue || x.CreateOn >= FilterTime.Value.ToUniversalTime()) &&
-                                   (!FilterTimeTo.HasValue || x.CreateOn <= FilterTimeTo.Value.ToUniversalTime()))
-                                .OrderByDescending(x => x.CreateOn);
+                                   (!FilterTimeTo.HasValue || x.CreateOn <= FilterTimeTo.Value.ToUniversalTime());
+                            baseQuery = _orderService.GetBaseQuery(filter).OrderByDescending(x => x.CreateOn);
+                            query = _orderService.GetQueryableListLight(filter).OrderByDescending(x => x.CreateOn);
                         }
                         else
                         {
                             ViewBag.typ = "d";
                             ViewBag.type = 1;
-                            query = _orderService.GetQueryableList(x => x.DeliveryId == id && !x.IsDeleted &&
+                            Expression<Func<Order, bool>> filter = x => x.DeliveryId == id && !x.IsDeleted &&
                                    (!FilterTime.HasValue || x.CreateOn >= FilterTime.Value.ToUniversalTime()) &&
-                                   (!FilterTimeTo.HasValue || x.CreateOn <= FilterTimeTo.Value.ToUniversalTime()))
-                                .OrderByDescending(x => x.CreateOn);
+                                   (!FilterTimeTo.HasValue || x.CreateOn <= FilterTimeTo.Value.ToUniversalTime());
+                            baseQuery = _orderService.GetBaseQuery(filter).OrderByDescending(x => x.CreateOn);
+                            query = _orderService.GetQueryableListLight(filter).OrderByDescending(x => x.CreateOn);
                         }
                     }
                     else
@@ -682,24 +683,26 @@ namespace PostexS.Controllers
 
                     if (!string.IsNullOrWhiteSpace(searchTerm))
                     {
-                        query = query.Where(x =>
+                        Expression<Func<Order, bool>> searchFilter = x =>
                             x.Code.Contains(searchTerm) ||
                             x.ClientName.Contains(searchTerm) ||
                             x.Address.Contains(searchTerm) ||
-                            (x.Delivery != null && (x.Delivery.Name.Contains(searchTerm) || x.Delivery.PhoneNumber.Contains(searchTerm))) ||
-                            x.Notes.Contains(searchTerm) ||
-                            x.OrderNotes.Any(n => n.Content.Contains(searchTerm))
-                        );
+                            x.Notes.Contains(searchTerm);
+
+                        query = query?.Where(searchFilter);
+                        if (baseQuery != null)
+                            baseQuery = baseQuery.Where(searchFilter);
                     }
-                    // Pagination logic
-                    var totalItems = query?.Count() ?? 0;
+
+                    var countQuery = baseQuery ?? query;
+                    var totalItems = countQuery?.Count() ?? 0;
                     var totalPages = pageSize > 0 ? (int)Math.Ceiling(totalItems / (double)pageSize) : 1;
 
-                    //_context.Database.SetCommandTimeout(120); // 120 ثانية
+                    if (pageSize <= 0) pageSize = Math.Min(totalItems, 500);
 
                     var pagedItems = query?.AsNoTracking()
-                        .Skip(pageSize > 0 ? (page - 1) * pageSize : 0)
-                        .Take(pageSize > 0 ? pageSize : totalItems)
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
                         .ToList() ?? new List<Order>();
 
                     ViewBag.CurrentPage = page;
@@ -728,9 +731,250 @@ namespace PostexS.Controllers
             return RedirectToAction("Index");
         }
 
+        [Authorize]
+        public IActionResult UserOrdersNew(string id, string type = "c")
+        {
+            if (User.IsInRole("Client"))
+            {
+                id = _userManger.GetUserId(User);
+            }
+            ViewBag.UserId = id;
+            ViewBag.typ = type;
+            return View();
+        }
+
+        [Authorize]
+        [HttpGet]
+        public IActionResult UserOrdersApi(string id, string type = "c", string state = "", string taswya = "",
+            DateTime? filterTime = null, DateTime? filterTimeTo = null,
+            string searchTerm = "", int page = 1, int pageSize = 50, bool includeStats = false)
+        {
+            if (User.IsInRole("Client"))
+            {
+                id = _userManger.GetUserId(User);
+            }
+            if (string.IsNullOrEmpty(id))
+                return Json(new { error = "معرف المستخدم مطلوب" });
+
+            if (pageSize <= 0) pageSize = 50;
+            if (pageSize > 200) pageSize = 200;
+            if (page < 1) page = 1;
+
+            IQueryable<Order> baseQuery;
+
+            if (!string.IsNullOrWhiteSpace(state) || !string.IsNullOrWhiteSpace(taswya))
+            {
+                if (type == "c")
+                {
+                    OrderCompleted? comp = null;
+                    if (taswya == "completed") comp = OrderCompleted.OK;
+                    else if (taswya == "uncompleted") comp = OrderCompleted.NOK;
+                    baseQuery = ApplyClientStateFilterBase(id, state, comp);
+                }
+                else
+                {
+                    OrderCompleted? comp = null;
+                    if (taswya == "completed") comp = OrderCompleted.OK;
+                    else if (taswya == "uncompleted") comp = OrderCompleted.NOK;
+                    baseQuery = ApplyDeliveryStateFilterBase(id, state, comp);
+                }
+            }
+            else
+            {
+                Expression<Func<Order, bool>> filter;
+                if (type == "c")
+                    filter = x => x.ClientId == id && !x.IsDeleted &&
+                        (!filterTime.HasValue || x.CreateOn >= filterTime.Value.ToUniversalTime()) &&
+                        (!filterTimeTo.HasValue || x.CreateOn <= filterTimeTo.Value.ToUniversalTime());
+                else
+                    filter = x => x.DeliveryId == id && !x.IsDeleted &&
+                        (!filterTime.HasValue || x.CreateOn >= filterTime.Value.ToUniversalTime()) &&
+                        (!filterTimeTo.HasValue || x.CreateOn <= filterTimeTo.Value.ToUniversalTime());
+
+                baseQuery = _orderService.GetBaseQuery(filter).OrderByDescending(x => x.CreateOn);
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                baseQuery = baseQuery.Where(x =>
+                    x.Code.Contains(searchTerm) ||
+                    x.ClientName.Contains(searchTerm) ||
+                    x.Address.Contains(searchTerm) ||
+                    x.Notes.Contains(searchTerm));
+            }
+
+            var totalItems = baseQuery.Count();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            var items = baseQuery.AsNoTracking()
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(o => new UserOrderItemVM
+                {
+                    Id = o.Id,
+                    Code = o.Code,
+                    CreateOn = o.CreateOn,
+                    ClientName = o.ClientName,
+                    Address = o.Address,
+                    Notes = o.Notes,
+                    TotalCost = o.TotalCost,
+                    ArrivedCost = o.ArrivedCost,
+                    Status = o.Status,
+                    OrderCompleted = o.OrderCompleted,
+                    CompletedOn = o.CompletedOn,
+                    SenderName = o.Client.Name,
+                    DeliveryName = o.Delivery != null ? o.Delivery.Name : null,
+                    DeliveryPhone = o.Delivery != null ? o.Delivery.PhoneNumber : null,
+                    LastNote = o.OrderNotes.OrderByDescending(n => n.Id).Select(n => n.Content).FirstOrDefault()
+                })
+                .ToList();
+
+            var filteredStats = new UserOrdersStatsVM
+            {
+                Total = totalItems,
+                Placed = baseQuery.Count(x => x.Status == OrderStatus.Placed),
+                Assigned = baseQuery.Count(x => x.Status == OrderStatus.Assigned),
+                Delivered = baseQuery.Count(x => x.Status == OrderStatus.Delivered || x.Status == OrderStatus.Delivered_With_Edit_Price || x.Status == OrderStatus.PartialDelivered),
+                Returned = baseQuery.Count(x => x.Status == OrderStatus.Returned || x.Status == OrderStatus.PartialReturned || x.Status == OrderStatus.Returned_And_Paid_DeliveryCost || x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender),
+                Rejected = baseQuery.Count(x => x.Status == OrderStatus.Rejected),
+                Waiting = baseQuery.Count(x => x.Status == OrderStatus.Waiting),
+                Completed = baseQuery.Count(x => x.OrderCompleted == OrderCompleted.OK),
+                TotalArrivedCost = baseQuery.Any() ? baseQuery.Sum(x => x.ArrivedCost) : 0
+            };
+
+            var response = new UserOrdersApiResponse
+            {
+                TotalItems = totalItems,
+                TotalPages = totalPages,
+                CurrentPage = page,
+                PageSize = pageSize,
+                Items = items,
+                FilteredStats = filteredStats
+            };
+
+            if (includeStats)
+            {
+                IQueryable<Order> globalQuery;
+                if (type == "c")
+                    globalQuery = _orderService.GetBaseQuery(x => x.ClientId == id && !x.IsDeleted);
+                else
+                    globalQuery = _orderService.GetBaseQuery(x => x.DeliveryId == id && !x.IsDeleted);
+
+                response.GlobalStats = new UserOrdersStatsVM
+                {
+                    Total = globalQuery.Count(),
+                    Placed = globalQuery.Count(x => x.Status == OrderStatus.Placed),
+                    Assigned = globalQuery.Count(x => x.Status == OrderStatus.Assigned),
+                    Delivered = globalQuery.Count(x => x.Status == OrderStatus.Delivered || x.Status == OrderStatus.Delivered_With_Edit_Price || x.Status == OrderStatus.PartialDelivered),
+                    Returned = globalQuery.Count(x => x.Status == OrderStatus.Returned || x.Status == OrderStatus.PartialReturned || x.Status == OrderStatus.Returned_And_Paid_DeliveryCost || x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender),
+                    Rejected = globalQuery.Count(x => x.Status == OrderStatus.Rejected),
+                    Waiting = globalQuery.Count(x => x.Status == OrderStatus.Waiting),
+                    Completed = globalQuery.Count(x => x.OrderCompleted == OrderCompleted.OK),
+                    TotalArrivedCost = globalQuery.Sum(x => x.ArrivedCost)
+                };
+            }
+
+            return Json(response);
+        }
+
+        [Authorize]
+        [HttpGet]
+        public IActionResult UserOrdersAllIds(string id, string type = "c", string state = "", string taswya = "",
+            DateTime? filterTime = null, DateTime? filterTimeTo = null, string searchTerm = "")
+        {
+            if (User.IsInRole("Client"))
+                id = _userManger.GetUserId(User);
+
+            if (string.IsNullOrEmpty(id))
+                return Json(new { ids = new List<long>() });
+
+            IQueryable<Order> baseQuery;
+
+            if (!string.IsNullOrWhiteSpace(state) || !string.IsNullOrWhiteSpace(taswya))
+            {
+                OrderCompleted? comp = null;
+                if (taswya == "completed") comp = OrderCompleted.OK;
+                else if (taswya == "uncompleted") comp = OrderCompleted.NOK;
+
+                baseQuery = type == "c"
+                    ? ApplyClientStateFilterBase(id, state, comp)
+                    : ApplyDeliveryStateFilterBase(id, state, comp);
+            }
+            else
+            {
+                Expression<Func<Order, bool>> filter;
+                if (type == "c")
+                    filter = x => x.ClientId == id && !x.IsDeleted &&
+                        (!filterTime.HasValue || x.CreateOn >= filterTime.Value.ToUniversalTime()) &&
+                        (!filterTimeTo.HasValue || x.CreateOn <= filterTimeTo.Value.ToUniversalTime());
+                else
+                    filter = x => x.DeliveryId == id && !x.IsDeleted &&
+                        (!filterTime.HasValue || x.CreateOn >= filterTime.Value.ToUniversalTime()) &&
+                        (!filterTimeTo.HasValue || x.CreateOn <= filterTimeTo.Value.ToUniversalTime());
+
+                baseQuery = _orderService.GetBaseQuery(filter);
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                baseQuery = baseQuery.Where(x =>
+                    x.Code.Contains(searchTerm) ||
+                    x.ClientName.Contains(searchTerm) ||
+                    x.Address.Contains(searchTerm) ||
+                    x.Notes.Contains(searchTerm));
+            }
+
+            var ids = baseQuery.AsNoTracking().Select(x => x.Id).ToList();
+            return Json(new { ids = ids, count = ids.Count });
+        }
+
+        private IQueryable<Order> ApplyClientStateFilterBase(string id, string state, OrderCompleted? completedStatus)
+        {
+            IQueryable<Order> query = _orderService.GetBaseQuery(x => x.ClientId == id);
+            if (completedStatus.HasValue)
+                query = query.Where(x => x.OrderCompleted == completedStatus.Value);
+
+            switch (state)
+            {
+                case "gdeda": return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Placed).OrderByDescending(x => x.CreateOn);
+                case "garya": return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Assigned).OrderByDescending(x => x.CreateOn);
+                case "wasalet": return query.Where(x => !x.IsDeleted && (x.Status == OrderStatus.Delivered || x.Status == OrderStatus.Delivered_With_Edit_Price || x.Status == OrderStatus.PartialDelivered)).OrderByDescending(x => x.CreateOn);
+                case "wasaleteditprice": return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Delivered_With_Edit_Price).OrderByDescending(x => x.CreateOn);
+                case "mo2gl": return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Waiting).OrderByDescending(x => x.CreateOn);
+                case "closed": return query.Where(x => !x.IsDeleted && x.Status != OrderStatus.Completed && x.Finished).OrderByDescending(x => x.CreateOn);
+                case "returned": return query.Where(x => !x.IsDeleted && (x.Status == OrderStatus.Returned || x.Status == OrderStatus.Returned_And_Paid_DeliveryCost || x.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender || x.Status == OrderStatus.PartialReturned)).OrderByDescending(x => x.CreateOn);
+                case "refused": return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Rejected).OrderByDescending(x => x.CreateOn);
+                case "deleted": return query.Where(x => x.IsDeleted).OrderByDescending(x => x.CreateOn);
+                case "mo3l2": return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Placed && x.Pending).OrderByDescending(x => x.CreateOn);
+                case "all": return query.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreateOn);
+                default: return query.OrderByDescending(x => x.CreateOn);
+            }
+        }
+
+        private IQueryable<Order> ApplyDeliveryStateFilterBase(string id, string state, OrderCompleted? completedStatus)
+        {
+            IQueryable<Order> query = _orderService.GetBaseQuery(x => x.DeliveryId == id);
+            if (completedStatus.HasValue)
+                query = query.Where(x => x.OrderCompleted == completedStatus.Value);
+
+            switch (state)
+            {
+                case "gdeda": return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Placed).OrderByDescending(x => x.CreateOn);
+                case "garya": return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Assigned).OrderByDescending(x => x.CreateOn);
+                case "wasalet": return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Delivered).OrderByDescending(x => x.CreateOn);
+                case "mo2gl": return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Waiting).OrderByDescending(x => x.CreateOn);
+                case "closed": return query.Where(x => !x.IsDeleted && x.Status != OrderStatus.Completed && x.Finished).OrderByDescending(x => x.CreateOn);
+                case "returned": return query.Where(x => !x.IsDeleted && (x.Status == OrderStatus.Returned || x.Status == OrderStatus.PartialReturned)).OrderByDescending(x => x.CreateOn);
+                case "refused": return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Rejected).OrderByDescending(x => x.CreateOn);
+                case "deleted": return query.Where(x => x.IsDeleted).OrderByDescending(x => x.CreateOn);
+                case "mo3l2": return query.Where(x => !x.IsDeleted && x.Status == OrderStatus.Placed && x.Pending).OrderByDescending(x => x.CreateOn);
+                default: return query.OrderByDescending(x => x.CreateOn);
+            }
+        }
+
         private IQueryable<Order> ApplyClientStateFilter(string id, string state, OrderCompleted? completedStatus)
         {
-            IQueryable<Order> query = _orderService.GetQueryableList(x => x.ClientId == id);
+            IQueryable<Order> query = _orderService.GetQueryableListLight(x => x.ClientId == id);
 
             if (completedStatus.HasValue)
             {
@@ -783,7 +1027,7 @@ namespace PostexS.Controllers
 
         private IQueryable<Order> ApplyDeliveryStateFilter(string id, string state, OrderCompleted? completedStatus)
         {
-            IQueryable<Order> query = _orderService.GetQueryableList(x => x.DeliveryId == id);
+            IQueryable<Order> query = _orderService.GetQueryableListLight(x => x.DeliveryId == id);
 
             if (completedStatus.HasValue)
             {
@@ -931,7 +1175,7 @@ namespace PostexS.Controllers
              && (AccountantId == "0" || x.Complete_UserId == AccountantId)
                 && (FilterTimeTo.Value >= x.CreateOn) &&
                       (String.IsNullOrWhiteSpace(searchStr) || (x.Id.ToString().Contains(searchStr)
-                                        || x.ActualUser.Name.ToLower().Contains(searchStr)
+                                        || x.ActualUser.Name.Contains(searchStr)
                                         || x.Amount.ToString().Contains(searchStr))));
             }
 
@@ -1018,7 +1262,7 @@ namespace PostexS.Controllers
              && (AccountantId == "0" || x.Complete_UserId == AccountantId)
                 && (FilterTimeTo.Value >= x.CreateOn) &&
                       (String.IsNullOrWhiteSpace(searchStr) || (x.Id.ToString().Contains(searchStr)
-                                        || x.ActualUser.Name.ToLower().Contains(searchStr)
+                                        || x.ActualUser.Name.Contains(searchStr)
                                         || x.Amount.ToString().Contains(searchStr))));
             }
 
@@ -2086,10 +2330,10 @@ namespace PostexS.Controllers
         {
             var time = DateTime.Now.AddHours(-72).ToUniversalTime();
             bool auth = User.IsInRole("Client");
-            var user = new ApplicationUser();
+            string userId = null;
             if (auth)
             {
-                user = await _userManger.GetUserAsync(User);
+                userId = _userManger.GetUserId(User);
             }
 
             var orders = new List<Order>();
@@ -2105,7 +2349,7 @@ namespace PostexS.Controllers
                 orders = _orderService.GetList(x => x.OrderCompleted == OrderCompleted.OK &&
                                                     x.Status != OrderStatus.Completed
                                                     && x.Finished
-                                                    && !x.IsDeleted && x.ClientId == user.Id).ToList();
+                                                    && !x.IsDeleted && x.ClientId == userId).ToList();
             else
                 orders = _orderService.GetList(x => x.OrderCompleted == OrderCompleted.OK &&
                                                     x.Status != OrderStatus.Completed
@@ -2546,10 +2790,10 @@ namespace PostexS.Controllers
         public async Task<IActionResult> _TotalPrice(string searchStr, string q, long BranchId = -1)
         {
             bool auth = User.IsInRole("Client");
-            var user = new ApplicationUser();
+            string userId = null;
             if (auth)
             {
-                user = await _userManger.GetUserAsync(User);
+                userId = _userManger.GetUserId(User);
             }
 
             Expression<Func<Order, bool>> filter = null;
@@ -2560,92 +2804,92 @@ namespace PostexS.Controllers
             if (q == "deleted")
             {
                 filter = f => f.IsDeleted &&
-                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.ToLower().Contains(searchStr))
+                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.Contains(searchStr))
                                || (string.IsNullOrEmpty(searchStr) ? true : f.Code.Contains(searchStr)))
                               && (BranchId == -1
                                   ? true
                                   : f.BranchId == BranchId
-                                    && (auth ? f.ClientId == user.Id && f.Status != OrderStatus.PartialReturned : true));
+                                    && (auth ? f.ClientId == userId && f.Status != OrderStatus.PartialReturned : true));
             }
             else if (q == "placed")
             {
                 filter = f => f.Status == OrderStatus.Placed && !f.IsDeleted &&
                               !f.Pending &&
-                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.ToLower().Contains(searchStr))
+                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.Contains(searchStr))
                                || (string.IsNullOrEmpty(searchStr) ? true : f.Code.Contains(searchStr)))
                               && (BranchId == -1 ? true : f.BranchId == BranchId)
-                              && (auth ? f.ClientId == user.Id && f.Status != OrderStatus.PartialReturned : true);
+                              && (auth ? f.ClientId == userId && f.Status != OrderStatus.PartialReturned : true);
             }
             else if (q == "ass")
             {
                 filter = f => f.Status == OrderStatus.Assigned && !f.IsDeleted &&
                               f.OrderCompleted == OrderCompleted.NOK && !f.Finished &&
-                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.ToLower().Contains(searchStr))
+                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.Contains(searchStr))
                                || (string.IsNullOrEmpty(searchStr) ? true : f.Code.Contains(searchStr)))
                               && (BranchId == -1 ? true : f.BranchId == BranchId)
-                              && (auth ? f.ClientId == user.Id && f.Status != OrderStatus.PartialReturned : true);
+                              && (auth ? f.ClientId == userId && f.Status != OrderStatus.PartialReturned : true);
             }
             else if (q == "wai")
             {
                 filter = f => f.Status == OrderStatus.Waiting && !f.IsDeleted &&
                               f.OrderCompleted == OrderCompleted.NOK && !f.Finished &&
-                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.ToLower().Contains(searchStr))
+                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.Contains(searchStr))
                                || (string.IsNullOrEmpty(searchStr) ? true : f.Code.Contains(searchStr)))
                               && (BranchId == -1 ? true : f.BranchId == BranchId)
-                              && (auth ? f.ClientId == user.Id && f.Status != OrderStatus.PartialReturned : true);
+                              && (auth ? f.ClientId == userId && f.Status != OrderStatus.PartialReturned : true);
             }
             else if (q == "com")
             {
                 filter = f => !f.IsDeleted && f.Finished &&
                               f.OrderCompleted == OrderCompleted.OK &&
-                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.ToLower().Contains(searchStr))
+                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.Contains(searchStr))
                                || (string.IsNullOrEmpty(searchStr) ? true : f.Code.Contains(searchStr)))
                               && (BranchId == -1 ? true : f.BranchId == BranchId)
-                              && (auth ? f.ClientId == user.Id && f.Status != OrderStatus.PartialReturned : true);
+                              && (auth ? f.ClientId == userId && f.Status != OrderStatus.PartialReturned : true);
             }
             else if (q == "fsh")
             {
                 filter = f => f.Status != OrderStatus.Completed && f.Finished && !f.IsDeleted &&
                               f.OrderCompleted == OrderCompleted.NOK &&
-                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.ToLower().Contains(searchStr))
+                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.Contains(searchStr))
                                || (string.IsNullOrEmpty(searchStr) ? true : f.Code.Contains(searchStr)))
                               && (BranchId == -1 ? true : f.BranchId == BranchId)
-                              && (auth ? f.ClientId == user.Id && f.Status != OrderStatus.PartialReturned : true);
+                              && (auth ? f.ClientId == userId && f.Status != OrderStatus.PartialReturned : true);
             }
             else if (q == "pen")
             {
                 filter = f => f.Status == OrderStatus.Placed && f.Pending &&
                               !f.IsDeleted &&
-                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.ToLower().Contains(searchStr))
+                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.Contains(searchStr))
                                || (string.IsNullOrEmpty(searchStr) ? true : f.Code.Contains(searchStr)))
                               && (BranchId == -1 ? true : f.BranchId == BranchId)
-                              && (auth ? f.ClientId == user.Id && f.Status != OrderStatus.PartialReturned : true);
+                              && (auth ? f.ClientId == userId && f.Status != OrderStatus.PartialReturned : true);
             }
             else if (q == "returned")
             {
                 filter = f => (f.Status == OrderStatus.Returned || f.Status == OrderStatus.PartialReturned) &&
                               !f.IsDeleted &&
-                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.ToLower().Contains(searchStr))
+                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.Contains(searchStr))
                                || (string.IsNullOrEmpty(searchStr) ? true : f.Code.Contains(searchStr)))
                               && (BranchId == -1 ? true : f.BranchId == BranchId)
-                              && (auth ? f.ClientId == user.Id && f.Status != OrderStatus.PartialReturned : true);
+                              && (auth ? f.ClientId == userId && f.Status != OrderStatus.PartialReturned : true);
             }
             else if (q == "rej")
             {
                 filter = f => f.Status != OrderStatus.Rejected && !f.IsDeleted &&
                               f.OrderCompleted == OrderCompleted.NOK && !f.Finished &&
-                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.ToLower().Contains(searchStr))
+                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.Contains(searchStr))
                                || (string.IsNullOrEmpty(searchStr) ? true : f.Code.Contains(searchStr)))
                               && (BranchId == -1 ? true : f.BranchId == BranchId)
-                              && (auth ? f.ClientId == user.Id && f.Status != OrderStatus.PartialReturned : true);
+                              && (auth ? f.ClientId == userId && f.Status != OrderStatus.PartialReturned : true);
             }
             else
             {
                 filter = f => !f.IsDeleted &&
-                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.ToLower().Contains(searchStr))
+                              ((string.IsNullOrEmpty(searchStr) ? true : f.ClientPhone.Contains(searchStr))
                                || (string.IsNullOrEmpty(searchStr) ? true : f.Code.Contains(searchStr)))
                               && (BranchId == -1 ? true : f.BranchId == BranchId)
-                              && (auth ? f.ClientId == user.Id && f.Status != OrderStatus.PartialReturned : true);
+                              && (auth ? f.ClientId == userId && f.Status != OrderStatus.PartialReturned : true);
             }
 
             var orders = _orders.Get(filter).ToList();
@@ -3314,10 +3558,10 @@ namespace PostexS.Controllers
             long BranchId = -1)
         {
             bool auth = User.IsInRole("Client");
-            var user = new ApplicationUser();
+            string userId = null;
             if (auth)
             {
-                user = await _userManger.GetUserAsync(User);
+                userId = _userManger.GetUserId(User);
             }
 
             Expression<Func<Order, bool>> filter = null;
@@ -3332,23 +3576,23 @@ namespace PostexS.Controllers
                     filter = f => f.IsDeleted &&
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientPhone.ToLower().Contains(searchStr))
+                                       : f.ClientPhone.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                       : f.ClientCode.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1
                                       ? true
                                       : f.BranchId == BranchId
-                                        && (auth ? f.ClientId == user.Id : true)) || (BranchId == -1
+                                        && (auth ? f.ClientId == userId : true)) || (BranchId == -1
                                       ? true
                                       : f.Client.BranchId == BranchId
-                                        && (auth ? f.ClientId == user.Id : true)) || (BranchId == -1
+                                        && (auth ? f.ClientId == userId : true)) || (BranchId == -1
                                       ? true
                                       : f.PreviousBranchId == BranchId && !f.TransferredConfirmed
-                                        && (auth ? f.ClientId == user.Id : true)));
+                                        && (auth ? f.ClientId == userId : true)));
                 }
                 else if (q == "placed")
                 {
@@ -3356,30 +3600,30 @@ namespace PostexS.Controllers
                                   !f.Pending &&
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientPhone.ToLower().Contains(searchStr))
+                                       : f.ClientPhone.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                       : f.ClientCode.Contains(searchStr))
                                    || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
-                                  && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
+                                  && (auth ? f.ClientId == userId /*&& f.Status != OrderStatus.PartialReturned*/: true);
                 }
                 else if (q == "fin")
                 {
                     filter = f => (f.Status == OrderStatus.PartialDelivered || f.Status == OrderStatus.Delivered || f.Status == OrderStatus.Delivered_With_Edit_Price) && !f.IsDeleted && f.OrderCompleted == OrderCompleted.NOK &&
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientPhone.ToLower().Contains(searchStr))
+                                       : f.ClientPhone.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                       : f.ClientCode.Contains(searchStr))
                                    || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
-                                  && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
+                                  && (auth ? f.ClientId == userId /*&& f.Status != OrderStatus.PartialReturned*/: true);
                 }
                 else if (q == "ass")
                 {
@@ -3387,15 +3631,15 @@ namespace PostexS.Controllers
                                   f.OrderCompleted == OrderCompleted.NOK && !f.Finished &&
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientPhone.ToLower().Contains(searchStr))
+                                       : f.ClientPhone.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                       : f.ClientCode.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
-                                  && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
+                                  && (auth ? f.ClientId == userId /*&& f.Status != OrderStatus.PartialReturned*/: true);
                 }
                 else if (q == "wai")
                 {
@@ -3403,15 +3647,15 @@ namespace PostexS.Controllers
                                   f.OrderCompleted == OrderCompleted.NOK && !f.Finished &&
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientPhone.ToLower().Contains(searchStr))
+                                       : f.ClientPhone.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                       : f.ClientCode.Contains(searchStr))
                                    || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
-                                  && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
+                                  && (auth ? f.ClientId == userId /*&& f.Status != OrderStatus.PartialReturned*/: true);
                 }
                 else if (q == "com")
                 {
@@ -3419,15 +3663,15 @@ namespace PostexS.Controllers
                                   f.OrderCompleted == OrderCompleted.OK && f.Status != OrderStatus.Rejected &&
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientPhone.ToLower().Contains(searchStr))
+                                       : f.ClientPhone.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                       : f.ClientCode.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
-                                  && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
+                                  && (auth ? f.ClientId == userId /*&& f.Status != OrderStatus.PartialReturned*/: true);
                 }
                 else if (q == "fsh")
                 {
@@ -3435,15 +3679,15 @@ namespace PostexS.Controllers
                                   f.OrderCompleted == OrderCompleted.OK &&
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientPhone.ToLower().Contains(searchStr))
+                                       : f.ClientPhone.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                       : f.ClientCode.Contains(searchStr))
                                    || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
-                                  && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
+                                  && (auth ? f.ClientId == userId /*&& f.Status != OrderStatus.PartialReturned*/: true);
                 }
                 else if (q == "pen")
                 {
@@ -3451,15 +3695,15 @@ namespace PostexS.Controllers
                                   !f.IsDeleted &&
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientPhone.ToLower().Contains(searchStr))
+                                       : f.ClientPhone.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                       : f.ClientCode.Contains(searchStr))
                                   || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
-                                  && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
+                                  && (auth ? f.ClientId == userId /*&& f.Status != OrderStatus.PartialReturned*/: true);
                 }
                 else if (q == "returned")
                 {
@@ -3467,15 +3711,15 @@ namespace PostexS.Controllers
                                       !f.IsDeleted &&
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientPhone.ToLower().Contains(searchStr))
+                                       : f.ClientPhone.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                       : f.ClientCode.Contains(searchStr))
                                   || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
-                                  && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
+                                  && (auth ? f.ClientId == userId /*&& f.Status != OrderStatus.PartialReturned*/: true);
                 }
                 else if (q == "rej")
                 {
@@ -3483,15 +3727,15 @@ namespace PostexS.Controllers
                                   !f.Finished &&
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientPhone.ToLower().Contains(searchStr))
+                                       : f.ClientPhone.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                       : f.ClientCode.Contains(searchStr))
                                    || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
-                                  && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
+                                  && (auth ? f.ClientId == userId /*&& f.Status != OrderStatus.PartialReturned*/: true);
                 }
                 else if (q == "trans")
                 {
@@ -3499,45 +3743,45 @@ namespace PostexS.Controllers
                                   !f.Finished &&
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientPhone.ToLower().Contains(searchStr))
+                                       : f.ClientPhone.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                       : f.ClientCode.Contains(searchStr))
                                    || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
-                                  && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
+                                  && (auth ? f.ClientId == userId /*&& f.Status != OrderStatus.PartialReturned*/: true);
                 }
                 else if (q == "notprinted")
                 {
                     filter = f => !f.IsDeleted && !f.IsPrinted &&
                               ((string.IsNullOrEmpty(searchStr)
                                    ? true
-                                   : f.ClientPhone.ToLower().Contains(searchStr))
+                                   : f.ClientPhone.Contains(searchStr))
                                 || (string.IsNullOrEmpty(searchStr)
                                    ? true
-                                   : f.ClientCode.ToLower().Contains(searchStr))
+                                   : f.ClientCode.Contains(searchStr))
                                 || (string.IsNullOrEmpty(searchStr)
                                    ? true
                                    : f.Code.Contains(searchStr)))
                               && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
-                              && (auth ? f.ClientId == user.Id : true);
+                              && (auth ? f.ClientId == userId : true);
                 }
                 else
                 {
                     filter = f => !f.IsDeleted &&
                                   ((string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientPhone.ToLower().Contains(searchStr))
+                                       : f.ClientPhone.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
-                                       : f.ClientCode.ToLower().Contains(searchStr))
+                                       : f.ClientCode.Contains(searchStr))
                                     || (string.IsNullOrEmpty(searchStr)
                                        ? true
                                        : f.Code.Contains(searchStr)))
                                   && ((BranchId == -1 ? true : f.BranchId == BranchId) || (BranchId == -1 ? true : f.Client.BranchId == BranchId) || (BranchId == -1 ? true : f.PreviousBranchId == BranchId && !f.TransferredConfirmed))
-                                  && (auth ? f.ClientId == user.Id /*&& f.Status != OrderStatus.PartialReturned*/: true);
+                                  && (auth ? f.ClientId == userId /*&& f.Status != OrderStatus.PartialReturned*/: true);
                 }
             }
 
@@ -3769,8 +4013,8 @@ namespace PostexS.Controllers
             {
                 var s = searchStr.ToLower();
                 query = query.Where(o =>
-                    (o.ClientPhone != null && o.ClientPhone.ToLower().Contains(s)) ||
-                    (o.ClientCode != null && o.ClientCode.ToLower().Contains(s)) ||
+                    (o.ClientPhone != null && o.ClientPhone.Contains(s)) ||
+                    (o.ClientCode != null && o.ClientCode.Contains(s)) ||
                     (o.Code != null && o.Code.Contains(searchStr)));
             }
 
