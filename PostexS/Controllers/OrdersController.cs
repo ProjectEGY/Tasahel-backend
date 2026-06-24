@@ -757,7 +757,7 @@ namespace PostexS.Controllers
                 return Json(new { error = "معرف المستخدم مطلوب" });
 
             if (pageSize <= 0) pageSize = 50;
-            if (pageSize > 200) pageSize = 200;
+            if (pageSize > 1000) pageSize = 1000;
             if (page < 1) page = 1;
 
             IQueryable<Order> baseQuery;
