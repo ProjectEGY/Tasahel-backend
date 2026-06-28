@@ -1755,7 +1755,6 @@ namespace PostexS.Controllers
         [HttpPost]
         public async Task<IActionResult> Complete(List<long> OrderId, List<double> DeliveryCost)
         {
-            //using (var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
             using (var scope = new TransactionScope(TransactionScopeOption.Required,
                                        new TransactionOptions { IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted, Timeout = TimeSpan.FromMinutes(10) },
                                        TransactionScopeAsyncFlowOption.Enabled))
@@ -1767,6 +1766,30 @@ namespace PostexS.Controllers
                         double total = 0;
                         var admin = await _users.GetObj(x => x.Id == "9897454b-add0-45ef-ad3b-53027814ede7");
                         var orders = new List<long>();
+                        string userid = " ";
+
+                        // تجميع الطلبات الصالحة أولاً (لم يتم تسويتها + DeliveryCost != -1)
+                        var validOrders = new List<(Order order, double deliveryCost)>();
+                        for (int i = 0; i < OrderId.Count; i++)
+                        {
+                            if (DeliveryCost[i] != -1)
+                            {
+                                var order = await _orders.GetObj(x => x.Id == OrderId[i]);
+                                if (order != null && order.OrderCompleted != OrderCompleted.OK)
+                                {
+                                    validOrders.Add((order, DeliveryCost[i]));
+                                }
+                            }
+                        }
+
+                        if (validOrders.Count == 0)
+                        {
+                            scope.Complete();
+                            TempData["Error"] = "لا توجد طلبات صالحة للتسوية (ربما تم تسويتها بالفعل)";
+                            return RedirectToAction(nameof(Complete));
+                        }
+
+                        // إنشاء Wallet فقط لو فيه طلبات فعلية
                         var wallet = new Wallet()
                         {
                             UserId = admin.Id,
@@ -1776,41 +1799,32 @@ namespace PostexS.Controllers
                             Complete_UserId = _userManger.GetUserId(User),
                             AddedToAdminWallet = false
                         };
-                        string userid = " ";
                         await _wallet.Add(wallet);
-                        for (int i = 0; i < OrderId.Count; i++)
-                        {
-                            if (DeliveryCost[i] != -1)
-                            {
-                                var order = await _orders.GetObj(x => x.Id == OrderId[i]);
-                                order.ClientCost = order.ArrivedCost - DeliveryCost[i];
-                                //order.Status = OrderStatus.Completed;
-                                order.OrderCompleted = OrderCompleted.OK;
-                                order.CompletedId = wallet.Id;
-                                order.CompletedOn = DateTime.Now.ToUniversalTime();
-                                if (userid != order.ClientId && userid != " ")
-                                    throw new Exception("فشل تسوية الطلبات.");
-                                userid = order.ClientId;
-                                total = total + (order.ArrivedCost - order.ClientCost - order.DeliveryCost);
-                                //user.Wallet = user.Wallet + (order.ArrivedCost - DeliveryCost[i] - order.DeliveryCost);
-                                order.LastUpdated = DateTime.Now.ToUniversalTime();
-                                if (await _orders.Update(order))
-                                {
-                                    if (order.OrderOperationHistoryId != null)
-                                    {
-                                        var history = await _Histories.GetObj(x => x.Id == order.OrderOperationHistoryId);
-                                        history.Complete_UserId = _userManger.GetUserId(User);
-                                        history.CompleteDate = DateTime.Now.ToUniversalTime();
-                                        await _Histories.Update(history);
-                                        //                                    await _CRUDHistory.Update(history.Id);
-                                    }
 
-                                    // Send WhatsApp message to sender's group when order is completed
-                                    //await _wapilotService.EnqueueOrderStatusUpdateAsync(order, _userManger.GetUserId(User), "تم تقفيل الطلب");
+                        foreach (var (order, deliveryCost) in validOrders)
+                        {
+                            order.ClientCost = order.ArrivedCost - deliveryCost;
+                            order.OrderCompleted = OrderCompleted.OK;
+                            order.CompletedId = wallet.Id;
+                            order.CompletedOn = DateTime.Now.ToUniversalTime();
+                            if (userid != order.ClientId && userid != " ")
+                                throw new Exception("فشل تسوية الطلبات.");
+                            userid = order.ClientId;
+                            total = total + (order.ArrivedCost - order.ClientCost - order.DeliveryCost);
+                            order.LastUpdated = DateTime.Now.ToUniversalTime();
+                            if (await _orders.Update(order))
+                            {
+                                if (order.OrderOperationHistoryId != null)
+                                {
+                                    var history = await _Histories.GetObj(x => x.Id == order.OrderOperationHistoryId);
+                                    history.Complete_UserId = _userManger.GetUserId(User);
+                                    history.CompleteDate = DateTime.Now.ToUniversalTime();
+                                    await _Histories.Update(history);
                                 }
-                                orders.Add(order.Id);
                             }
+                            orders.Add(order.Id);
                         }
+
                         admin.Wallet = admin.Wallet + total;
                         if (!await _users.Update(admin))
                             throw new Exception("فشل تسوية الطلبات.");
@@ -1820,7 +1834,6 @@ namespace PostexS.Controllers
                         wallet.AddedToAdminWallet = true;
                         await _wallet.Update(wallet);
                         scope.Complete();
-                        //var orderIdsString = string.Join(",", orders);
                         return RedirectToAction(nameof(Print), new { orderIds = orders });
                     }
                     return RedirectToAction(nameof(Complete));
@@ -1828,7 +1841,6 @@ namespace PostexS.Controllers
                 }
                 catch (Exception ex)
                 {
-                    // إدارة الخطأ هنا
                     return RedirectToAction(nameof(Complete));
                 }
             }
@@ -2009,6 +2021,34 @@ namespace PostexS.Controllers
                         double total = 0;
                         var admin = await _users.GetObj(x => x.Id == "9897454b-add0-45ef-ad3b-53027814ede7");
                         var orders = new List<long>();
+                        string userid = " ";
+
+                        // تجميع الطلبات الصالحة أولاً
+                        var validOrders = new List<(Order order, int index)>();
+                        for (int i = 0; i < OrderId.Count; i++)
+                        {
+                            if (Recieve[i])
+                            {
+                                var order = await _orders.GetSingle(x => x.Id == OrderId[i], "Client,Branch");
+                                if (order != null && order.BranchId == order.Client.BranchId)
+                                {
+                                    bool alreadySettled = (order.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender || order.Status == OrderStatus.Returned_And_Paid_DeliveryCost)
+                                        ? order.ReturnedOrderCompleted == OrderCompleted.OK
+                                        : order.OrderCompleted == OrderCompleted.OK;
+
+                                    if (!alreadySettled)
+                                        validOrders.Add((order, i));
+                                }
+                            }
+                        }
+
+                        if (validOrders.Count == 0)
+                        {
+                            scope.Complete();
+                            TempData["Error"] = "لا توجد طلبات صالحة للتسوية (ربما تم تسويتها بالفعل)";
+                            return RedirectToAction(nameof(ReturnedComplete));
+                        }
+
                         var wallet = new Wallet()
                         {
                             UserId = admin.Id,
@@ -2018,63 +2058,54 @@ namespace PostexS.Controllers
                             Complete_UserId = _userManger.GetUserId(User),
                             AddedToAdminWallet = false,
                         };
-                        string userid = " ";
                         await _wallet.Add(wallet);
-                        for (int i = 0; i < OrderId.Count; i++)
+
+                        foreach (var (order, idx) in validOrders)
                         {
-                            if (Recieve[i])
+                            if (order.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender || order.Status == OrderStatus.Returned_And_Paid_DeliveryCost)
                             {
-                                //var order = await _orders.GetObj(x => x.Id == OrderId[i]);
-                                var order = await _orders.GetSingle(x => x.Id == OrderId[i], "Client,Branch");
-                                if (order.BranchId == order.Client.BranchId)
+                                order.ReturnedOrderCompleted = OrderCompleted.OK;
+                                order.ReturnedCompletedId = wallet.Id;
+                            }
+                            else
+                            {
+                                order.OrderCompleted = OrderCompleted.OK;
+                                order.CompletedId = wallet.Id;
+                            }
+                            order.CompletedOn = DateTime.Now.ToUniversalTime();
+                            if (userid != order.ClientId && userid != " ")
+                                throw new Exception("فشل تسوية الطلبات.");
+                            userid = order.ClientId;
+                            if (order.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender || order.Status == OrderStatus.Returned_And_Paid_DeliveryCost)
+                                total = total + (order.Cost);
+                            else total = total + (order.TotalCost);
+                            order.LastUpdated = DateTime.Now.ToUniversalTime();
+                            if (await _orders.Update(order))
+                            {
+                                if (order.OrderOperationHistoryId != null)
                                 {
+                                    var history = await _Histories.GetObj(x => x.Id == order.OrderOperationHistoryId);
                                     if (order.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender || order.Status == OrderStatus.Returned_And_Paid_DeliveryCost)
                                     {
-                                        order.ReturnedOrderCompleted = OrderCompleted.OK;
-                                        order.ReturnedCompletedId = wallet.Id;
+                                        history.ReturnedComplete_UserId = _userManger.GetUserId(User);
+                                        history.ReturnedCompleteDate = DateTime.Now.ToUniversalTime();
                                     }
                                     else
                                     {
-                                        order.OrderCompleted = OrderCompleted.OK;
-                                        order.CompletedId = wallet.Id;
+                                        history.Complete_UserId = _userManger.GetUserId(User);
+                                        history.CompleteDate = DateTime.Now.ToUniversalTime();
                                     }
-                                    order.CompletedOn = DateTime.Now.ToUniversalTime();
-                                    if (userid != order.ClientId && userid != " ")
-                                        throw new Exception("فشل تسوية الطلبات.");
-                                    userid = order.ClientId;
-                                    if (order.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender || order.Status == OrderStatus.Returned_And_Paid_DeliveryCost)
-                                        total = total + (order.Cost);
-                                    else total = total + (order.TotalCost);
-                                    order.LastUpdated = DateTime.Now.ToUniversalTime();
-                                    if (await _orders.Update(order))
-                                    {
-                                        if (order.OrderOperationHistoryId != null)
-                                        {
-                                            var history = await _Histories.GetObj(x => x.Id == order.OrderOperationHistoryId);
-                                            if (order.Status == OrderStatus.Returned_And_DeliveryCost_On_Sender || order.Status == OrderStatus.Returned_And_Paid_DeliveryCost)
-                                            {
-                                                history.ReturnedComplete_UserId = _userManger.GetUserId(User);
-                                                history.ReturnedCompleteDate = DateTime.Now.ToUniversalTime();
-                                            }
-                                            else
-                                            {
-                                                history.Complete_UserId = _userManger.GetUserId(User);
-                                                history.CompleteDate = DateTime.Now.ToUniversalTime();
-                                            }
-                                            await _Histories.Update(history);
-                                            //                                    await _CRUDHistory.Update(history.Id);
-                                        }
-                                    }
-                                    orders.Add(order.Id);
+                                    await _Histories.Update(history);
                                 }
                             }
+                            orders.Add(order.Id);
                         }
+
                         wallet.Amount = total;
                         wallet.ActualUserId = userid;
                         wallet.AddedToAdminWallet = true;
                         await _wallet.Update(wallet);
                         scope.Complete();
-                        //var orderIdsString = string.Join(",", orders);
                         return RedirectToAction(nameof(Print), new { orderIds = orders, returned = true });
                     }
                     else
@@ -2084,7 +2115,6 @@ namespace PostexS.Controllers
                 }
                 catch (Exception ex)
                 {
-                    // إدارة الخطأ هنا
                     return RedirectToAction(nameof(ReturnedComplete));
                 }
             }

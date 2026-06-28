@@ -275,7 +275,7 @@
 
                     @*  <button type="button" onclick="window.print();" class="btn"><i class="fa fa-print"></i> طباعة</button>*@
 
-                    <input type="submit" class="btn btn-primary" onclick="return confirm('هل  تريد تسويتها وسيتم نقلك إلى صفحة الطباعه ?')" value="تسوية الطلبات" />
+                    <input type="submit" id="btnReturnedComplete" class="btn btn-primary" onclick="if(!confirm('هل تريد تسويتها؟ سيتم نقلك إلى صفحة الطباعة')) return false; this.disabled=true; this.value='جاري التسوية...'; this.form.submit(); return false;" value="تسوية الطلبات" />
                 </div>
             </div>
         }

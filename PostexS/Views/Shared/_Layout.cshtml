@@ -62,7 +62,9 @@
         #cover-spin {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.58);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             z-index: 99999;
             display: none;
             align-items: center;
@@ -74,44 +76,50 @@
         }
 
         #cover-spin .loader-content {
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 18px 22px 14px;
             text-align: center;
-            min-width: 200px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+            position: relative;
         }
 
         #cover-spin .loader-logo {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
+            width: 120px;
+            height: 120px;
             object-fit: contain;
-            animation: loaderPulse 1.2s ease-in-out infinite;
-            margin-bottom: 10px;
+            animation: loaderBounce 1.4s ease-in-out infinite;
+            filter: drop-shadow(0 8px 25px rgba(245, 166, 35, 0.3));
         }
 
-        #cover-spin .loader-text {
-            font-size: 13px;
-            color: #0f172a;
-            font-weight: 700;
+        #cover-spin .loader-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 150px;
+            height: 150px;
+            margin: -75px 0 0 -75px;
+            border: 3px solid transparent;
+            border-top-color: #f5a623;
+            border-radius: 50%;
+            animation: loaderSpin 1s linear infinite;
         }
 
-        @@keyframes loaderPulse {
-            0% {
-                transform: scale(1);
-                opacity: 1;
-            }
+        #cover-spin .loader-ring::before {
+            content: '';
+            position: absolute;
+            inset: 5px;
+            border: 3px solid transparent;
+            border-top-color: #1a3a6b;
+            border-radius: 50%;
+            animation: loaderSpin 1.5s linear infinite reverse;
+        }
 
-            50% {
-                transform: scale(1.08);
-                opacity: 0.78;
-            }
+        @@keyframes loaderBounce {
+            0%, 100% { transform: scale(1) translateY(0); }
+            25% { transform: scale(1.05) translateY(-8px); }
+            50% { transform: scale(0.95) translateY(0); }
+            75% { transform: scale(1.02) translateY(-4px); }
+        }
 
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
+        @@keyframes loaderSpin {
+            to { transform: rotate(360deg); }
         }
     </style>
     <style type="text/css">
@@ -218,8 +226,8 @@
 <body class="skin-blue sidebar-mini">
     <div id="cover-spin">
         <div class="loader-content">
-            <img class="loader-logo" src="~/content/images/tasahelexpress.png" alt="Tasahel Loader" />
-            <div class="loader-text">جاري التحميل...</div>
+            <div class="loader-ring"></div>
+            <img class="loader-logo" src="~/content/images/tasahelexpress.png" alt="Tasahel" />
         </div>
     </div>
     <div class="wrapper">
@@ -308,12 +316,18 @@
     @RenderSection("Scripts", false)
     <script>
         function showGlobalLoader() {
-            // disabled
+            document.getElementById('cover-spin').style.display = 'flex';
         }
 
         function hideGlobalLoader() {
-            // disabled
+            document.getElementById('cover-spin').style.display = 'none';
         }
+
+        window.addEventListener('pageshow', function (e) {
+            if (e.persisted) {
+                hideGlobalLoader();
+            }
+        });
 
         $(function () {
             $("body").toggleClass('sidebar-open');

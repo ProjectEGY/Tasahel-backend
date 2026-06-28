@@ -1,92 +1,267 @@
-﻿@{
+@{
     Layout = null;
 }
 <!DOCTYPE html>
-<html>
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>تسجيل الدخول</title>
-    <!-- Tell the browser to be responsive to screen width -->
+    <title>تسجيل الدخول - Tasahel Express</title>
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
-    <!-- Bootstrap 3.3.4 -->
-    <link href="~/Content/assets/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
-    <!-- Font Awesome -->
-    <link href="~/Content/assets/plugins/font-awesome-4.7.0/css/font-awesome.min.css" rel="stylesheet" />
-    <!-- Theme style -->
-    <link href="~/Content/assets/dist/css/AdminLTE.min.css" rel="stylesheet" />
     <link href="~/content/images/tasahelexpress.png" type="image/png" rel="icon">
-    <link href="~/content/images/tasahelexpress.png" type="image/png" rel="apple-touch-icon">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="~/Content/assets/plugins/font-awesome-4.7.0/css/font-awesome.min.css" rel="stylesheet" />
     <style>
-        body {
-            font-family: 'Cairo', sans-serif;
-            background-color: white;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
+        body {
+            font-family: 'Cairo', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            background: #f5f5f5;
+            overflow: hidden;
+        }
+
+        /* --- Left: Video Side --- */
+        .video-side {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0a1628;
+        }
+
+        .video-side video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* --- Right: Login Side --- */
+        .login-side {
+            width: 480px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            padding: 40px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .login-inner {
+            width: 100%;
+            max-width: 340px;
+        }
+
+        /* --- Logo --- */
+        .logo-wrapper {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo-wrapper img {
+            width: 180px;
+            height: auto;
+        }
+
+        /* --- Welcome --- */
+        .welcome-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a1a1a;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .welcome-sub {
+            font-size: 14px;
+            color: #888;
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        /* --- Form --- */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 14px;
+            color: #333;
+            background: #fafafa;
+            transition: all 0.2s;
+            outline: none;
+            text-align: right;
+        }
+
+        .input-field::placeholder {
+            color: #bbb;
+        }
+
+        .input-field:focus {
+            border-color: #f5a623;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.1);
+        }
+
+        /* --- Button --- */
+        .btn-login {
+            width: 100%;
+            padding: 13px;
+            background: #f5a623;
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-family: 'Cairo', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+
+        .btn-login:hover {
+            background: #e8961a;
+            box-shadow: 0 4px 15px rgba(245, 166, 35, 0.3);
+        }
+
+        .btn-login:active {
+            transform: scale(0.98);
+        }
+
+        /* --- Errors --- */
         .validation-summary-errors ul {
             list-style: none;
-            margin-bottom: 30px;
+            padding: 0;
+            margin: 0 0 16px;
+        }
+
+        .validation-summary-errors ul li {
+            background: #fff5f5;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #dc2626;
+            font-size: 13px;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+
+        /* --- Footer --- */
+        .login-footer {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid #e0e0e0;
+            color: #999;
+            margin: 0 5px;
+            font-size: 16px;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .social-links a:hover {
+            border-color: #f5a623;
+            color: #f5a623;
+        }
+
+        .copyright {
+            color: #bbb;
+            font-size: 11px;
+            margin-top: 12px;
+        }
+
+        .copyright a {
+            color: #f5a623;
+            text-decoration: none;
+        }
+
+        /* --- Responsive --- */
+        @@media (max-width: 900px) {
+            .video-side {
+                display: none;
+            }
+
+            .login-side {
+                width: 100%;
+            }
         }
     </style>
 </head>
-<body class="login-page" style="background-color:white">
-    <div class="login-box">
-        <div class="login-logo" style="background-color:white">
+<body>
+    <!-- Left: Video -->
+    <div class="video-side">
+        <video autoplay muted loop playsinline>
+            <source src="~/Content/Videos/login-splash.mp4" type="video/mp4">
+        </video>
+    </div>
 
-            <img src="~/Content/Images/TasahelExpress.png" width="200" height="110" />
+    <!-- Right: Login Form -->
+    <div class="login-side">
+        <div class="login-inner">
+            <div class="logo-wrapper">
+                <img src="~/Content/Images/TasahelExpress.png" alt="Tasahel Express" />
+            </div>
 
+            <h1 class="welcome-title">مرحباً بك</h1>
+            <p class="welcome-sub">سجّل دخولك للوحة التحكم</p>
 
-        </div><!-- /.login-logo -->
-        <hr />
-        <h3 class="text-center">Tasahel Express اهلاً بك في تطبيق  </h3>
-        <!--<div class="login-logo">
-            <a href="#">تسجيل الدخول</a>
-        </div>-->
-        <!-- /.login-logo -->
-        <div class="login-box-body">
-            @Html.ValidationSummary(false, "", new { @class = "text-danger text-center" })
-            <p class="login-box-msg">تسجيل الدخول</p>
+            @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+
             @using (Html.BeginForm("Login", "Home", FormMethod.Post))
             {
                 @Html.AntiForgeryToken()
-                <div class="form-group has-feedback">
-                    <span class="glyphicon glyphicon-envelope form-control-feedback"></span>
-                    <input type="email" class="form-control" name="Email" placeholder="البريد الالكترونى" style="text-align:center;">
+                <div class="form-group">
+                    <label>البريد الإلكتروني</label>
+                    <input type="email" class="input-field" name="Email" placeholder="example@mail.com" autocomplete="email" />
                 </div>
-                <div class="form-group has-feedback">
-                    <span class="glyphicon glyphicon-lock form-control-feedback"></span>
-                    <input type="password" class="form-control" name="Password" placeholder="كلمة المرور" style="text-align:center;">
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" class="input-field" name="Password" placeholder="••••••••" autocomplete="current-password" />
                 </div>
-                <div class="row" style="margin:auto;">
-                    <div class="col-lg-12">
-                        <button type="submit" class="btn btn-primary btn-block">تسجيل الدخول</button>
-                    </div>
-                </div>
+                <button type="submit" class="btn-login">تسجيل الدخول</button>
             }
-        </div><!-- /.login-box-body -->
 
-    </div><!-- /.login-box -->
-    <div class="row" style="bottom: 5%; text-align: center; background-color:white">
-        @*   <div class="col-lg-6">
-            <p>Download App</p>
-            <a href="https://apps.apple.com/eg/app/postex/id1591770031" target="_blank" class="btn btn-light"><img src="~/Content/Website/images/appleicon.png" alt="icon"> App Store</a>
-            <a href="https://play.google.com/store/apps/details?id=apps.projectegy.postex" target="_blank" class="btn btn-light"><img src="~/Content/Website/images/playicon.png" alt="icon"> Google play</a>
-        </div> *@
-        <div class="col-lg-6">
-            <p>Social media link</p>
-            <a href="https://www.instagram.com/tasaheel.eg/profilecard/?igsh=a3pyOGRlMjExcnA=" target="_blank" class="btn btn-light"><i class="fa fa-instagram" style="font-size:30px;color:#E1306C;"></i></a>
-            <a href="https://www.facebook.com/share/18hUyUTJSj/?mibextid=wwXIfr" target="_blank" class="btn btn-light"><i class="fa fa-facebook" style="font-size:30px;color:darkblue"></i></a>
-        </div>
-        <div class="col-lg-12" style="margin-top:10px">
-            <p>  &copy; Copyright <strong><a href="https://project-eg.com/" target="_blank"><span>Project-Egy</span></a></strong>. All Rights Reserved</p>
-
+            <div class="login-footer">
+                <div class="social-links">
+                    <a href="https://www.facebook.com/share/18hUyUTJSj/?mibextid=wwXIfr" target="_blank"><i class="fa fa-facebook"></i></a>
+                    <a href="https://www.instagram.com/tasaheel.eg/profilecard/?igsh=a3pyOGRlMjExcnA=" target="_blank"><i class="fa fa-instagram"></i></a>
+                </div>
+                <p class="copyright">&copy; 2026 <a href="https://project-eg.com/" target="_blank">Project-Egy</a>. All Rights Reserved</p>
+            </div>
         </div>
     </div>
-    <!-- jQuery 2.1.4 -->
-    <script src="~/Content/assets/plugins/jQuery/jQuery-2.1.4.min.js"></script>
-    <!-- Bootstrap 3.3.4 -->
-    <script src="~/Content/assets/bootstrap/js/bootstrap.min.js"></script>
-    <!-- iCheck -->
-    <script src="~/Content/assets/plugins/iCheck/icheck.min.js"></script>
 </body>
 </html>

@@ -283,7 +283,13 @@ namespace PostexS
                 app.UseHsts();
             }
             app.UseHttpsRedirection();
-            app.UseStaticFiles();
+            var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+            provider.Mappings[".mp4"] = "video/mp4";
+            provider.Mappings[".webm"] = "video/webm";
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                ContentTypeProvider = provider
+            });
 
             // Swagger UI - Enable in all environments
             app.UseSwagger(c =>

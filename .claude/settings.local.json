@@ -47,7 +47,9 @@
       "Bash(grep -E \"\\\\.cs$\")",
       "PowerShell(dotnet build PostexS\\\\PostexS.csproj --no-restore 2>&1)",
       "Bash(ls \"C:\\\\Users\\\\iT\\\\Downloads\\\\صور فيديو المشكله\")",
-      "Bash(git status *)"
+      "Bash(git status *)",
+      "Skill(code-review)",
+      "Skill(code-review:*)"
     ]
   }
 }
