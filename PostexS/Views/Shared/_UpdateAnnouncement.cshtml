@@ -1,0 +1,140 @@
+@{
+    // ============================================================
+    //  إعلان تحديث مؤقت — يظهر في الداشبورد لمدة 3 أيام من تاريخ النشر
+    //  ⚠️ غيّر التاريخ ده لتاريخ ما ترفع التحديث (يوم النشر):
+    var announceStart = new DateTime(2026, 7, 1);
+    var announceDays = 3;
+    // ============================================================
+    var announceEnd = announceStart.AddDays(announceDays);
+    var withinWindow = DateTime.Now.Date <= announceEnd.Date;
+
+    var isAdminUser = User.Identity.IsAuthenticated && !User.IsInRole("Client");
+    var canBulk = User.IsInRole("Admin") || User.IsInRole("HighAdmin") || User.IsInRole("Accountant") || User.IsInRole("TrustAdmin");
+    var canWarehouse = User.IsInRole("Admin") || User.IsInRole("HighAdmin") || User.IsInRole("TrustAdmin");
+
+    var showAnnounce = withinWindow && isAdminUser && (canBulk || canWarehouse);
+    // نسخة الإعلان — لو عايز البانر يرجع يظهر لكل الناس تاني بعد تعديل، غيّر الرقم
+    var announceVersion = "2026-07-update-1";
+}
+
+@if (showAnnounce)
+{
+    <div id="featureUpdateBanner" data-ann-version="@announceVersion" style="display:none;">
+        <style>
+            #featureUpdateBanner {
+                position: relative;
+                border-radius: 12px;
+                padding: 18px 22px;
+                margin-bottom: 20px;
+                background: linear-gradient(135deg, #1a3a6b 0%, #2e86c1 100%);
+                box-shadow: 0 6px 22px rgba(26,58,107,0.25);
+                overflow: hidden;
+            }
+            #featureUpdateBanner::before {
+                content: '';
+                position: absolute;
+                top: -40%; left: -10%;
+                width: 260px; height: 260px;
+                background: radial-gradient(circle, rgba(255,255,255,0.10) 0%, transparent 70%);
+                border-radius: 50%;
+            }
+            #featureUpdateBanner .ann-head {
+                display: flex; align-items: center; gap: 10px;
+                color: #fff; margin-bottom: 6px;
+            }
+            #featureUpdateBanner .ann-badge {
+                background: #f5a623; color: #1a3a6b; font-weight: 700;
+                font-size: 12px; padding: 3px 10px; border-radius: 20px;
+            }
+            #featureUpdateBanner .ann-head h4 { margin: 0; font-size: 18px; font-weight: 700; }
+            #featureUpdateBanner .ann-sub { color: rgba(255,255,255,0.85); font-size: 13px; margin: 0 0 14px 0; }
+            #featureUpdateBanner .ann-items {
+                display: flex; gap: 12px; flex-wrap: wrap;
+            }
+            #featureUpdateBanner .ann-card {
+                background: rgba(255,255,255,0.12);
+                border: 1px solid rgba(255,255,255,0.18);
+                border-radius: 10px; padding: 12px 14px;
+                flex: 1; min-width: 240px;
+                display: flex; align-items: center; gap: 12px;
+            }
+            #featureUpdateBanner .ann-card .ann-ico {
+                font-size: 26px; color: #fff; flex-shrink: 0; width: 42px; text-align: center;
+            }
+            #featureUpdateBanner .ann-card .ann-txt { flex: 1; color: #fff; }
+            #featureUpdateBanner .ann-card .ann-txt b { display: block; font-size: 14px; margin-bottom: 2px; }
+            #featureUpdateBanner .ann-card .ann-txt span { font-size: 12px; color: rgba(255,255,255,0.8); }
+            #featureUpdateBanner .ann-btn {
+                background: #fff; color: #1a3a6b; font-weight: 700; font-size: 13px;
+                padding: 7px 14px; border-radius: 8px; border: none;
+                white-space: nowrap; text-decoration: none; display: inline-block;
+                transition: all 0.15s;
+            }
+            #featureUpdateBanner .ann-btn:hover { background: #f5a623; color: #1a3a6b; transform: translateY(-1px); }
+            #featureUpdateBanner .ann-close {
+                position: absolute; top: 10px; left: 12px;
+                background: rgba(255,255,255,0.2); color: #fff; border: none;
+                width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+                font-size: 15px; line-height: 1; transition: background 0.15s;
+            }
+            #featureUpdateBanner .ann-close:hover { background: rgba(255,255,255,0.35); }
+            @@media (max-width: 600px) {
+                #featureUpdateBanner .ann-items { flex-direction: column; }
+                #featureUpdateBanner .ann-card { flex-direction: column; text-align: center; }
+            }
+            @@media print { #featureUpdateBanner { display: none !important; } }
+        </style>
+
+        <button type="button" class="ann-close" title="إغلاق" onclick="dismissFeatureBanner()">&times;</button>
+
+        <div class="ann-head">
+            <span class="ann-badge">جديد 🎉</span>
+            <h4>فيه تحديثات جديدة في النظام</h4>
+        </div>
+        <p class="ann-sub">ضفنا طريقتين جداد يسهّلوا الشغل — جرّبهم من هنا:</p>
+
+        <div class="ann-items">
+            @if (canBulk)
+            {
+                <div class="ann-card">
+                    <div class="ann-ico"><i class="fa fa-file-excel-o"></i></div>
+                    <div class="ann-txt">
+                        <b>تقفيل الطلبات بالاكسيل</b>
+                        <span>قفّل طلبات كتير مرة واحدة برفع ملف اكسيل بدل أوردر أوردر</span>
+                    </div>
+                    <a class="ann-btn" href="@Url.Action("BulkSettlement", "Orders")">افتح الصفحة</a>
+                </div>
+            }
+            @if (canWarehouse)
+            {
+                <div class="ann-card">
+                    <div class="ann-ico"><i class="fa fa-inbox"></i></div>
+                    <div class="ann-txt">
+                        <b>استلام مخزن</b>
+                        <span>راجع طلبات إدخال البيانات واقبلها أو ارفضها قبل تشغيلها</span>
+                    </div>
+                    <a class="ann-btn" href="@Url.Action("WarehouseReceipt", "Orders")">افتح الصفحة</a>
+                </div>
+            }
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var banner = document.getElementById('featureUpdateBanner');
+            if (!banner) return;
+            var key = 'featureUpdateDismissed_' + banner.getAttribute('data-ann-version');
+            try {
+                if (localStorage.getItem(key) === '1') {
+                    banner.style.display = 'none';
+                    return;
+                }
+            } catch (e) { }
+            banner.style.display = 'block';
+            window.dismissFeatureBanner = function () {
+                try { localStorage.setItem(key, '1'); } catch (e) { }
+                banner.style.display = 'none';
+            };
+        })();
+    </script>
+}

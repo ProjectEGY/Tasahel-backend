@@ -423,6 +423,18 @@
                 </div>
             </div>
         </div>
+        <div class="col-lg-6 mb-10">
+            <div class="form-group">
+                <label class="col-sm-7 control-label">
+                    <i class="fa fa-inbox" style="color:#2e86c1;"></i> توجيه طلبات الحساب لاستلام المخزن:
+                </label>
+                <div class="col-sm-5" style="padding-top:8px;">
+                    <input type="checkbox" name="OrdersGoToWarehousePending" value="true" @(Model.OrdersGoToWarehousePending ? "checked" : "") style="width:20px;height:20px;vertical-align:middle;" />
+                    <span style="color:#888;font-size:12px;">الطلبات تنتظر استلام المخزن قبل التشغيل</span>
+                    <input type="hidden" name="OrdersGoToWarehousePending" value="false" />
+                </div>
+            </div>
+        </div>
         @if (ViewBag.q == "a")
         {
            @*  <div class="col-lg-6 mb-10">

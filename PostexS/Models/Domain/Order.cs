@@ -22,6 +22,8 @@ namespace PostexS.Models.Domain
         public double DeliveryFees { get; set; }
         public double TotalCost { get; set; }
         public bool Pending { get; set; }
+        // استلام مخزن: مُميِّز لطلبات انتظار استلام المخزن (بينفصل عن Pending بتاعة موافقة الراسل)
+        public bool WarehousePending { get; set; } = false;
         public bool TransferredConfirmed { get; set; } = false;
         public bool PendingReturnTransferrConfirmed { get; set; } = false;
         public double ArrivedCost { get; set; }

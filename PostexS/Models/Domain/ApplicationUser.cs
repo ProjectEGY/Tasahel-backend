@@ -32,6 +32,8 @@ namespace PostexS.Models.Domain
         public bool HideSenderName { get; set; } = false;
         public bool HideSenderPhone { get; set; } = false;
         public bool HideSenderCode { get; set; } = false;
+        // استلام مخزن: لو مفعّلة على الحساب، الطلبات اللي يدخلها الحساب تروح لانتظار استلام المخزن (Pending) قبل ما تشتغل
+        public bool OrdersGoToWarehousePending { get; set; } = false;
         public string? IdentityFrontPhoto { get; set; }
         public string? IdentityBackPhoto { get; set; }
         public string? RidingLecencePhoto { get; set; }

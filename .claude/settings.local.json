@@ -49,7 +49,25 @@
       "Bash(ls \"C:\\\\Users\\\\iT\\\\Downloads\\\\صور فيديو المشكله\")",
       "Bash(git status *)",
       "Skill(code-review)",
-      "Skill(code-review:*)"
+      "Skill(code-review:*)",
+      "Read(//c/Users/iT/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/15304f60-8ca5-48ce-adaa-09405e45808f/65b0e82d-370f-439a-8362-ee3e3daeffa4/skills/xlsx/**)",
+      "Bash(python -c ' *)",
+      "PowerShell($excel = New-Object -ComObject Excel.Application; $excel.Visible = $false; $wb = $excel.Workbooks.Open\\(\"C:\\\\Users\\\\iT\\\\Downloads\\\\فورمه شيت التقفيل.xlsx\"\\); $ws = $wb.Sheets.Item\\(1\\); $usedRange = $ws.UsedRange; $rows = $usedRange.Rows.Count; $cols = $usedRange.Columns.Count; Write-Output \"Rows: $rows, Cols: $cols\"; for \\($r = 1; $r -le [Math]::Min\\($rows, 20\\); $r++\\) { $line = \"\"; for \\($c = 1; $c -le $cols; $c++\\) { $val = $ws.Cells.Item\\($r, $c\\).Text; $line += \"$val`t\" }; Write-Output \"Row $r : $line\" }; $wb.Close\\($false\\); $excel.Quit\\(\\); [System.Runtime.Interopservices.Marshal]::ReleaseComObject\\($excel\\) | Out-Null)",
+      "Bash(dotnet build *)",
+      "Bash(git --no-pager diff HEAD -- PostexS/Controllers/OrdersController.cs)",
+      "Bash(git --no-pager diff HEAD --stat)",
+      "Bash(git --no-pager diff HEAD -- PostexS/Models/Domain/ApplicationUser.cs PostexS/Controllers/UsersController.cs PostexS/Views/Users/Edit.cshtml)",
+      "Bash(git --no-pager diff HEAD -- PostexS/Views/Orders/BulkSettlement.cshtml)",
+      "Bash(git --no-pager diff HEAD -- PostexS/Migrations)",
+      "Read(//c/Users/iT/AppData/Local/Temp/claude/C--Users-iT-source-repos-ProjectEGY-Tasahel-backend/9000be34-fc46-4348-ac8f-5b2c1da17039/scratchpad/**)",
+      "Bash(git --no-pager diff HEAD -- PostexS/Models/Domain/ApplicationUser.cs PostexS/Controllers/UsersController.cs PostexS/Views/Users/Edit.cshtml PostexS/Views/Partials/AdminSideMenu.cshtml)",
+      "Bash(git --no-pager diff HEAD -- PostexS/Views/Partials/AdminSideMenu.cshtml)",
+      "Bash(git --no-pager diff HEAD -- PostexS/Migrations/20260701114707_AddOrdersGoToWarehousePending.cs PostexS/Models/Data/ApplicationDbContextModelSnapshot.cs)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git check-ignore *)",
+      "Read(//c/Users/iT/source/repos/MohammedSharabash/Rima-Backend/**)",
+      "Bash(ls -la docs/)",
+      "Bash(ls -la .claude/)"
     ]
   }
 }

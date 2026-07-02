@@ -3,15 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PostexS.Models.Data;
 
-namespace PostexS.Migrations
+namespace TasahelExpress.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260701114707_AddOrdersGoToWarehousePending")]
+    partial class AddOrdersGoToWarehousePending
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -888,9 +890,6 @@ namespace PostexS.Migrations
 
                     b.Property<long?>("WalletId")
                         .HasColumnType("bigint");
-
-                    b.Property<bool>("WarehousePending")
-                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 

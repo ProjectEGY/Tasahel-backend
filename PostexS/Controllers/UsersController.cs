@@ -1517,6 +1517,8 @@ namespace PostexS.Controllers
             else user.Tracking = false;
             user.Name = model.Name;
             user.BranchId = model.BranchId;
+            // استلام مخزن — إعداد عام لأي نوع حساب (إدخال بيانات / راسل)
+            user.OrdersGoToWarehousePending = model.OrdersGoToWarehousePending;
 
             if (model.UserType == UserType.Client)
             {
@@ -2466,7 +2468,8 @@ namespace PostexS.Controllers
         {
             ViewBag.UserId = id;
             var user = _user.Get(x => x.Id == id).First();
-            ViewBag.Orders = _orders.Get(x => x.ClientId == id && x.Status == OrderStatus.Placed && !x.IsDeleted && x.Pending
+            // نستبعد طلبات استلام المخزن — دي ليها صفحتها الخاصة (WarehouseReceipt) عشان مايحصلش تداخل بين التدفقين
+            ViewBag.Orders = _orders.Get(x => x.ClientId == id && x.Status == OrderStatus.Placed && !x.IsDeleted && x.Pending && !x.WarehousePending
             && ((x.BranchId == user.BranchId && x.Client.BranchId == user.BranchId) || (x.BranchId == user.BranchId && x.TransferredConfirmed))).ToList();
             return View();
         }
