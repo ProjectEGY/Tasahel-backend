@@ -171,7 +171,7 @@
                     </li>
                     <li class="treeview @(Context.Request.Path.ToString().ToLower().Contains("bulksettlement") ? "active" : "")" style="background: linear-gradient(135deg, #1a3a6b, #2e86c1); border-radius: 4px; margin: 4px 8px;">
                         <a href="@Url.Action("BulkSettlement", "Orders")" style="color: #fff !important;">
-                            <i class="fa fa-file-excel-o"></i> <span>تقفيل بالاكسيل</span>
+                            <i class="fa fa-file-excel-o"></i> <span>تحديث الحالات بالاكسيل</span>
                         </a>
                     </li>
                     @if (User.IsInRole("Admin") || User.IsInRole("HighAdmin") || User.IsInRole("TrustAdmin"))

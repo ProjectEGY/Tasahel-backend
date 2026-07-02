@@ -4297,8 +4297,8 @@ namespace PostexS.Controllers
         {
             ViewBag.Clients = _users.Get(x => !x.IsDeleted && x.UserType == UserType.Client).OrderBy(x => x.Name).ToList();
             ViewBag.Drivers = _users.Get(x => !x.IsDeleted && x.UserType == UserType.Driver).OrderBy(x => x.Name).ToList();
-            // التنفيذ الفعلي (تأكيد التقفيل) متاح لـ HighAdmin فقط — نخفي خطوة التأكيد عن باقي الأدوار
-            ViewBag.CanExecute = User.IsInRole("HighAdmin");
+            // التنفيذ متاح لأي دور بيقدر يفتح الصفحة (بقى تحديث حالات مش تقفيل مالي)
+            ViewBag.CanExecute = true;
             return View();
         }
 
@@ -4380,6 +4380,8 @@ namespace PostexS.Controllers
         [Authorize(Roles = "Admin,HighAdmin,Accountant,TrustAdmin")]
         public IActionResult DownloadBulkSettlementTemplate(string clientId = null, string driverId = null)
         {
+            try
+            {
             var query = _orders.GetAllAsIQueryable(
                 filter: x => !x.IsDeleted
                     && (
@@ -4434,7 +4436,14 @@ namespace PostexS.Controllers
                     row++;
                 }
 
-                ws.Columns().AdjustToContents();
+                // عرض ثابت للأعمدة بدل AdjustToContents — الأخيرة بتقيس النص بالخطوط وبترمي error
+                // على استضافات مفيهاش خطوط (زي السيرفر)، والتصدير الشغّال في النظام مش بيستخدمها أصلاً.
+                ws.Column(1).Width = 18;
+                ws.Column(2).Width = 12;
+                ws.Column(3).Width = 24;
+                ws.Column(4).Width = 22;
+                ws.Column(5).Width = 18;
+                ws.Column(6).Width = 14;
 
                 var statusSheet = workbook.Worksheets.Add("الحالات");
                 statusSheet.Cell(1, 1).Value = "الحالات المتاحة";
@@ -4443,13 +4452,26 @@ namespace PostexS.Controllers
                 for (int i = 0; i < statuses.Length; i++)
                     statusSheet.Cell(i + 2, 1).Value = statuses[i];
 
+                // قائمة منسدلة (dropdown) لعمود "حاله الشحنه" — الموظف يختار الحالة بدل ما يكتبها
+                int lastDvRow = Math.Max(row + 200, 2000);
+                var dvList = "\"" + string.Join(",", statuses) + "\"";
+                var statusDv = ws.Range(2, 3, lastDvRow, 3).CreateDataValidation();
+                statusDv.List(dvList, true);
+
                 using (var stream = new MemoryStream())
                 {
                     workbook.SaveAs(stream);
                     return File(stream.ToArray(),
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        $"تقفيل_الطلبات_{DateTime.Now:yyyyMMdd}.xlsx");
+                        $"BulkSettlement_{DateTime.Now:yyyyMMdd}.xlsx");
                 }
+            }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("DownloadBulkSettlementTemplate error: " + ex);
+                // مؤقتاً للتشخيص: نرجّع تفاصيل الخطأ كنص (الصفحة للأدمن بس) عشان نعرف السبب بالظبط
+                return Content("خطأ أثناء إنشاء ملف الاكسيل — ابعت النص ده للمطوّر:\n\n" + ex.ToString(), "text/plain; charset=utf-8");
             }
         }
 
@@ -4680,7 +4702,7 @@ namespace PostexS.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "HighAdmin")]
+        [Authorize(Roles = "Admin,HighAdmin,Accountant,TrustAdmin")]
         public async Task<IActionResult> ExecuteBulkSettlement(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -4728,301 +4750,162 @@ namespace PostexS.Controllers
                 try
                 {
                     var userid = _userManger.GetUserId(User);
-                    var adminUser = await _users.GetObj(x => x.Id == userid);
-                    if (adminUser == null)
-                        return Json(new { success = false, message = "تعذّر تحديد المستخدم الحالي" });
 
                     int successCount = 0;
                     int skipCount = 0;
-                    int markedReturnedCount = 0;
-                    var walletsInOrder = new List<Wallet>();
-                    var walletsByDriver = new Dictionary<string, Wallet>();
-                    var returnWalletsByDriver = new Dictionary<string, Wallet>();
-                    var walletTotals = new Dictionary<long, double>();
                     var processedOrderIds = new List<long>();
                     var skipped = new List<object>();
 
-                    // 2) تحميل كل الطلبات (tracked) + الـ histories دفعة واحدة بدل استعلام لكل صف
+                    // تحميل الطلبات (tracked، مع بيانات المندوب) دفعة واحدة بدل استعلام لكل صف
                     var codes = rows.Select(r => r.Code).Distinct().ToList();
                     var orders = LoadOrdersByCodes(codes, tracked: true);
                     var ordersByCode = orders
                         .GroupBy(x => x.Code)
                         .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-                    // المناديب من الـ Include (من غير استعلام إضافي) — لسعر الشحن واسم المندوب في الملخص
-                    var drivers = orders.Where(o => o.Delivery != null && !string.IsNullOrEmpty(o.DeliveryId))
-                        .GroupBy(o => o.DeliveryId)
-                        .ToDictionary(g => g.Key, g => g.First().Delivery);
-
-                    var historyIds = orders.Where(o => o.OrderOperationHistoryId != null)
-                        .Select(o => o.OrderOperationHistoryId.Value).Distinct().ToList();
-                    var histories = new Dictionary<long, OrderOperationHistory>();
-                    for (int i = 0; i < historyIds.Count; i += 1000)
-                    {
-                        var chunk = historyIds.Skip(i).Take(1000).ToList();
-                        foreach (var h in _Histories.Get(h => chunk.Contains(h.Id)))
-                            histories[h.Id] = h;
-                    }
-
                     var nowUtc = DateTime.Now.ToUniversalTime();
 
                     foreach (var r in rows)
                     {
                         var targetStatus = statusMap[r.StatusStr];
-                        double arrivedCost = 0;
+                        double paid = 0;
                         if (!string.IsNullOrEmpty(r.PriceStr))
-                            double.TryParse(r.PriceStr, out arrivedCost);
+                            double.TryParse(r.PriceStr, out paid);
 
                         ordersByCode.TryGetValue(r.Code, out var order);
                         if (order == null) { skipped.Add(new { row = r.RowNum, code = r.Code, message = "غير موجود في النظام" }); skipCount++; continue; }
                         if (string.IsNullOrEmpty(order.DeliveryId)) { skipped.Add(new { row = r.RowNum, code = r.Code, message = "غير مسند لمندوب" }); skipCount++; continue; }
 
-                        bool isReturnWalletStatus = targetStatus == OrderStatus.Returned_And_Paid_DeliveryCost
+                        bool isReturnPaidStatus = targetStatus == OrderStatus.Returned_And_Paid_DeliveryCost
                             || targetStatus == OrderStatus.Returned_And_DeliveryCost_On_Sender;
 
-                        if (order.Finished && !isReturnWalletStatus) { skipped.Add(new { row = r.RowNum, code = r.Code, message = "الطلب مقفل مسبقاً" }); skipCount++; continue; }
-                        if (order.ReturnedFinished && isReturnWalletStatus) { skipped.Add(new { row = r.RowNum, code = r.Code, message = "المرتجع مقفل مسبقاً" }); skipCount++; continue; }
+                        // منمسّش الطلبات المقفّلة ماليًا عشان منبوّظش تقفيلة اتعملت خلاص
+                        if (order.Finished && !isReturnPaidStatus) { skipped.Add(new { row = r.RowNum, code = r.Code, message = "الطلب مقفول ماليًا — اتخطى" }); skipCount++; continue; }
+                        if (order.ReturnedFinished && isReturnPaidStatus) { skipped.Add(new { row = r.RowNum, code = r.Code, message = "المرتجع مقفول ماليًا — اتخطى" }); skipCount++; continue; }
 
-                        string driverId = order.DeliveryId;
+                        double driverFee = (order.Delivery != null && order.Delivery.DeliveryCost != null) ? order.Delivery.DeliveryCost.Value : 0;
 
-                        if (isReturnWalletStatus)
+                        // بنشيل الطلب من أي تقفيلة سابقة (زي FinishOrder بالظبط)
+                        order.WalletId = null;
+
+                        switch (targetStatus)
                         {
-                            if (!returnWalletsByDriver.ContainsKey(driverId))
-                            {
-                                var w = new Wallet
+                            case OrderStatus.Delivered:
+                                order.ArrivedCost = order.TotalCost;
+                                order.DeliveryCost = driverFee;
+                                break;
+                            case OrderStatus.Delivered_With_Edit_Price:
+                                order.ArrivedCost = paid;
+                                order.DeliveryCost = driverFee;
+                                break;
+                            case OrderStatus.Returned_And_Paid_DeliveryCost:
+                                order.ArrivedCost = paid;
+                                order.DeliveryCost = driverFee;
+                                order.ReturnedCost = order.Cost;
+                                break;
+                            case OrderStatus.Returned_And_DeliveryCost_On_Sender:
+                                order.ArrivedCost = 0;
+                                order.DeliveryCost = driverFee;
+                                order.ReturnedCost = order.Cost;
+                                break;
+                            case OrderStatus.Returned:
+                                order.ArrivedCost = 0;
+                                order.DeliveryCost = 0;
+                                order.ReturnedCost = order.TotalCost;
+                                break;
+                            case OrderStatus.PartialDelivered:
+                                order.ArrivedCost = paid;
+                                order.DeliveryCost = driverFee;
+                                // طلب عكسي مرتجع جزئي بنفس الكود + R (نفس FinishOrder: يُنشأ لو مش موجود، أو يُحدَّث لو موجود)
+                                var revCode = "R" + order.Code;
+                                var existingRev = await _orders.GetObj(x => x.Code == revCode && !x.IsDeleted);
+                                if (existingRev == null)
                                 {
-                                    UserId = userid,
-                                    Amount = 0,
-                                    TransactionType = TransactionType.OrderFinished,
-                                    ActualUserId = driverId,
-                                    UserWalletLast = adminUser.Wallet,
-                                    AddedToAdminWallet = false
-                                };
-                                await _wallet.Add(w);
-                                returnWalletsByDriver[driverId] = w;
-                                walletsInOrder.Add(w);
-                                walletTotals[w.Id] = 0;
-                            }
-                            var wallet = returnWalletsByDriver[driverId];
-                            order.ReturnedWalletId = wallet.Id;
-                            order.ReturnedFinished = true;
-                            order.Status = targetStatus;
-                        }
-                        else if (targetStatus == OrderStatus.Returned)
-                        {
-                            // مرتجع كامل: تعليم مرحلة أولى فقط (مطابق لـ goto Skip في FinshedOrders).
-                            // لا يُقفَّل مالياً هنا؛ بيتقفل بعد كده في تقفيل المرتجعات. الحفظ في SaveChanges النهائي (الكيان tracked).
-                            order.DeliveryCost = 0;
-                            order.ArrivedCost = 0;
-                            order.ReturnedCost = order.TotalCost;
-                            order.Status = targetStatus;
-                            order.LastUpdated = nowUtc;
-                            markedReturnedCount++;
-                            continue;
-                        }
-                        else
-                        {
-                            if (!walletsByDriver.ContainsKey(driverId))
-                            {
-                                var w = new Wallet
-                                {
-                                    UserId = userid,
-                                    Amount = 0,
-                                    TransactionType = TransactionType.OrderFinished,
-                                    ActualUserId = driverId,
-                                    UserWalletLast = adminUser.Wallet,
-                                    AddedToAdminWallet = false
-                                };
-                                await _wallet.Add(w);
-                                walletsByDriver[driverId] = w;
-                                walletsInOrder.Add(w);
-                                walletTotals[w.Id] = 0;
-                            }
-                            var wallet = walletsByDriver[driverId];
-
-                            // لو الطلب لسه ما اتسلّمش من تطبيق المندوب (مثلاً Assigned) بيبقى DeliveryCost=0،
-                            // فنملأه من سعر شحن المندوب زي FinishOrder عشان عمولة المندوب متضيعش.
-                            if (order.DeliveryCost == 0)
-                                order.DeliveryCost = drivers.TryGetValue(driverId, out var du) ? (du.DeliveryCost ?? 0) : 0;
-
-                            if (targetStatus == OrderStatus.PartialDelivered)
-                            {
-                                order.ArrivedCost = arrivedCost;
-                                order.Status = targetStatus;
-                                order.WalletId = wallet.Id;
-                                order.Finished = true;
-                                walletTotals[wallet.Id] += (arrivedCost - order.DeliveryCost);
-
-                                var partialReturned = new Order
-                                {
-                                    Code = "R" + order.Code,
-                                    Notes = order.Notes,
-                                    AddressCity = order.AddressCity,
-                                    Address = order.Address,
-                                    ClientName = order.ClientName,
-                                    ClientCode = order.ClientCode,
-                                    ClientPhone = order.ClientPhone,
-                                    ClientSecondaryPhone = order.ClientSecondaryPhone,
-                                    Cost = order.Cost,
-                                    DeliveryFees = order.DeliveryFees,
-                                    TotalCost = order.TotalCost,
-                                    Pending = order.Pending,
-                                    TransferredConfirmed = order.TransferredConfirmed,
-                                    ArrivedCost = order.ArrivedCost,
-                                    DeliveryCost = 0,
-                                    ReturnedCost = order.TotalCost - arrivedCost,
-                                    Finished = false,
-                                    Status = OrderStatus.PartialReturned,
-                                    OrderCompleted = order.OrderCompleted,
-                                    ClientId = order.ClientId,
-                                    LastUpdated = nowUtc,
-                                    WalletId = null,
-                                    DeliveryId = order.DeliveryId,
-                                    BranchId = order.BranchId,
-                                    OrderOperationHistoryId = order.OrderOperationHistoryId,
-                                };
-                                await _orders.Add(partialReturned);
-                                var prHistory = new OrderOperationHistory
-                                {
-                                    OrderId = partialReturned.Id,
-                                    Create_UserId = userid,
-                                    CreateDate = partialReturned.CreateOn,
-                                };
-                                await _Histories.Add(prHistory);
-                                partialReturned.OrderOperationHistoryId = prHistory.Id;
-                                // ملاحظة على المرتجع الجزئي (بديل للنوت اللي بياخده الفلو اليدوي)
-                                await _orderNotes.Add(new OrderNotes
-                                {
-                                    Content = "مرتجع جزئي من التقفيل بالإكسيل",
-                                    OrderId = partialReturned.Id,
-                                    UserId = userid
-                                });
-                            }
-                            else
-                            {
-                                if (targetStatus == OrderStatus.Delivered)
-                                    order.ArrivedCost = order.TotalCost;
+                                    var partialReturned = new Order
+                                    {
+                                        Code = revCode,
+                                        Notes = order.Notes,
+                                        AddressCity = order.AddressCity,
+                                        Address = order.Address,
+                                        ClientCode = order.ClientCode,
+                                        ClientName = order.ClientName,
+                                        ClientPhone = order.ClientPhone,
+                                        ClientSecondaryPhone = order.ClientSecondaryPhone,
+                                        Cost = order.Cost,
+                                        DeliveryFees = order.DeliveryFees,
+                                        TotalCost = order.TotalCost,
+                                        Pending = order.Pending,
+                                        TransferredConfirmed = order.TransferredConfirmed,
+                                        PendingReturnTransferrConfirmed = order.PendingReturnTransferrConfirmed,
+                                        ArrivedCost = order.ArrivedCost,
+                                        DeliveryCost = 0,
+                                        ReturnedCost = order.TotalCost - order.ArrivedCost,
+                                        Finished = order.Finished,
+                                        Status = OrderStatus.PartialReturned,
+                                        OrderCompleted = order.OrderCompleted,
+                                        ClientId = order.ClientId,
+                                        LastUpdated = nowUtc,
+                                        WalletId = order.WalletId,
+                                        DeliveryId = order.DeliveryId,
+                                        BranchId = order.BranchId,
+                                        PreviousBranchId = order.PreviousBranchId,
+                                        OrderOperationHistoryId = order.OrderOperationHistoryId,
+                                        ReturnedFinished = order.ReturnedFinished,
+                                        ReturnedOrderCompleted = order.ReturnedOrderCompleted,
+                                        ReturnedWalletId = order.ReturnedWalletId,
+                                        ReturnedCompletedId = order.ReturnedCompletedId,
+                                    };
+                                    await _orders.Add(partialReturned);
+                                    var prHistory = new OrderOperationHistory
+                                    {
+                                        OrderId = partialReturned.Id,
+                                        Create_UserId = userid,
+                                        CreateDate = partialReturned.CreateOn,
+                                    };
+                                    await _Histories.Add(prHistory);
+                                    partialReturned.OrderOperationHistoryId = prHistory.Id;
+                                    await _orders.Update(partialReturned);
+                                }
                                 else
-                                    order.ArrivedCost = arrivedCost;
-
-                                order.Status = targetStatus;
-                                order.WalletId = wallet.Id;
-                                order.Finished = true;
-                                walletTotals[wallet.Id] += (order.ArrivedCost - order.DeliveryCost);
-                            }
+                                {
+                                    existingRev.ArrivedCost = order.ArrivedCost;
+                                    existingRev.ReturnedCost = order.TotalCost - order.ArrivedCost;
+                                    await _orders.Update(existingRev);
+                                }
+                                break;
+                            default:
+                                order.ArrivedCost = paid;
+                                order.DeliveryCost = 0;
+                                order.ReturnedCost = order.TotalCost - paid;
+                                break;
                         }
 
-                        // تحديث سجل العمليات (tracked — الحفظ في الآخر مرة واحدة)
-                        if (order.OrderOperationHistoryId != null
-                            && histories.TryGetValue(order.OrderOperationHistoryId.Value, out var history)
-                            && history != null)
-                        {
-                            if (isReturnWalletStatus)
-                            {
-                                history.ReturnedFinish_UserId = userid;
-                                history.ReturnedFinishDate = nowUtc;
-                            }
-                            else
-                            {
-                                history.Finish_UserId = userid;
-                                history.FinishDate = nowUtc;
-                            }
-                        }
-
+                        order.Status = targetStatus;
                         order.LastUpdated = nowUtc;
+
+                        // ملاحظة على الطلب (وبتحفظ تعديلات الطلب كمان لأنها SaveChanges على نفس الـ context)
+                        await _orderNotes.Add(new OrderNotes
+                        {
+                            Content = "تم تحديث الحالة إلى: " + r.StatusStr + " (عن طريق ملف الاكسيل)",
+                            OrderId = order.Id,
+                            UserId = userid
+                        });
+
                         processedOrderIds.Add(order.Id);
                         successCount++;
                     }
 
-                    // 3) مبالغ المحافظ + رصيد جاري للأدمن (UserWalletLast لكل محفظة = الرصيد قبلها فعلاً)
-                    double runningAdminWallet = adminUser.Wallet;
-                    foreach (var w in walletsInOrder)
+                    scope.Complete();
+
+                    return Json(new
                     {
-                        w.Amount = walletTotals.TryGetValue(w.Id, out var amt) ? amt : 0;
-                        w.UserWalletLast = runningAdminWallet;
-                        runningAdminWallet -= w.Amount;
-                    }
-                    adminUser.Wallet = runningAdminWallet;
-
-                    // تحديث المحافظ ثم المستخدم — أي SaveChanges منهم بيثبّت كل تعديلات الطلبات/السجلات المتتبَّعة مرة واحدة
-                    foreach (var w in walletsInOrder)
-                        await _wallet.Update(w);
-                    bool userUpdated = await _users.Update(adminUser);
-
-                    if (userUpdated)
-                    {
-                        foreach (var w in walletsInOrder)
-                        {
-                            w.AddedToAdminWallet = true;
-                            await _wallet.Update(w);
-                        }
-                        scope.Complete();
-
-                        var allWallets = walletsInOrder;
-
-                        try
-                        {
-                            var completedOrders = _orders.Get(x => processedOrderIds.Contains(x.Id)).ToList();
-                            await _wapilotService.EnqueueBulkOrderCompletionAsync(completedOrders, userid);
-                        }
-                        catch { }
-
-                        try
-                        {
-                            var settledOrders = _orders.GetAllAsIQueryable(
-                                filter: x => processedOrderIds.Contains(x.Id),
-                                IncludeProperties: "Client", asNoTracking: true).ToList();
-                            var clientGroups = settledOrders.GroupBy(x => x.ClientId);
-                            var sendNotify = new SendNotification(_pushNotification, _notification, _firebaseService.CustomerMessaging);
-                            foreach (var group in clientGroups)
-                            {
-                                await sendNotify.SendToAllSpecificAndroidUserDevices(
-                                    group.Key,
-                                    "تسوية طلبات",
-                                    $"تمت تسوية {group.Count()} طلب (تقفيل بالإكسيل)",
-                                    notificationType: "settlement");
-                            }
-                        }
-                        catch { }
-
-                        try
-                        {
-                            var sendDriver = new SendNotification(_pushNotification, _notification, _firebaseService.CaptainMessaging);
-                            foreach (var w in allWallets)
-                            {
-                                await sendDriver.SendToAllSpecificAndroidUserDevices(
-                                    w.ActualUserId,
-                                    "تقفيلة جديدة",
-                                    $"تمت تقفيلة لطلباتك. رقم التقفيلة: {w.Id}، المبلغ: {w.Amount:N2}",
-                                    notificationType: "settlement");
-                            }
-                        }
-                        catch { }
-
-                        return Json(new
-                        {
-                            success = true,
-                            message = markedReturnedCount > 0
-                                ? $"تم تقفيل {successCount} طلب بنجاح، وتعليم {markedReturnedCount} مرتجع كامل (بينتظر تقفيل المرتجعات)"
-                                : $"تم تقفيل {successCount} طلب بنجاح",
-                            successCount,
-                            markedReturnedCount,
-                            skipCount,
-                            walletsCreated = allWallets.Count,
-                            skipped,
-                            walletsSummary = allWallets.Select(w => new
-                            {
-                                w.Id,
-                                w.Amount,
-                                w.ActualUserId,
-                                driverName = drivers.TryGetValue(w.ActualUserId, out var du2) ? du2.Name : w.ActualUserId
-                            })
-                        });
-                    }
-                    else
-                    {
-                        return Json(new { success = false, message = "حدث خطأ في تحديث المحفظة" });
-                    }
+                        success = true,
+                        message = $"تم تحديث حالة {successCount} طلب (جاهزة لتقفيل المندوب)"
+                            + (skipCount > 0 ? $" — واتخطى {skipCount} طلب" : ""),
+                        successCount,
+                        skipCount,
+                        skipped
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -5108,6 +4991,40 @@ namespace PostexS.Controllers
                 count++;
             }
             return Json(new { success = true, message = $"تم رفض {count} طلب" });
+        }
+
+        // استلام شحنة واحدة بمسح الباركود (scan) — أسرع طريقة للمخزن
+        [Authorize(Roles = "Admin,HighAdmin,TrustAdmin")]
+        [HttpPost]
+        public async Task<IActionResult> AcceptWarehouseOrderByCode(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                return Json(new { success = false, status = "empty", message = "الكود فارغ" });
+
+            code = code.Trim();
+            var order = await _orders.GetObj(x => x.Code == code && !x.IsDeleted);
+            if (order == null)
+                return Json(new { success = false, status = "notfound", code, message = $"الكود {code} مش موجود في النظام" });
+            if (!order.WarehousePending)
+                return Json(new { success = false, status = "notpending", code, message = $"الشحنة {code} مش في انتظار الاستلام (اتقبلت قبل كده أو مش من المخزن)" });
+
+            var userid = _userManger.GetUserId(User);
+            var nowUtc = DateTime.Now.ToUniversalTime();
+            order.Pending = false;
+            order.WarehousePending = false;
+            order.LastUpdated = nowUtc;
+            await _orders.Update(order);
+            if (order.OrderOperationHistoryId != null)
+            {
+                var history = await _Histories.GetObj(x => x.Id == order.OrderOperationHistoryId);
+                if (history != null)
+                {
+                    history.Accept_UserId = userid;
+                    history.AcceptDate = nowUtc;
+                    await _Histories.Update(history);
+                }
+            }
+            return Json(new { success = true, status = "accepted", code = order.Code, recipient = order.ClientName ?? "", message = $"تم استلام {order.Code}" });
         }
 
         #endregion

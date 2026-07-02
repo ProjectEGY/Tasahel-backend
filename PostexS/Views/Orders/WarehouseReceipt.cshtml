@@ -38,10 +38,27 @@
 
     .count-badge { background:#27ae60; color:#fff; border-radius:20px; padding:3px 12px; font-size:13px; font-weight:700; }
 
+    .scan-box {
+        background: #eef7f1; border: 2px dashed #27ae60; border-radius: 10px;
+        padding: 16px 18px; margin-bottom: 16px;
+    }
+    .scan-box label { display:block; font-weight:700; color:#145a32; margin-bottom:8px; font-size:14px; }
+    .scan-box input {
+        width: 100%; max-width: 420px; padding: 12px 14px; font-size: 18px; font-weight: 700;
+        border: 2px solid #27ae60; border-radius: 8px; text-align: center; letter-spacing: 1px;
+    }
+    .scan-box input:focus { outline: none; box-shadow: 0 0 0 3px rgba(39,174,96,0.2); }
+    .scan-box .scan-hint { display:inline-block; margin-right:12px; color:#7f8c8d; font-size:12px; }
+    .scan-log { max-height: 180px; overflow-y: auto; margin-bottom: 16px; }
+    .scan-line { padding: 6px 12px; border-radius: 6px; margin-bottom: 5px; font-size: 13px; font-weight: 600; }
+    .scan-line.ok { background: #eafaf1; color: #1e8449; border: 1px solid #a9dfbf; }
+    .scan-line.err { background: #fdecea; color: #c0392b; border: 1px solid #f5b7b1; }
+
     @@media (max-width:768px) {
         .wh-hero .hero-icon { display:none; }
         .wh-actions { flex-direction:column; }
         .btn-wh { width:100%; justify-content:center; }
+        .scan-box input { max-width: 100%; }
     }
 </style>
 
@@ -53,7 +70,7 @@
 
 <div class="wh-card">
     <div class="wh-card-head">
-        <h4><i class="fa fa-clock-o"></i> طلبات بانتظار الاستلام <span class="count-badge">@Model.Count</span></h4>
+        <h4><i class="fa fa-clock-o"></i> طلبات بانتظار الاستلام <span class="count-badge" id="pendingCount">@Model.Count</span></h4>
         <form method="get" style="margin:0;">
             <select name="BranchId" class="form-control" style="display:inline-block;width:auto;" onchange="this.form.submit()">
                 <option value="-1">كل الفروع</option>
@@ -80,10 +97,22 @@
             <div class="wh-empty">
                 <div><i class="fa fa-check-circle"></i></div>
                 <p>مفيش طلبات بانتظار الاستلام حالياً</p>
+                <p style="font-size:13px; max-width:600px; margin:10px auto 0; color:#8a97a3; line-height:2;">
+                    الطلبات بتظهر هنا لما حساب <b>إدخال بيانات</b> مفعّل عليه خيار «استلام مخزن» يدخّل طلبات جديدة.<br />
+                    فعّل الخيار من: <b>المستخدمين ← تعديل الحساب ← «توجيه طلبات الحساب لاستلام المخزن»</b>،
+                    وبعدها أي طلب الحساب ده يدخّله هييجي هنا تستلمه <b>بمسح الباركود (Scan)</b> أو بالاختيار اليدوي.
+                </p>
             </div>
         }
         else
         {
+            <div class="scan-box">
+                <label><i class="fa fa-barcode"></i> استلام بالمسح — امسح باركود الشحنة (أو اكتب الكود واضغط Enter):</label>
+                <input type="text" id="scanInput" autocomplete="off" placeholder="امسح الباركود هنا..." />
+                <span class="scan-hint">كل مسح بيستلم الشحنة على طول</span>
+            </div>
+            <div id="scanLog" class="scan-log"></div>
+
             <div class="wh-actions">
                 <button class="btn-wh btn-accept" id="acceptBtn" onclick="doAction('accept')" disabled>
                     <i class="fa fa-check"></i> استلام المحدد (<span id="accCount">0</span>)
@@ -92,7 +121,7 @@
                     <i class="fa fa-times"></i> رفض المحدد
                 </button>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive" id="whTableWrap">
                 <table class="table table-striped table-bordered table-hover" style="text-align:center;">
                     <thead>
                         <tr>
@@ -109,7 +138,7 @@
                     <tbody>
                         @foreach (var o in Model)
                         {
-                            <tr>
+                            <tr data-code="@o.Code">
                                 <td><input type="checkbox" class="rowChk" value="@o.Id" onclick="updateSel()" /></td>
                                 <td><span class="badge bg-blue-active">@o.Code</span></td>
                                 <td>@(o.Client != null ? o.Client.Name : "-")</td>
@@ -178,4 +207,79 @@
             });
         });
     }
+
+    // ===== الاستلام بالمسح (Scan) =====
+    (function () {
+        var $scan = $('#scanInput');
+        if (!$scan.length) return;
+
+        function focusScan() { $scan.trigger('focus'); }
+        focusScan();
+
+        // ===== بيب صوتي (Web Audio — من غير ملفات) =====
+        var audioCtx = null;
+        function beep(freq, duration, type, vol) {
+            try {
+                var AC = window.AudioContext || window.webkitAudioContext;
+                if (!AC) return;
+                if (!audioCtx) audioCtx = new AC();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                var osc = audioCtx.createOscillator();
+                var gain = audioCtx.createGain();
+                osc.type = type || 'sine';
+                osc.frequency.value = freq;
+                gain.gain.value = vol || 0.15;
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) { }
+        }
+        function beepOk() { beep(1000, 0.12, 'sine', 0.15); }        // نجاح: نبرة عالية قصيرة
+        function beepErr() { beep(200, 0.45, 'square', 0.2); }       // خطأ: نبرة منخفضة أطول (بازر)
+
+        function logLine(cls, text) {
+            $('#scanLog').prepend('<div class="scan-line ' + cls + '">' + text + '</div>');
+        }
+
+        function refreshCount() {
+            var n = $('.rowChk').length;
+            $('#pendingCount').text(n);
+            if (n === 0) {
+                $('#whTableWrap').html('<div class="wh-empty" style="padding:24px;"><div><i class="fa fa-check-circle" style="color:#27ae60;"></i></div><p>تم استلام كل الطلبات ✅</p></div>');
+                $('#acceptBtn, #rejectBtn').prop('disabled', true);
+            }
+        }
+
+        $scan.on('keydown', function (e) {
+            if (e.key !== 'Enter' && e.keyCode !== 13) return;
+            e.preventDefault();
+            var code = ($scan.val() || '').trim();
+            $scan.val('');
+            if (!code) return;
+
+            $.ajax({
+                url: '@Url.Action("AcceptWarehouseOrderByCode", "Orders")',
+                type: 'POST',
+                global: false, // منمنع اللودر العام إنه يومض مع كل مسح
+                data: { code: code },
+                success: function (res) {
+                    if (res && res.success) {
+                        beepOk();
+                        logLine('ok', '✅ ' + res.message + (res.recipient ? ' — ' + res.recipient : ''));
+                        if (typeof toastr !== 'undefined') toastr.success(res.message);
+                        var row = $('tr[data-code="' + code + '"]');
+                        if (row.length) { row.fadeOut(180, function () { $(this).remove(); refreshCount(); }); }
+                        else { refreshCount(); }
+                    } else {
+                        beepErr();
+                        logLine('err', '❌ ' + (res ? res.message : 'خطأ'));
+                        if (typeof toastr !== 'undefined') toastr.error(res ? res.message : 'خطأ');
+                    }
+                },
+                error: function () { beepErr(); logLine('err', '❌ حصل خطأ أثناء الاستلام، جرّب تاني'); },
+                complete: function () { focusScan(); }
+            });
+        });
+    })();
 </script>

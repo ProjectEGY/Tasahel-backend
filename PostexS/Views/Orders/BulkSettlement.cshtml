@@ -1,6 +1,6 @@
 @using PostexS.Models.Domain
 @{
-    ViewData["Title"] = "تقفيل بالاكسيل";
+    ViewData["Title"] = "تحديث حالات الطلبات بالاكسيل";
     var clients = ViewBag.Clients as List<ApplicationUser>;
     var drivers = ViewBag.Drivers as List<ApplicationUser>;
 }
@@ -104,6 +104,39 @@
         color: #555;
         margin-bottom: 6px;
     }
+
+    #selectedInfo {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+    }
+    .sel-chip {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 18px;
+        border-radius: 10px;
+        background: #f8fafe;
+        border: 1px solid #e3ebf3;
+        min-width: 240px;
+        flex: 1;
+    }
+    .sel-chip i {
+        font-size: 18px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        flex-shrink: 0;
+    }
+    .sel-chip-client i { background: linear-gradient(135deg, #1a3a6b, #2e86c1); }
+    .sel-chip-driver i { background: linear-gradient(135deg, #145a32, #27ae60); }
+    .sel-chip .sel-label { display: block; font-size: 11px; color: #95a5a6; margin-bottom: 2px; }
+    .sel-chip b { font-size: 15px; color: #2c3e50; }
 
     .btn-action {
         padding: 10px 24px;
@@ -313,8 +346,8 @@
 <!-- Hero Section -->
 <div class="bulk-hero">
     <i class="fa fa-file-excel-o hero-icon"></i>
-    <h2><i class="fa fa-file-excel-o"></i> تقفيل الطلبات بالاكسيل</h2>
-    <p>قفّل طلبات متعددة مرة واحدة عن طريق رفع ملف اكسيل - بدل ما تقفل أوردر أوردر</p>
+    <h2><i class="fa fa-file-excel-o"></i> تحديث حالات الطلبات بالاكسيل</h2>
+    <p>حدّث حالة توصيل طلبات كتير مرة واحدة برفع ملف اكسيل — زي ما المندوب بيعمل في التطبيق، بس بالجملة (التقفيل يفضل خطوة منفصلة)</p>
 </div>
 
 <!-- Step 1: Filter -->
@@ -351,6 +384,16 @@
                 </button>
             </div>
         </div>
+        <div id="selectedInfo">
+            <div class="sel-chip sel-chip-client">
+                <i class="fa fa-user"></i>
+                <div><span class="sel-label">الراسل المختار</span><b id="selClientName">كل الراسلين</b></div>
+            </div>
+            <div class="sel-chip sel-chip-driver">
+                <i class="fa fa-motorcycle"></i>
+                <div><span class="sel-label">المندوب المختار</span><b id="selDriverName">كل المناديب</b></div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -358,7 +401,7 @@
 <div id="ordersSection" class="step-card">
     <div class="step-header">
         <div class="step-number">2</div>
-        <h4>الطلبات المتاحة للتقفيل</h4>
+        <h4>الطلبات المتاحة للتحديث</h4>
     </div>
     <div class="step-body">
         <div id="ordersStats" class="stats-row"></div>
@@ -393,7 +436,7 @@
 <div id="uploadSection" class="step-card">
     <div class="step-header">
         <div class="step-number">3</div>
-        <h4>رفع ملف التقفيل</h4>
+        <h4>رفع ملف التحديث</h4>
     </div>
     <div class="step-body">
         <div class="upload-zone" id="uploadZone">
@@ -459,22 +502,22 @@
 <div id="confirmSection" class="step-card">
     <div class="step-header">
         <div class="step-number">5</div>
-        <h4>تأكيد التقفيل</h4>
+        <h4>تأكيد التحديث</h4>
     </div>
     <div class="step-body" style="text-align:center; padding:32px;">
         <i class="fa fa-exclamation-triangle" style="font-size:48px; color:#f39c12; margin-bottom:16px;"></i>
-        <p style="font-size:16px; color:#333; margin-bottom:8px;">هل أنت متأكد من تقفيل الطلبات الموجودة في الملف؟</p>
+        <p style="font-size:16px; color:#333; margin-bottom:8px;">هل أنت متأكد من تحديث حالات الطلبات الموجودة في الملف؟</p>
         <p id="confirmSummary" style="font-size:14px; color:#888; margin-bottom:24px;"></p>
         @if (ViewBag.CanExecute == true)
         {
             <button class="btn-action btn-confirm" id="executeBtn" onclick="executeSettlement()">
-                <i class="fa fa-check"></i> تأكيد التقفيل
+                <i class="fa fa-check"></i> تأكيد التحديث
             </button>
         }
         else
         {
             <div class="validation-result validation-warning" style="justify-content:center;">
-                <i class="fa fa-lock" style="font-size:20px;"></i> تنفيذ التقفيل متاح لمستخدم HighAdmin فقط — المراجعة متاحة لك للاطلاع على المشاكل بدون تنفيذ.
+                <i class="fa fa-lock" style="font-size:20px;"></i> التنفيذ غير متاح لحسابك — المراجعة متاحة لك للاطلاع على المشاكل بدون تنفيذ.
             </div>
         }
     </div>
@@ -484,8 +527,17 @@
     var ordersDataTable = null;
     var selectedFile = null;
 
+    function updateSelectedInfo() {
+        var c = $('#clientFilter');
+        var d = $('#driverFilter');
+        $('#selClientName').text(c.val() && c.val() !== '0' ? c.find('option:selected').text() : 'كل الراسلين');
+        $('#selDriverName').text(d.val() && d.val() !== '0' ? d.find('option:selected').text() : 'كل المناديب');
+    }
+
     $(document).ready(function () {
         $('#clientFilter, #driverFilter').select2({ placeholder: 'اختر...', allowClear: true, width: '100%' });
+        $('#clientFilter, #driverFilter').on('change', updateSelectedInfo);
+        updateSelectedInfo();
         var zone = document.getElementById('uploadZone');
         zone.addEventListener('dragover', function (e) { e.preventDefault(); this.classList.add('drag-over'); });
         zone.addEventListener('dragleave', function () { this.classList.remove('drag-over'); });
@@ -508,7 +560,7 @@
             tbody.empty();
 
             if (data.length === 0) {
-                swal("", "لا توجد طلبات متاحة للتقفيل بهذا الفلتر", "info");
+                swal("", "لا توجد طلبات متاحة للتحديث بهذا الفلتر", "info");
                 $('#ordersSection').hide();
                 return;
             }
@@ -566,7 +618,10 @@
     function downloadTemplate() {
         var clientId = $('#clientFilter').val();
         var driverId = $('#driverFilter').val();
-        window.location.href = '@Url.Action("DownloadBulkSettlementTemplate", "Orders")' + '?clientId=' + clientId + '&driverId=' + driverId;
+        var url = '@Url.Action("DownloadBulkSettlementTemplate", "Orders")' + '?clientId=' + clientId + '&driverId=' + driverId;
+        // بنفتح التحميل في تاب جديد: الصفحة الأصلية (والاختيارات) متتغيرش، ومفيش لودر عالق،
+        // ولو حصل خطأ بيظهر في التاب الجديد بدل ما يتبلع في iframe مخفي.
+        window.open(url, '_blank');
     }
 
     function onFileSelected(input) {
@@ -614,18 +669,18 @@
 
                 $('#validationStats').html(
                     '<div class="stat-box stat-blue"><div class="stat-value">' + res.totalRows + '</div><div class="stat-label">إجمالي السطور</div></div>' +
-                    '<div class="stat-box stat-green"><div class="stat-value">' + res.validCount + '</div><div class="stat-label">صالح للتقفيل</div></div>' +
+                    '<div class="stat-box stat-green"><div class="stat-value">' + res.validCount + '</div><div class="stat-label">صالح للتحديث</div></div>' +
                     '<div class="stat-box stat-red"><div class="stat-value">' + res.errorCount + '</div><div class="stat-label">أخطاء</div></div>' +
                     '<div class="stat-box stat-orange"><div class="stat-value">' + res.warningCount + '</div><div class="stat-label">تحذيرات</div></div>'
                 );
 
                 var msgHtml = '';
                 if (res.errorCount === 0 && res.validCount > 0) {
-                    msgHtml = '<div class="validation-result validation-success"><i class="fa fa-check-circle" style="font-size:20px;"></i> الملف صالح - يمكنك متابعة التقفيل</div>';
+                    msgHtml = '<div class="validation-result validation-success"><i class="fa fa-check-circle" style="font-size:20px;"></i> الملف صالح - يمكنك متابعة التحديث</div>';
                 } else if (res.errorCount > 0 && res.validCount > 0) {
-                    msgHtml = '<div class="validation-result validation-warning"><i class="fa fa-exclamation-triangle" style="font-size:20px;"></i> يوجد ' + res.errorCount + ' خطأ سيتم تخطيهم. يمكنك المتابعة لتقفيل ' + res.validCount + ' طلب صالح.</div>';
+                    msgHtml = '<div class="validation-result validation-warning"><i class="fa fa-exclamation-triangle" style="font-size:20px;"></i> يوجد ' + res.errorCount + ' خطأ سيتم تخطيهم. يمكنك المتابعة لتحديث ' + res.validCount + ' طلب صالح.</div>';
                 } else if (res.validCount === 0) {
-                    msgHtml = '<div class="validation-result validation-error"><i class="fa fa-times-circle" style="font-size:20px;"></i> لا توجد طلبات صالحة للتقفيل. راجع الأخطاء أدناه.</div>';
+                    msgHtml = '<div class="validation-result validation-error"><i class="fa fa-times-circle" style="font-size:20px;"></i> لا توجد طلبات صالحة للتحديث. راجع الأخطاء أدناه.</div>';
                 }
                 $('#validationMessages').html(msgHtml);
 
@@ -674,10 +729,34 @@
                 $('#validationSection').show().addClass('fade-in');
 
                 if (res.validCount > 0) {
-                    $('#confirmSummary').text('سيتم تقفيل ' + res.validCount + ' طلب' + (res.errorCount > 0 ? ' وتخطي ' + res.errorCount + ' طلب بها أخطاء' : ''));
+                    $('#confirmSummary').text('سيتم تحديث حالة ' + res.validCount + ' طلب' + (res.errorCount > 0 ? ' وتخطي ' + res.errorCount + ' طلب بها أخطاء' : ''));
                     $('#confirmSection').show().addClass('fade-in');
                 } else {
                     $('#confirmSection').hide();
+                }
+
+                // سكرول تلقائي لقسم النتيجة/المشاكل
+                var target = $('#validationSection');
+                if (target.length) {
+                    $('html, body').animate({ scrollTop: target.offset().top - 20 }, 450);
+                }
+
+                // بوب أب بالنتيجة يلفت نظر الموظف إن فيه مشكلة
+                if (res.validCount === 0) {
+                    swal("فيه مشاكل في الملف ❌",
+                        "مفيش أي طلب صالح للتحديث. لقينا " + res.errorCount + " خطأ" +
+                        (res.warningCount > 0 ? " و " + res.warningCount + " تحذير" : "") +
+                        ". راجع الأخطاء تحت أو حمّل تقرير المشاكل.",
+                        "error");
+                } else if (res.errorCount > 0 || res.warningCount > 0) {
+                    swal("راجع النتيجة ⚠️",
+                        "صالح للتحديث: " + res.validCount +
+                        " | أخطاء: " + res.errorCount +
+                        " | تحذيرات: " + res.warningCount +
+                        ". راجع التفاصيل تحت قبل التأكيد.",
+                        "warning");
+                } else {
+                    swal("الملف سليم ✅", res.validCount + " طلب جاهز للتحديث.", "success");
                 }
             },
             error: function () {
@@ -704,17 +783,17 @@
 
     function executeSettlement() {
         swal({
-            title: "تأكيد التقفيل",
+            title: "تأكيد التحديث",
             text: "هل أنت متأكد؟ لا يمكن التراجع عن هذه العملية.",
             icon: "warning",
-            buttons: ["إلغاء", "نعم، قفّل"],
+            buttons: ["إلغاء", "نعم، حدّث"],
             dangerMode: true,
         }).then(function (confirmed) {
             if (!confirmed) return;
 
             var formData = new FormData();
             formData.append('file', selectedFile);
-            $('#executeBtn').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري التقفيل...');
+            $('#executeBtn').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري التحديث...');
 
             $.ajax({
                 url: '@Url.Action("ExecuteBulkSettlement", "Orders")',
@@ -723,16 +802,10 @@
                 processData: false,
                 contentType: false,
                 success: function (res) {
-                    $('#executeBtn').prop('disabled', false).html('<i class="fa fa-check"></i> تأكيد التقفيل');
+                    $('#executeBtn').prop('disabled', false).html('<i class="fa fa-check"></i> تأكيد التحديث');
                     if (res.success) {
                         var extra = '';
-                        if (res.skipCount > 0) extra += '\nتم تخطي ' + res.skipCount + ' صف (مقفل مسبقاً أو غير صالح).';
-                        if (res.walletsSummary && res.walletsSummary.length > 0) {
-                            extra += '\n\nملخص التقفيلات حسب المندوب:';
-                            res.walletsSummary.forEach(function (w) {
-                                extra += '\n• ' + w.driverName + ': ' + Number(w.amount).toFixed(2);
-                            });
-                        }
+                        if (res.skipCount > 0) extra += '\nتم تخطي ' + res.skipCount + ' صف (مقفول ماليًا أو غير صالح).';
                         swal("تم بنجاح", res.message + extra, "success").then(function () {
                             location.reload();
                         });
@@ -741,8 +814,8 @@
                     }
                 },
                 error: function () {
-                    $('#executeBtn').prop('disabled', false).html('<i class="fa fa-check"></i> تأكيد التقفيل');
-                    swal("خطأ", "حدث خطأ أثناء التقفيل", "error");
+                    $('#executeBtn').prop('disabled', false).html('<i class="fa fa-check"></i> تأكيد التحديث');
+                    swal("خطأ", "حدث خطأ أثناء التحديث", "error");
                 }
             });
         });
