@@ -4414,13 +4414,12 @@ namespace PostexS.Controllers
                 ws.RightToLeft = true;
 
                 ws.Cell(1, 1).Value = "كود الشحنه";
-                ws.Cell(1, 2).Value = "سعر الطلب";
+                ws.Cell(1, 2).Value = "مبلغ التحصيل";
                 ws.Cell(1, 3).Value = "حاله الشحنه";
-                ws.Cell(1, 4).Value = "الراسل";
-                ws.Cell(1, 5).Value = "المندوب";
-                ws.Cell(1, 6).Value = "السعر الأصلي";
+                ws.Cell(1, 4).Value = "عموله المندوب";
+                ws.Cell(1, 5).Value = "ملاحظه المندوب";
 
-                var headerRange = ws.Range(1, 1, 1, 6);
+                var headerRange = ws.Range(1, 1, 1, 5);
                 headerRange.Style.Font.Bold = true;
                 headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#1a3a6b");
                 headerRange.Style.Font.FontColor = XLColor.White;
@@ -4429,12 +4428,8 @@ namespace PostexS.Controllers
                 int row = 2;
                 foreach (var order in orders)
                 {
+                    // بنملأ كود الشحنة بس؛ الموظف يملأ السعر والحالة والعمولة والملاحظة
                     ws.Cell(row, 1).Value = order.Code;
-                    ws.Cell(row, 2).Value = "";
-                    ws.Cell(row, 3).Value = "";
-                    ws.Cell(row, 4).Value = order.Client?.Name ?? "-";
-                    ws.Cell(row, 5).Value = order.Delivery?.Name ?? "-";
-                    ws.Cell(row, 6).Value = order.TotalCost;
                     row++;
                 }
 
@@ -4443,9 +4438,8 @@ namespace PostexS.Controllers
                 ws.Column(1).Width = 18;
                 ws.Column(2).Width = 12;
                 ws.Column(3).Width = 24;
-                ws.Column(4).Width = 22;
-                ws.Column(5).Width = 18;
-                ws.Column(6).Width = 14;
+                ws.Column(4).Width = 16;
+                ws.Column(5).Width = 30;
 
                 var statusSheet = workbook.Worksheets.Add("الحالات");
                 statusSheet.Cell(1, 1).Value = "الحالات المتاحة";
@@ -4488,10 +4482,21 @@ namespace PostexS.Controllers
             { "مرتجع وشحن على الراسل", OrderStatus.Returned_And_DeliveryCost_On_Sender },
         };
 
-        // قراءة صفوف الشيت مع تحديد الأعمدة بالاسم (مش بالترتيب الثابت) عشان لو المستخدم زوّد/حرّك عمود مايبوظش
-        private static List<(int RowNum, string Code, string PriceStr, string StatusStr)> ReadBulkRows(Stream stream)
+        // صف من شيت التحديث (كود + سعر + حالة + عمولة المندوب + ملاحظة المندوب)
+        private class BulkRow
         {
-            var list = new List<(int, string, string, string)>();
+            public int RowNum;
+            public string Code;
+            public string PriceStr;
+            public string StatusStr;
+            public string CommissionStr;
+            public string NoteStr;
+        }
+
+        // قراءة صفوف الشيت مع تحديد الأعمدة بالاسم (مش بالترتيب الثابت) عشان لو المستخدم زوّد/حرّك عمود مايبوظش
+        private static List<BulkRow> ReadBulkRows(Stream stream)
+        {
+            var list = new List<BulkRow>();
             using (var workbook = new XLWorkbook(stream))
             {
                 var ws = workbook.Worksheet(1);
@@ -4499,25 +4504,34 @@ namespace PostexS.Controllers
                 var header = used.FirstOrDefault();
                 if (header == null) return list;
 
-                int codeCol = 0, priceCol = 0, statusCol = 0;
+                int codeCol = 0, priceCol = 0, statusCol = 0, commissionCol = 0, noteCol = 0;
                 foreach (var cell in header.CellsUsed())
                 {
                     var h = cell.GetString()?.Trim();
                     if (h == "كود الشحنه" || h == "كود الشحنة") codeCol = cell.Address.ColumnNumber;
-                    else if (h == "سعر الطلب") priceCol = cell.Address.ColumnNumber;
+                    else if (h == "مبلغ التحصيل" || h == "سعر الطلب") priceCol = cell.Address.ColumnNumber;
                     else if (h == "حاله الشحنه" || h == "حالة الشحنة") statusCol = cell.Address.ColumnNumber;
+                    else if (h == "عموله المندوب" || h == "عمولة المندوب") commissionCol = cell.Address.ColumnNumber;
+                    else if (h == "ملاحظه المندوب" || h == "ملاحظة المندوب") noteCol = cell.Address.ColumnNumber;
                 }
                 // fallback للترتيب الافتراضي لو الهيدر مش متطابق
                 if (codeCol == 0) codeCol = 1;
                 if (priceCol == 0) priceCol = 2;
                 if (statusCol == 0) statusCol = 3;
+                if (commissionCol == 0) commissionCol = 4;
+                if (noteCol == 0) noteCol = 5;
 
                 foreach (var row in used.Skip(1))
                 {
-                    string code = row.Cell(codeCol).GetString()?.Trim();
-                    string priceStr = row.Cell(priceCol).GetString()?.Trim();
-                    string statusStr = row.Cell(statusCol).GetString()?.Trim();
-                    list.Add((row.RowNumber(), code, priceStr, statusStr));
+                    list.Add(new BulkRow
+                    {
+                        RowNum = row.RowNumber(),
+                        Code = row.Cell(codeCol).GetString()?.Trim(),
+                        PriceStr = row.Cell(priceCol).GetString()?.Trim(),
+                        StatusStr = row.Cell(statusCol).GetString()?.Trim(),
+                        CommissionStr = row.Cell(commissionCol).GetString()?.Trim(),
+                        NoteStr = row.Cell(noteCol).GetString()?.Trim(),
+                    });
                 }
             }
             return list;
@@ -4557,7 +4571,7 @@ namespace PostexS.Controllers
 
             var statusMap = BulkStatusMap();
 
-            List<(int RowNum, string Code, string PriceStr, string StatusStr)> rawRows;
+            List<BulkRow> rawRows;
             try
             {
                 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
@@ -4572,7 +4586,7 @@ namespace PostexS.Controllers
 
             // إزالة التكرار: لو نفس الكود اتكرر ناخد آخر صف (نية المستخدم النهائية) ونحذّر على الباقي
             var seenCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var dedupRows = new List<(int RowNum, string Code, string PriceStr, string StatusStr)>();
+            var dedupRows = new List<BulkRow>();
             for (int i = rawRows.Count - 1; i >= 0; i--)
             {
                 var r = rawRows[i];
@@ -4622,12 +4636,12 @@ namespace PostexS.Controllers
                 {
                     if (string.IsNullOrEmpty(priceStr))
                     {
-                        errors.Add(new { row = rowNum, code, message = "سعر الطلب فارغ (مطلوب لحالات التوصيل)" });
+                        errors.Add(new { row = rowNum, code, message = "مبلغ التحصيل فارغ (مطلوب لحالات التوصيل)" });
                         continue;
                     }
                     if (!double.TryParse(priceStr, out arrivedCost) || arrivedCost < 0)
                     {
-                        errors.Add(new { row = rowNum, code, message = $"سعر الطلب غير صالح: {priceStr}" });
+                        errors.Add(new { row = rowNum, code, message = $"مبلغ التحصيل غير صالح: {priceStr}" });
                         continue;
                     }
                 }
@@ -4659,10 +4673,14 @@ namespace PostexS.Controllers
                     continue;
                 }
 
+                // عمولة المندوب اختيارية — لكن لو مكتوبة لازم تكون رقم صالح (وإلا هتتجاهل وتُستخدم العمولة الافتراضية)
+                if (!string.IsNullOrEmpty(r.CommissionStr) && (!double.TryParse(r.CommissionStr, out var comm) || comm < 0))
+                    warnings.Add(new { row = rowNum, code, message = $"عمولة المندوب غير صالحة: {r.CommissionStr} — هتتجاهل وتتحسب العمولة الافتراضية", type = "info" });
+
                 // فرق السعر: تحذير أحمر للحالات العادية، وتنبيه معلوماتي (متوقع) لتعديل السعر/الجزئي
                 if (!isReturnStatus && arrivedCost != order.TotalCost)
                 {
-                    string msg = $"السعر مختلف: في الشيت {arrivedCost:N2} والسيستم {order.TotalCost:N2}";
+                    string msg = $"مبلغ التحصيل ({arrivedCost:N2}) مختلف عن سعر الطلب في السيستم ({order.TotalCost:N2})";
                     if (targetStatus == OrderStatus.Delivered_With_Edit_Price || targetStatus == OrderStatus.PartialDelivered)
                         warnings.Add(new { row = rowNum, code, message = msg + " (متوقع لتعديل السعر/الجزئي)", type = "info" });
                     else
@@ -4717,7 +4735,7 @@ namespace PostexS.Controllers
             var statusMap = BulkStatusMap();
 
             // 1) قراءة الصفوف مرة واحدة
-            List<(int RowNum, string Code, string PriceStr, string StatusStr)> rawRows;
+            List<BulkRow> rawRows;
             try
             {
                 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
@@ -4731,7 +4749,7 @@ namespace PostexS.Controllers
             }
 
             // إزالة التكرار (آخر ظهور للكود) + استبعاد الصفوف غير الصالحة مبدئياً
-            var rows = new List<(int RowNum, string Code, string PriceStr, string StatusStr)>();
+            var rows = new List<BulkRow>();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (int i = rawRows.Count - 1; i >= 0; i--)
             {
@@ -4773,6 +4791,7 @@ namespace PostexS.Controllers
                         double paid = 0;
                         if (!string.IsNullOrEmpty(r.PriceStr))
                             double.TryParse(r.PriceStr, out paid);
+                        bool hasCommission = double.TryParse(r.CommissionStr, out double commission);
 
                         ordersByCode.TryGetValue(r.Code, out var order);
                         if (order == null) { skipped.Add(new { row = r.RowNum, code = r.Code, message = "غير موجود في النظام" }); skipCount++; continue; }
@@ -4786,6 +4805,8 @@ namespace PostexS.Controllers
                         if (order.ReturnedFinished && isReturnPaidStatus) { skipped.Add(new { row = r.RowNum, code = r.Code, message = "المرتجع مقفول ماليًا — اتخطى" }); skipCount++; continue; }
 
                         double driverFee = (order.Delivery != null && order.Delivery.DeliveryCost != null) ? order.Delivery.DeliveryCost.Value : 0;
+                        // عمولة المندوب: لو الموظف كتبها في الشيت نستخدمها (بتختلف بالمنطقة)، وإلا العمولة الافتراضية بتاعت المندوب
+                        double effectiveFee = hasCommission ? commission : driverFee;
 
                         // بنشيل الطلب من أي تقفيلة سابقة (زي FinishOrder بالظبط)
                         order.WalletId = null;
@@ -4794,20 +4815,20 @@ namespace PostexS.Controllers
                         {
                             case OrderStatus.Delivered:
                                 order.ArrivedCost = order.TotalCost;
-                                order.DeliveryCost = driverFee;
+                                order.DeliveryCost = effectiveFee;
                                 break;
                             case OrderStatus.Delivered_With_Edit_Price:
                                 order.ArrivedCost = paid;
-                                order.DeliveryCost = driverFee;
+                                order.DeliveryCost = effectiveFee;
                                 break;
                             case OrderStatus.Returned_And_Paid_DeliveryCost:
                                 order.ArrivedCost = paid;
-                                order.DeliveryCost = driverFee;
+                                order.DeliveryCost = effectiveFee;
                                 order.ReturnedCost = order.Cost;
                                 break;
                             case OrderStatus.Returned_And_DeliveryCost_On_Sender:
                                 order.ArrivedCost = 0;
-                                order.DeliveryCost = driverFee;
+                                order.DeliveryCost = effectiveFee;
                                 order.ReturnedCost = order.Cost;
                                 break;
                             case OrderStatus.Returned:
@@ -4817,7 +4838,7 @@ namespace PostexS.Controllers
                                 break;
                             case OrderStatus.PartialDelivered:
                                 order.ArrivedCost = paid;
-                                order.DeliveryCost = driverFee;
+                                order.DeliveryCost = effectiveFee;
                                 // طلب عكسي مرتجع جزئي بنفس الكود + R (نفس FinishOrder: يُنشأ لو مش موجود، أو يُحدَّث لو موجود)
                                 var revCode = "R" + order.Code;
                                 var existingRev = await _orders.GetObj(x => x.Code == revCode && !x.IsDeleted);
@@ -4885,13 +4906,19 @@ namespace PostexS.Controllers
                         order.Status = targetStatus;
                         order.LastUpdated = nowUtc;
 
-                        // ملاحظة على الطلب (وبتحفظ تعديلات الطلب كمان لأنها SaveChanges على نفس الـ context)
-                        await _orderNotes.Add(new OrderNotes
+                        // حفظ الطلب
+                        await _orders.Update(order);
+
+                        // ملاحظة المندوب من الشيت (لو الموظف كتبها فقط) — من غير أي ملاحظة تلقائية
+                        if (!string.IsNullOrWhiteSpace(r.NoteStr))
                         {
-                            Content = "تم تحديث الحالة إلى: " + r.StatusStr + " (عن طريق ملف الاكسيل)",
-                            OrderId = order.Id,
-                            UserId = userid
-                        });
+                            await _orderNotes.Add(new OrderNotes
+                            {
+                                Content = r.NoteStr,
+                                OrderId = order.Id,
+                                UserId = userid
+                            });
+                        }
 
                         processedOrderIds.Add(order.Id);
                         successCount++;
