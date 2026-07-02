@@ -4299,6 +4299,8 @@ namespace PostexS.Controllers
             ViewBag.Drivers = _users.Get(x => !x.IsDeleted && x.UserType == UserType.Driver).OrderBy(x => x.Name).ToList();
             // التنفيذ متاح لأي دور بيقدر يفتح الصفحة (بقى تحديث حالات مش تقفيل مالي)
             ViewBag.CanExecute = true;
+            // فتح صفحة تقفيل المندوب بعد التحديث متاح لـ HighAdmin بس (هو اللي بيقفّل)
+            ViewBag.CanSettle = User.IsInRole("HighAdmin");
             return View();
         }
 

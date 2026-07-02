@@ -526,6 +526,7 @@
 <script>
     var ordersDataTable = null;
     var selectedFile = null;
+    var canOpenDriverSettlement = @(ViewBag.CanSettle == true ? "true" : "false");
 
     function updateSelectedInfo() {
         var c = $('#clientFilter');
@@ -791,6 +792,14 @@
         }).then(function (confirmed) {
             if (!confirmed) return;
 
+            // لو التحديث لمندوب واحد محدَّد، بنفتح تاب فاضي دلوقتي (وقت ضغطة المستخدم) عشان مايتبلوكش،
+            // وبعد نجاح التحديث بنوجّهه لصفحة تقفيل المندوب للمراجعة والاعتماد.
+            var settleDriverId = $('#driverFilter').val();
+            var settleTab = null;
+            if (canOpenDriverSettlement && settleDriverId && settleDriverId !== '0') {
+                settleTab = window.open('', '_blank');
+            }
+
             var formData = new FormData();
             formData.append('file', selectedFile);
             $('#executeBtn').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري التحديث...');
@@ -804,17 +813,23 @@
                 success: function (res) {
                     $('#executeBtn').prop('disabled', false).html('<i class="fa fa-check"></i> تأكيد التحديث');
                     if (res.success) {
+                        if (settleTab) {
+                            settleTab.location = '@Url.Action("FinshedOrders", "Users")' + '/' + encodeURIComponent(settleDriverId);
+                        }
                         var extra = '';
                         if (res.skipCount > 0) extra += '\nتم تخطي ' + res.skipCount + ' صف (مقفول ماليًا أو غير صالح).';
+                        if (settleTab) extra += '\n\nفتحنا لك صفحة تقفيل المندوب في تاب جديد للمراجعة والاعتماد.';
                         swal("تم بنجاح", res.message + extra, "success").then(function () {
                             location.reload();
                         });
                     } else {
+                        if (settleTab) settleTab.close();
                         swal("خطأ", res.message, "error");
                     }
                 },
                 error: function () {
                     $('#executeBtn').prop('disabled', false).html('<i class="fa fa-check"></i> تأكيد التحديث');
+                    if (settleTab) settleTab.close();
                     swal("خطأ", "حدث خطأ أثناء التحديث", "error");
                 }
             });
